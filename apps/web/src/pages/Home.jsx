@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Box, Typography, useMediaQuery } from '@mui/material';
 import { useLocation } from 'react-router-dom';
 import { useCardData } from "../hooks/useCardData.jsx";
@@ -7,6 +7,7 @@ import Header from "../components/elements/Header.jsx";
 import CardPanel from "../components/ui/CardPanel.jsx";
 import TradeSummary from "../components/elements/TradeSummary.jsx";
 import { useThemeMode } from "../contexts/ThemeContext.jsx";
+import { useCardDetail } from "../contexts/CardDetailContext.jsx";
 
 const Home = () => {
     const location = useLocation();
@@ -36,6 +37,13 @@ const Home = () => {
     }));
 
     const tradeState = useTradeState(cardGroups, cardIdLookup);
+    const { registerAddWant } = useCardDetail();
+    const addWantRef = useRef(tradeState.addWantCard);
+    addWantRef.current = tradeState.addWantCard;
+
+    useEffect(() => {
+        return registerAddWant((payload) => addWantRef.current(payload));
+    }, [registerAddWant]);
 
     // Load trade from navigation state (when coming from history page)
     useEffect(() => {

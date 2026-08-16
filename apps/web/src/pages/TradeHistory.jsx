@@ -32,6 +32,7 @@ import { useEntitlement } from '../contexts/EntitlementContext.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { getUserTrades, deleteTrade } from '../services/tradeHistory';
 import { useCardData } from '../hooks/useCardData.jsx';
+import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import { FreeLimits } from '../utils/freeLimits.js';
 import { normalizeTradeList, tradeDisplayName } from '../utils/tradeItems.js';
 import { CardThumbnail } from '../components/ui/CardImagePreview.jsx';
@@ -51,7 +52,7 @@ const TradeHistory = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { isPro, loading: entitlementLoading } = useEntitlement();
-    const { pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
+    const { pricesUpdatedAt: lastUpdatedTimestamp, cardIdLookup } = useCardData();
     const { isDark } = useThemeMode();
     const [trades, setTrades] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -397,6 +398,7 @@ const TradeHistory = () => {
                                                     currencySymbol={trade.currency_symbol}
                                                     textColor={textColor}
                                                     mutedColor={mutedColor}
+                                                    cardIdLookup={cardIdLookup}
                                                 />
 
                                                 {trade.notes ? (
@@ -519,6 +521,7 @@ function TradeCardLists({
     currencySymbol = '$',
     textColor,
     mutedColor,
+    cardIdLookup = {},
 }) {
     const haveCards = normalizeTradeList(haveList);
     const wantCards = normalizeTradeList(wantList);
@@ -535,6 +538,7 @@ function TradeCardLists({
                     currencySymbol={currencySymbol}
                     textColor={textColor}
                     mutedColor={mutedColor}
+                    cardIdLookup={cardIdLookup}
                 />
             )}
             {(wantCards.length > 0 || cashWant > 0) && (
@@ -545,13 +549,30 @@ function TradeCardLists({
                     currencySymbol={currencySymbol}
                     textColor={textColor}
                     mutedColor={mutedColor}
+                    cardIdLookup={cardIdLookup}
                 />
             )}
         </Box>
     );
 }
 
-function TradeSideList({ label, cards, cash, currencySymbol = '$', textColor, mutedColor }) {
+function TradeSideList({
+    label,
+    cards,
+    cash,
+    currencySymbol = '$',
+    textColor,
+    mutedColor,
+    cardIdLookup = {},
+}) {
+    const { openDetail } = useCardDetail();
+
+    const openCard = (card) => {
+        const id = card.uniqueId;
+        const printing = (id && cardIdLookup[id]) || null;
+        if (printing) openDetail(printing);
+    };
+
     return (
         <Box>
             <Typography
@@ -568,7 +589,9 @@ function TradeSideList({ label, cards, cash, currencySymbol = '$', textColor, mu
                 {label}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                {cards.map((card, index) => (
+                {cards.map((card, index) => {
+                    const printing = card.uniqueId && cardIdLookup[card.uniqueId];
+                    return (
                     <Box
                         key={`${card.uniqueId || card.name}-${index}`}
                         sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}
@@ -578,9 +601,14 @@ function TradeSideList({ label, cards, cash, currencySymbol = '$', textColor, mu
                             fallbackUrl={card.imageUrlFallback}
                             alt={card.name}
                             size={28}
+                            onClick={printing ? () => openCard(card) : undefined}
                         />
                         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                             <Typography
+                                component={printing ? 'button' : 'span'}
+                                type={printing ? 'button' : undefined}
+                                onClick={printing ? () => openCard(card) : undefined}
+                                aria-label={printing ? `View details for ${card.name}` : undefined}
                                 variant="body2"
                                 sx={{
                                     color: textColor,
@@ -589,6 +617,13 @@ function TradeSideList({ label, cards, cash, currencySymbol = '$', textColor, mu
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
                                     lineHeight: 1.3,
+                                    border: 0,
+                                    background: 'none',
+                                    p: 0,
+                                    m: 0,
+                                    textAlign: 'left',
+                                    fontFamily: 'inherit',
+                                    cursor: printing ? 'pointer' : 'default',
                                 }}
                             >
                                 {card.quantity}× {card.name}
@@ -608,7 +643,8 @@ function TradeSideList({ label, cards, cash, currencySymbol = '$', textColor, mu
                             )}
                         </Typography>
                     </Box>
-                ))}
+                    );
+                })}
                 {cash > 0 && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                         <Typography variant="body2" sx={{ color: textColor, fontWeight: 600, flexGrow: 1 }}>

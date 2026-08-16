@@ -68,7 +68,6 @@ specs/001-card-price-history/
 ├── contracts/           # Phase 1 output
 │   ├── price-history-read.md
 │   └── history-section.md
-└── tasks.md             # Phase 2 output (/speckit-tasks)
 ```
 
 ### Source Code (repository root)

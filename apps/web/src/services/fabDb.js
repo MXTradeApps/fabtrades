@@ -48,7 +48,8 @@ const CARD_COLUMNS = [
     'sub_type_name', 'rarity', 'collector_number',
     'card_type', 'card_sub_type', 'card_class', 'talent', 'pitch', 'cost',
     'power', 'defense', 'life', 'intellect', 'set_name',
-    'tcg_low', 'tcg_mid', 'tcg_high', 'tcg_market', 'tcg_direct_low'
+    'tcg_low', 'tcg_mid', 'tcg_high', 'tcg_market', 'tcg_direct_low',
+    'cm_avg', 'cm_low', 'cm_trend', 'cm_avg_foil', 'cm_low_foil', 'cm_trend_foil'
 ].join(',');
 
 const catalogPage = (offset) =>
@@ -70,6 +71,12 @@ const mapRowToLegacyShape = (row) => ({
     highPrice: row.tcg_high,
     marketPrice: row.tcg_market,
     directLowPrice: row.tcg_direct_low,
+    cardmarketTrend: row.cm_trend,
+    cardmarketLow: row.cm_low,
+    cardmarketAvg: row.cm_avg,
+    cardmarketTrendFoil: row.cm_trend_foil,
+    cardmarketLowFoil: row.cm_low_foil,
+    cardmarketAvgFoil: row.cm_avg_foil,
     subTypeName: row.sub_type_name || '',
     extRarity: row.rarity || '',
     extNumber: row.collector_number || '',

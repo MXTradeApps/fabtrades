@@ -20,6 +20,7 @@ const setup = () => renderHook(() => useTradeState(cardGroups, {}));
 beforeEach(() => {
   // Ensure no stray ?trade= param leaks between tests via the URL-load effect.
   window.history.replaceState({}, '', '/');
+  window.localStorage.clear();
 });
 
 describe('useTradeState — adding cards', () => {
