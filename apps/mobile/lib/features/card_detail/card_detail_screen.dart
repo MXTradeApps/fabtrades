@@ -13,6 +13,7 @@ import '../../core/models/card_model.dart';
 import '../../core/models/trade.dart';
 import '../../core/providers.dart';
 import '../paywall/pro_limits.dart';
+import 'price_history_section.dart';
 
 class CardDetailScreen extends ConsumerStatefulWidget {
   const CardDetailScreen({super.key, required this.card, this.source = 'unknown'});
@@ -126,6 +127,8 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
                 const SizedBox(height: 14),
                 _PriceCard(
                     card: _selected, settings: settings, pricing: pricing),
+                const SizedBox(height: 14),
+                PriceHistorySection(cardId: _selected.id),
               ],
             ),
           ),

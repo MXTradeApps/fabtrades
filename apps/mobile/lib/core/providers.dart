@@ -49,6 +49,13 @@ final supabaseClientProvider =
 final cardRepositoryProvider = Provider<CardRepository>(
     (ref) => CardRepository(ref.watch(supabaseClientProvider)));
 
+/// Daily catalog snapshots for one Printing (`fab_price_history`). Empty list
+/// is success (no history yet), not an error. Window clipping is client-side.
+final priceHistoryProvider =
+    FutureProvider.family<List<PricePoint>, String>((ref, cardId) {
+  return ref.watch(cardRepositoryProvider).priceHistory(cardId);
+});
+
 final appUpdateRepositoryProvider = Provider<AppUpdateRepository>(
   (ref) => AppUpdateRepository(
     ref.watch(supabaseClientProvider),
