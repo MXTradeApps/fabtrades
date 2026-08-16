@@ -22,7 +22,7 @@
 
 ### What the app does
 
-FAB Trades is a Flesh and Blood TCG companion: users price-check cards, balance trades between two parties, keep a card **binder** and **want list**, **scan** physical cards with the camera, and track **lend/borrow** with friends. **Find Trade Filler** is free. A **Pro** subscription (RevenueCat) unlocks full price history and lifts free-tier caps (binder 50 distinct cards, want list 50, 1 loaned card, 3 saved trades — see `packages/contracts/free_limits.json`).
+FAB Trades is a Flesh and Blood TCG companion: users price-check cards, balance trades between two parties, keep a card **binder** and **want list**, **scan** physical cards with the camera, and track **lend/borrow** with friends. **Find Trade Filler** is free. A **Pro** subscription (RevenueCat) unlocks full price history and lifts free-tier caps (binder 50 distinct cards, want list 50, 10 loaned cards, 3 saved trades — see `packages/contracts/free_limits.json`).
 
 ### Identity model
 

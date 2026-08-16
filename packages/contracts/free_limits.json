@@ -4,7 +4,7 @@
     "binderCards": 50,
     "wantListCards": 50,
     "savedTrades": 3,
-    "loanedCards": 1
+    "loanedCards": 10
   },
   "behaviour": {
     "binderCards": "refuse",
@@ -38,15 +38,15 @@
       "allowed": false
     },
     {
-      "name": "a free account accepts the first loaned card",
+      "name": "a free account accepts the tenth loaned card",
       "limit": "loanedCards",
-      "existing": 0,
+      "existing": 9,
       "allowed": true
     },
     {
-      "name": "a free account refuses a second loaned card",
+      "name": "a free account refuses an eleventh loaned card",
       "limit": "loanedCards",
-      "existing": 1,
+      "existing": 10,
       "allowed": false
     },
     {

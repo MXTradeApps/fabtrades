@@ -17,7 +17,7 @@ class FreeLimits {
   ///
   /// Counted by quantity, not distinct titles — lending two copies is two
   /// loaned cards. Borrowing is uncapped: the limit is on what you have out.
-  static const loanedCards = 1;
+  static const loanedCards = 10;
 
   /// Trades a free account keeps.
   ///

@@ -175,8 +175,10 @@ void main() {
       for (var i = 0; i < FreeLimits.loanedCards + 3; i++) {
         expect(lend.addCard(borrowed, buildCard(id: 'borrowed-$i')), isTrue);
       }
-      expect(lend.addCard(lent, buildCard(id: 'lent-0')), isTrue);
-      expect(lend.addCard(lent, buildCard(id: 'lent-1')), isFalse);
+      for (var i = 0; i < FreeLimits.loanedCards; i++) {
+        expect(lend.addCard(lent, buildCard(id: 'lent-$i')), isTrue);
+      }
+      expect(lend.addCard(lent, buildCard(id: 'one-too-many')), isFalse);
     });
 
     test('refuses raising quantity past the cap', () async {
@@ -185,8 +187,18 @@ void main() {
       final groupId = lend.createGroup(isBorrowing: false);
       lend.addCard(groupId, buildCard(id: 'only'));
 
-      expect(lend.setCardQuantity(groupId, 'only', 2), isFalse);
-      expect(c.read(lendGroupProvider(groupId))!.items.single.quantity, 1);
+      expect(
+        lend.setCardQuantity(groupId, 'only', FreeLimits.loanedCards),
+        isTrue,
+      );
+      expect(
+        lend.setCardQuantity(groupId, 'only', FreeLimits.loanedCards + 1),
+        isFalse,
+      );
+      expect(
+        c.read(lendGroupProvider(groupId))!.items.single.quantity,
+        FreeLimits.loanedCards,
+      );
     });
 
     test('lifts the cap for Pro', () async {

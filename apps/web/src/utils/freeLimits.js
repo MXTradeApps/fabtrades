@@ -15,7 +15,7 @@ export const FreeLimits = {
     binderCards: 50,
     wantListCards: 50,
     savedTrades: 3,
-    loanedCards: 1,
+    loanedCards: 10,
 };
 
 /**

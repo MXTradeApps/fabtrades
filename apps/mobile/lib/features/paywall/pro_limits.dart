@@ -125,7 +125,7 @@ Future<bool> addToLendOrUpsell(
     ref,
     trigger: 'lend_limit',
     message:
-        'The free plan tracks ${FreeLimits.loanedCards} loaned card. Upgrade to lend more.',
+        'The free plan tracks ${FreeLimits.loanedCards} loaned cards. Upgrade to lend more.',
     onUpgraded: () {
       lend.addCard(groupId, card, quantity: quantity);
     },
@@ -157,7 +157,7 @@ Future<bool> setLendQuantityOrUpsell(
     ref,
     trigger: 'lend_limit',
     message:
-        'The free plan tracks ${FreeLimits.loanedCards} loaned card. Upgrade to lend more.',
+        'The free plan tracks ${FreeLimits.loanedCards} loaned cards. Upgrade to lend more.',
     onUpgraded: () {
       lend.setCardQuantity(groupId, cardId, quantity);
     },

@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Find Trade Filler** is free on mobile. The Pro lock, badge, and paywall
   gate are gone; anyone can open the sheet from an unbalanced trade.
+- Free plan **loaned-card cap** is 10 (was 1). Pro remains unlimited.
 
 ## [1.0.2] — App Store review compliance
 
