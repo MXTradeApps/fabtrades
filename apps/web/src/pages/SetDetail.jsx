@@ -25,11 +25,12 @@ import {
 } from '@mui/icons-material';
 import { Link, useParams } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
-import { CardThumbnail, CardImageModal } from '../components/ui/CardImagePreview.jsx';
+import { CardThumbnail } from '../components/ui/CardImagePreview.jsx';
 import TcgplayerBuyLink from '../components/ui/TcgplayerBuyLink.jsx';
 import { useSets } from '../hooks/useSets.js';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
+import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import { formatCardType, getCardGradient } from '../utils/searchUtils.js';
 import { useDocumentHead } from '../utils/seo.js';
 
@@ -187,13 +188,12 @@ const SetDetail = () => {
     const { getSetById, loading, error } = useSets();
     const { pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
     const { isDark } = useThemeMode();
+    const { openDetail } = useCardDetail();
     const theme = useTheme();
     const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
 
     const [query, setQuery] = useState('');
     const [sortMode, setSortMode] = useState('market-desc');
-    const [modalOpen, setModalOpen] = useState(false);
-    const [modalCard, setModalCard] = useState(null);
 
     const set = useMemo(() => getSetById(groupId), [getSetById, groupId]);
 
@@ -255,10 +255,8 @@ const SetDetail = () => {
     const textColor = isDark ? '#f5f1ed' : '#2c1810';
     const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
 
-    const openImage = (card) => {
-        if (!card?.imageUrl) return;
-        setModalCard(card);
-        setModalOpen(true);
+    const openCard = (card) => {
+        if (card?._uniqueId) openDetail(card);
     };
 
     return (
@@ -475,18 +473,29 @@ const SetDetail = () => {
                                                 fallbackUrl={card.imageUrlFallback}
                                                 alt={card.name}
                                                 size={isSmall ? 34 : 42}
-                                                onClick={() => openImage(card)}
+                                                onClick={() => openCard(card)}
                                             />
 
                                             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                                                 <Typography
+                                                    component={card._uniqueId ? 'button' : 'span'}
+                                                    type={card._uniqueId ? 'button' : undefined}
+                                                    onClick={card._uniqueId ? () => openCard(card) : undefined}
+                                                    aria-label={card._uniqueId ? `View details for ${card.name}` : undefined}
                                                     variant="body2"
                                                     sx={{
                                                         color: textColor,
                                                         fontWeight: 600,
                                                         whiteSpace: 'nowrap',
                                                         overflow: 'hidden',
-                                                        textOverflow: 'ellipsis'
+                                                        textOverflow: 'ellipsis',
+                                                        border: 0,
+                                                        background: 'none',
+                                                        p: 0,
+                                                        m: 0,
+                                                        textAlign: 'left',
+                                                        fontFamily: 'inherit',
+                                                        cursor: card._uniqueId ? 'pointer' : 'default',
                                                     }}
                                                 >
                                                     {card._baseName || card.name}
@@ -560,14 +569,6 @@ const SetDetail = () => {
                     </>
                 )}
             </Container>
-
-            <CardImageModal
-                open={modalOpen}
-                onClose={() => setModalOpen(false)}
-                imageUrl={modalCard?.imageUrl}
-                fallbackUrl={modalCard?.imageUrlFallback}
-                cardName={modalCard?.name}
-            />
         </Box>
     );
 };

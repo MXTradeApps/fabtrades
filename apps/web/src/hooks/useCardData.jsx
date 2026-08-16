@@ -75,6 +75,13 @@ const getNumericValue = (row, possibleKeys, defaultValue = 0) => {
     return isNaN(parsed) ? defaultValue : parsed;
 };
 
+const getNullableNumeric = (row, possibleKeys) => {
+    const value = getValue(row, possibleKeys, null);
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? null : parsed;
+};
+
 // Function to safely get an integer value
 const getIntegerValue = (row, possibleKeys, defaultValue = 0) => {
     const value = getValue(row, possibleKeys, defaultValue);
@@ -103,6 +110,13 @@ const createCardObject = (row) => {
         highPrice: getNumericValue(row, ['highPrice']),
         marketPrice: getNumericValue(row, ['marketPrice']),
         directLowPrice: getNumericValue(row, ['directLowPrice']),
+        // CardMarket stays nullable so unpriced is not coerced to 0 before display.
+        cardmarketTrend: getNullableNumeric(row, ['cardmarketTrend']),
+        cardmarketLow: getNullableNumeric(row, ['cardmarketLow']),
+        cardmarketAvg: getNullableNumeric(row, ['cardmarketAvg']),
+        cardmarketTrendFoil: getNullableNumeric(row, ['cardmarketTrendFoil']),
+        cardmarketLowFoil: getNullableNumeric(row, ['cardmarketLowFoil']),
+        cardmarketAvgFoil: getNullableNumeric(row, ['cardmarketAvgFoil']),
 
         // Card properties
         subTypeName: row.subTypeName || '',

@@ -17,8 +17,8 @@ import { AddShoppingCart as AddShoppingCartIcon } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
+import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import Header from '../components/elements/Header.jsx';
-import { CardImageModal } from '../components/ui/CardImagePreview.jsx';
 import { getPublicBinder } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
 import { addCardToTradeDraft } from '../utils/tradeDraft.js';
@@ -163,13 +163,13 @@ function SharedCardArt({ imageUrl, fallbackUrl, alt, onClick, qty, mutedColor })
 const SharedBinder = () => {
     const { token } = useParams();
     const { isDark } = useThemeMode();
+    const { openDetail } = useCardDetail();
     const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
     const [entries, setEntries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [sort, setSort] = useState('nameAsc');
-    const [previewCard, setPreviewCard] = useState(null);
     const [toast, setToast] = useState('');
 
     const bgGradient = isDark
@@ -244,6 +244,11 @@ const SharedBinder = () => {
         },
         [catalogById],
     );
+
+    const openEntryDetail = (entry) => {
+        const live = catalogById.get(entry.cardId);
+        if (live?._uniqueId) openDetail(live);
+    };
 
     const sorted = useMemo(() => {
         const list = [...entries];
@@ -444,16 +449,22 @@ const SharedBinder = () => {
                                                     alt={card.name}
                                                     qty={entry.quantity}
                                                     mutedColor={mutedColor}
-                                                    onClick={() =>
-                                                        setPreviewCard({
-                                                            name: card.name,
-                                                            imageUrl: card.imageUrl,
-                                                            imageUrlFallback: card.imageUrlFallback,
-                                                        })
-                                                    }
+                                                    onClick={() => openEntryDetail(entry)}
                                                 />
                                                 <Box sx={{ px: 0.75, py: 0.6 }}>
                                                     <Typography
+                                                        component={catalogById.get(entry.cardId) ? 'button' : 'span'}
+                                                        type={catalogById.get(entry.cardId) ? 'button' : undefined}
+                                                        onClick={
+                                                            catalogById.get(entry.cardId)
+                                                                ? () => openEntryDetail(entry)
+                                                                : undefined
+                                                        }
+                                                        aria-label={
+                                                            catalogById.get(entry.cardId)
+                                                                ? `View details for ${card.name}`
+                                                                : undefined
+                                                        }
                                                         sx={{
                                                             color: textColor,
                                                             fontSize: '0.75rem',
@@ -462,6 +473,14 @@ const SharedBinder = () => {
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap',
+                                                            border: 0,
+                                                            background: 'none',
+                                                            p: 0,
+                                                            m: 0,
+                                                            width: '100%',
+                                                            textAlign: 'left',
+                                                            fontFamily: 'inherit',
+                                                            cursor: catalogById.get(entry.cardId) ? 'pointer' : 'default',
                                                         }}
                                                     >
                                                         {card.name}
@@ -530,14 +549,6 @@ const SharedBinder = () => {
                     )}
                 </Paper>
             </Container>
-
-            <CardImageModal
-                open={Boolean(previewCard)}
-                onClose={() => setPreviewCard(null)}
-                imageUrl={previewCard?.imageUrl}
-                fallbackUrl={previewCard?.imageUrlFallback}
-                cardName={previewCard?.name}
-            />
 
             <Snackbar
                 open={Boolean(toast)}

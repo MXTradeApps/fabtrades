@@ -34,9 +34,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useEntitlement } from '../contexts/EntitlementContext.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
+import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import Header from '../components/elements/Header.jsx';
 import { SearchInput } from '../components/search/index.js';
-import { CardImageModal } from '../components/ui/CardImagePreview.jsx';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import {
     ensureBinderShare,
@@ -200,6 +200,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const { user } = useAuth();
     const { isPro, loading: entitlementLoading } = useEntitlement();
     const { isDark } = useThemeMode();
+    const { openDetail } = useCardDetail();
     const { cards, cardGroups, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
     const [entries, setEntries] = useState([]);
@@ -211,7 +212,6 @@ const BinderCollection = ({ isWanted = false }) => {
     const [busyCardId, setBusyCardId] = useState(null);
     const [limitMessage, setLimitMessage] = useState('');
     const [toast, setToast] = useState('');
-    const [previewCard, setPreviewCard] = useState(null);
     const [shareOpen, setShareOpen] = useState(false);
     const [share, setShare] = useState(null);
     const [shareBusy, setShareBusy] = useState(false);
@@ -316,6 +316,11 @@ const BinderCollection = ({ isWanted = false }) => {
         },
         [catalogById],
     );
+
+    const openEntryDetail = (entry) => {
+        const live = catalogById.get(entry.cardId);
+        if (live?._uniqueId) openDetail(live);
+    };
 
     const filtered = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
@@ -856,7 +861,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                             alt={card.name}
                                             qty={qty}
                                             mutedColor={mutedColor}
-                                            onClick={() => setPreviewCard(card)}
+                                            onClick={() => openEntryDetail(entry)}
                                         />
 
                                         <Box
@@ -870,6 +875,18 @@ const BinderCollection = ({ isWanted = false }) => {
                                             }}
                                         >
                                             <Typography
+                                                component={catalogById.get(entry.cardId) ? 'button' : 'span'}
+                                                type={catalogById.get(entry.cardId) ? 'button' : undefined}
+                                                onClick={
+                                                    catalogById.get(entry.cardId)
+                                                        ? () => openEntryDetail(entry)
+                                                        : undefined
+                                                }
+                                                aria-label={
+                                                    catalogById.get(entry.cardId)
+                                                        ? `View details for ${card.name}`
+                                                        : undefined
+                                                }
                                                 sx={{
                                                     fontWeight: 700,
                                                     fontSize: '0.8rem',
@@ -879,6 +896,13 @@ const BinderCollection = ({ isWanted = false }) => {
                                                     WebkitLineClamp: 2,
                                                     WebkitBoxOrient: 'vertical',
                                                     overflow: 'hidden',
+                                                    border: 0,
+                                                    background: 'none',
+                                                    p: 0,
+                                                    m: 0,
+                                                    textAlign: 'left',
+                                                    fontFamily: 'inherit',
+                                                    cursor: catalogById.get(entry.cardId) ? 'pointer' : 'default',
                                                 }}
                                             >
                                                 {card.name}
@@ -1092,14 +1116,6 @@ const BinderCollection = ({ isWanted = false }) => {
                     )}
                 </Paper>
             </Container>
-
-            <CardImageModal
-                open={Boolean(previewCard)}
-                onClose={() => setPreviewCard(null)}
-                imageUrl={previewCard?.imageUrl}
-                fallbackUrl={previewCard?.imageUrlFallback}
-                cardName={previewCard?.name}
-            />
 
             <Dialog
                 open={shareOpen}

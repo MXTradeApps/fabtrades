@@ -3,7 +3,9 @@ import { Box, Typography, Chip } from '@mui/material';
 import { getCardGradient, highlightMatch, formatCardType } from '../../utils/searchUtils';
 import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 import { usePriceType } from '../../contexts/PriceContext.jsx';
+import { useCardDetail } from '../../contexts/CardDetailContext.jsx';
 import { CardThumbnail } from '../ui/CardImagePreview.jsx';
+import { resolvePrinting } from '../../utils/printingsForCard.js';
 
 /**
  * SearchOption Component
@@ -18,6 +20,7 @@ const SearchOption = ({
 }) => {
     const { isDark } = useThemeMode();
     const { priceSource } = usePriceType();
+    const { openDetail } = useCardDetail();
     const [isHovered, setIsHovered] = useState(false);
     const gradient = getCardGradient(option.subTypeName, isDark);
     const textSegments = highlightMatch(option.label, searchTerm);
@@ -68,6 +71,12 @@ const SearchOption = ({
         setIsHovered(false);
     };
 
+    const printing = resolvePrinting(option.card || option);
+    const openPrinting = (event) => {
+        event.stopPropagation();
+        if (printing) openDetail(printing);
+    };
+
     return (
         <Box
             onClick={onClick}
@@ -101,6 +110,7 @@ const SearchOption = ({
                 fallbackUrl={imageUrlFallback}
                 alt={option.label} 
                 size={28}
+                onClick={printing ? openPrinting : undefined}
             />
             
             {/* Card info: name and set - takes remaining space */}
@@ -119,7 +129,10 @@ const SearchOption = ({
                     minWidth: 0
                 }}>
                     <Typography
-                        component="span"
+                        component={printing ? 'button' : 'span'}
+                        type={printing ? 'button' : undefined}
+                        onClick={printing ? openPrinting : undefined}
+                        aria-label={printing ? `View details for ${option.card?.name || option.label}` : undefined}
                         sx={{
                             fontSize: '0.8rem',
                             fontWeight: isHighlighted || isHovered ? 600 : 500,
@@ -127,7 +140,14 @@ const SearchOption = ({
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            lineHeight: 1.3
+                            lineHeight: 1.3,
+                            border: 0,
+                            background: 'none',
+                            p: 0,
+                            m: 0,
+                            textAlign: 'left',
+                            fontFamily: 'inherit',
+                            cursor: printing ? 'pointer' : 'inherit',
                         }}
                     >
                         {textSegments.map((segment, index) => (
@@ -192,14 +212,29 @@ const SearchOption = ({
                 )}
             </Box>
             
-            {/* Price - market primary, low secondary */}
-            <Box sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-end',
-                flexShrink: 0,
-                gap: 0.1
-            }}>
+            {/* Price is the remaining add control (row click also adds). */}
+            <Box
+                component="button"
+                type="button"
+                aria-label={`Add ${option.label}`}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onClick?.(event);
+                }}
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    flexShrink: 0,
+                    gap: 0.1,
+                    border: 0,
+                    background: 'none',
+                    p: 0,
+                    m: 0,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                }}
+            >
                 <Typography
                     component="span"
                     sx={{

@@ -72,7 +72,12 @@ export default defineConfig([
         // alongside its hook. Splitting them to satisfy Fast Refresh would spread
         // one concept across two files for no runtime benefit; the cost is losing
         // Fast Refresh on these specific files during development.
-        files: ['src/contexts/**/*.jsx', 'src/hooks/**/*.jsx', 'src/main.jsx'],
+        files: [
+            'src/contexts/**/*.jsx',
+            'src/hooks/**/*.jsx',
+            'src/main.jsx',
+            'src/components/cardDetail/**/*.jsx',
+        ],
         rules: {
             'react-refresh/only-export-components': 'off',
         },
