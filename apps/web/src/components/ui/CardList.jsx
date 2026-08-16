@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     List,
     ListItem,
@@ -17,7 +17,10 @@ import { formatCurrency } from "../../utils/helpers.js";
 import { getCardGradient } from "../../utils/searchUtils.js";
 import { usePriceType } from "../../contexts/PriceContext.jsx";
 import { useThemeMode } from "../../contexts/ThemeContext.jsx";
-import { CardThumbnail, CardImageModal } from "./CardImagePreview.jsx";
+import { CardThumbnail } from "./CardImagePreview.jsx";
+import { useCardDetail } from "../../contexts/CardDetailContext.jsx";
+import { useCardData } from "../../hooks/useCardData.jsx";
+import { resolvePrinting } from "../../utils/printingsForCard.js";
 
 const CardList = ({ 
     cards, 
@@ -27,8 +30,8 @@ const CardList = ({
     viewMode = 'list',
     isLandscape = false,
 }) => {
-    const [imageModalOpen, setImageModalOpen] = useState(false);
-    const [selectedCard, setSelectedCard] = useState(null);
+    const { openDetail } = useCardDetail();
+    const { cardIdLookup } = useCardData();
     const { priceSource } = usePriceType();
     const { isDark } = useThemeMode();
     const isGrid = viewMode === 'grid';
@@ -46,20 +49,15 @@ const CardList = ({
         return formatCurrency(amount);
     };
 
+    const handleOpenDetail = (card) => {
+        const printing = resolvePrinting(card, cardIdLookup);
+        if (printing) openDetail(printing);
+    };
+
     const handleQuantityChange = (cardIndex, newQuantity) => {
         if (onUpdateQuantity) {
             onUpdateQuantity(cardIndex, newQuantity);
         }
-    };
-
-    const handleImageClick = (card) => {
-        setSelectedCard(card);
-        setImageModalOpen(true);
-    };
-
-    const handleImageModalClose = () => {
-        setImageModalOpen(false);
-        setSelectedCard(null);
     };
 
     // Generate quantity options (1-6)
@@ -157,6 +155,7 @@ const CardList = ({
                 }}>
                     {cards.map((card, index) => {
                         const gradient = getCardGradient(card.subTypeName, isDark);
+                        const printing = resolvePrinting(card, cardIdLookup);
                         return (
                             <ListItem
                                 key={`${card.uniqueId || card.name}-${index}`}
@@ -208,13 +207,17 @@ const CardList = ({
                                     fallbackUrl={card.imageUrlFallback}
                                     alt={card.name}
                                     size={40}
-                                    onClick={() => handleImageClick(card)}
+                                    onClick={printing ? () => handleOpenDetail(card) : undefined}
                                 />
                                 
                                 <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     {quantitySelect(card, index)}
 
                                     <Typography
+                                        component={printing ? 'button' : 'span'}
+                                        type={printing ? 'button' : undefined}
+                                        onClick={printing ? () => handleOpenDetail(card) : undefined}
+                                        aria-label={printing ? `View details for ${card.name}` : undefined}
                                         variant="body2"
                                         sx={{
                                             fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.95rem', lg: '1rem', xl: '1.125rem' },
@@ -223,7 +226,20 @@ const CardList = ({
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
                                             flex: 1,
-                                            minWidth: 0
+                                            minWidth: 0,
+                                            border: 0,
+                                            background: 'none',
+                                            p: 0,
+                                            m: 0,
+                                            textAlign: 'left',
+                                            color: 'inherit',
+                                            fontFamily: 'inherit',
+                                            cursor: printing ? 'pointer' : 'default',
+                                            textDecoration: printing ? 'underline' : 'none',
+                                            textDecorationColor: 'transparent',
+                                            '&:hover': printing ? {
+                                                textDecorationColor: 'currentColor',
+                                            } : undefined,
                                         }}
                                     >
                                         {card.name}
@@ -311,6 +327,7 @@ const CardList = ({
                 >
                     {cards.map((card, index) => {
                         const gradient = getCardGradient(card.subTypeName, isDark);
+                        const printing = resolvePrinting(card, cardIdLookup);
                         return (
                             <Box
                                 key={`${card.uniqueId || card.name}-${index}`}
@@ -332,17 +349,17 @@ const CardList = ({
                                 }}
                             >
                                 <Box
-                                    component="button"
-                                    type="button"
-                                    onClick={() => handleImageClick(card)}
-                                    aria-label={`Preview ${card.name || 'card'}`}
+                                    component={printing ? 'button' : 'div'}
+                                    type={printing ? 'button' : undefined}
+                                    onClick={printing ? () => handleOpenDetail(card) : undefined}
+                                    aria-label={printing ? `View details for ${card.name || 'card'}` : undefined}
                                     sx={{
                                         position: 'relative',
                                         width: '100%',
                                         aspectRatio: '5 / 7',
                                         p: 0,
                                         border: 0,
-                                        cursor: 'pointer',
+                                        cursor: printing ? 'pointer' : 'default',
                                         backgroundColor: 'rgba(0, 0, 0, 0.15)',
                                         overflow: 'hidden',
                                     }}
@@ -411,6 +428,10 @@ const CardList = ({
                                     gap: 0.35,
                                 }}>
                                     <Typography
+                                        component={printing ? 'button' : 'span'}
+                                        type={printing ? 'button' : undefined}
+                                        onClick={printing ? () => handleOpenDetail(card) : undefined}
+                                        aria-label={printing ? `View details for ${card.name}` : undefined}
                                         sx={{
                                             color: textColor,
                                             fontWeight: 600,
@@ -421,6 +442,18 @@ const CardList = ({
                                             WebkitBoxOrient: 'vertical',
                                             overflow: 'hidden',
                                             minHeight: '1.7em',
+                                            border: 0,
+                                            background: 'none',
+                                            p: 0,
+                                            m: 0,
+                                            textAlign: 'left',
+                                            fontFamily: 'inherit',
+                                            cursor: printing ? 'pointer' : 'default',
+                                            textDecoration: printing ? 'underline' : 'none',
+                                            textDecorationColor: 'transparent',
+                                            '&:hover': printing ? {
+                                                textDecorationColor: 'currentColor',
+                                            } : undefined,
                                         }}
                                         title={card.name}
                                     >
@@ -468,14 +501,6 @@ const CardList = ({
             )}
 
         </Box>
-
-        <CardImageModal
-            open={imageModalOpen}
-            onClose={handleImageModalClose}
-            imageUrl={selectedCard?.imageUrl}
-            fallbackUrl={selectedCard?.imageUrlFallback}
-            cardName={selectedCard?.name}
-        />
         </>
     );
 };

@@ -10,6 +10,8 @@ import TermsOfUse from './pages/TermsOfUse.jsx';
 import Support from './pages/Support.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { EntitlementProvider } from './contexts/EntitlementContext.jsx';
+import { CardDetailProvider } from './contexts/CardDetailContext.jsx';
+import { CardDetailHost } from './components/cardDetail/CardDetailModal.jsx';
 
 function App() {
     return (
@@ -17,18 +19,21 @@ function App() {
             {/* Inside AuthProvider: the entitlement is keyed by the signed-in user. */}
             <EntitlementProvider>
                 <Router>
-                    <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/history" element={<TradeHistory />} />
-                        <Route path="/binder" element={<BinderCollection isWanted={false} />} />
-                        <Route path="/wants" element={<BinderCollection isWanted={true} />} />
-                        <Route path="/b/:token" element={<SharedBinder />} />
-                        <Route path="/sets" element={<SetList />} />
-                        <Route path="/sets/:groupId" element={<SetDetail />} />
-                        <Route path="/privacy" element={<PrivacyPolicy />} />
-                        <Route path="/terms" element={<TermsOfUse />} />
-                        <Route path="/support" element={<Support />} />
-                    </Routes>
+                    <CardDetailProvider>
+                        <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/history" element={<TradeHistory />} />
+                            <Route path="/binder" element={<BinderCollection isWanted={false} />} />
+                            <Route path="/wants" element={<BinderCollection isWanted={true} />} />
+                            <Route path="/b/:token" element={<SharedBinder />} />
+                            <Route path="/sets" element={<SetList />} />
+                            <Route path="/sets/:groupId" element={<SetDetail />} />
+                            <Route path="/privacy" element={<PrivacyPolicy />} />
+                            <Route path="/terms" element={<TermsOfUse />} />
+                            <Route path="/support" element={<Support />} />
+                        </Routes>
+                        <CardDetailHost />
+                    </CardDetailProvider>
                 </Router>
             </EntitlementProvider>
         </AuthProvider>

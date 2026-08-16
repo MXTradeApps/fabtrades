@@ -35,6 +35,7 @@ export default {
         '/node_modules/',
         '/dist/',
         '/build/',
+        '/tests/fixtures/',
     ],
     moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json'],
     transformIgnorePatterns: [

@@ -26,6 +26,9 @@ apps/mobile/env/*.local.json
 *.swo
 *~
 
+# Scratch files
+*.tmp
+
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -111,4 +114,7 @@ apps/web/.catalog-snapshot.json
 # Supabase CLI local state
 supabase/.branches/
 supabase/.temp/
+
+# App Store screenshot drafts / exports (large binary assets)
+screenshots/
 
