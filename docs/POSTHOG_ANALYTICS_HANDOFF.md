@@ -22,7 +22,7 @@
 
 ### What the app does
 
-FAB Trades is a Flesh and Blood TCG companion: users price-check cards, balance trades between two parties, keep a card **binder** and **want list**, **scan** physical cards with the camera, and track **lend/borrow** with friends. A **Pro** subscription (RevenueCat) unlocks the "trade filler" feature and lifts free-tier caps (binder 5 distinct cards, want list 4, 1 loaned card, 3 saved trades — see `packages/contracts/free_limits.json`).
+FAB Trades is a Flesh and Blood TCG companion: users price-check cards, balance trades between two parties, keep a card **binder** and **want list**, **scan** physical cards with the camera, and track **lend/borrow** with friends. **Find Trade Filler** is free. A **Pro** subscription (RevenueCat) unlocks full price history and lifts free-tier caps (binder 50 distinct cards, want list 50, 1 loaned card, 3 saved trades — see `packages/contracts/free_limits.json`).
 
 ### Identity model
 
@@ -244,7 +244,7 @@ Files: `apps/mobile/lib/features/trade/trade_screen.dart`, `apps/mobile/lib/core
 | `trade_quantity_changed` | qty stepper | `side`, `new_quantity` |
 | `trade_cash_adjusted` | cash field changed | `side`, `amount` |
 | `trade_cleared` | clear-trade action | `their_card_count`, `my_card_count` |
-| `trade_filler_opened` | filler sheet opened (Pro gate passed) — `trade_filler_sheet.dart` | `value_gap` |
+| `trade_filler_opened` | filler sheet opened — `trade_filler_sheet.dart` | `value_gap` |
 | `trade_filler_applied` | filler suggestions accepted | `cards_added`, `value_gap_before`, `value_gap_after` |
 | `trade_confirm_opened` | Confirm Trade sheet shown — `trade_screen.dart` | value/count props below |
 | `trade_confirmed` | confirm executed — `confirm_trade.dart` | `their_card_count`, `my_card_count`, `their_value`, `my_value`, `cash_amount`, `value_diff`, `binder_reconciled` (bool), `price_source` |
@@ -264,7 +264,7 @@ Files: `apps/mobile/lib/features/binder/binder_screen.dart`, `apps/mobile/lib/fe
 | `binder_card_removed` | removal | `card_id` |
 | `want_list_card_added` | add to want list (from card detail or actions sheet) | `card_id`, `source`, `want_list_size_after` |
 | `want_list_card_removed` | removal | `card_id` |
-| `free_limit_hit` | any free-tier cap blocks an action — `pro_limits.dart` is the choke point | `limit_type` (`binder`/`want_list`/`lend`/`trade_history`/`trade_filler`), `current_count`, `limit` |
+| `free_limit_hit` | any free-tier cap blocks an action — `pro_limits.dart` is the choke point | `limit_type` (`binder`/`want_list`/`lend`/`trade_history`), `current_count`, `limit` |
 
 `free_limit_hit` is the top of the monetization funnel — it must fire every time a cap blocks the user, immediately before the paywall is offered.
 
@@ -287,7 +287,7 @@ The paywall and Customer Center are **native RevenueCat UI** — you cannot inst
 
 | Event | Trigger | Properties |
 |---|---|---|
-| `paywall_shown` | right before `RevenueCatUI` paywall presented (`ensurePro` / `pro_gate.dart` path) | `trigger` (`trade_filler`/`binder_limit`/`want_list_limit`/`lend_limit`/`trade_history_limit`/`settings`) |
+| `paywall_shown` | right before `RevenueCatUI` paywall presented (`ensurePro` / `pro_gate.dart` path) | `trigger` (`price_history`/`binder_limit`/`want_list_limit`/`lend_limit`/`trade_history_limit`/`settings`) |
 | `purchase_completed` | `PaywallResult.purchased` | `trigger`, plus product id if the result exposes it |
 | `purchase_restored` | `PaywallResult.restored` or explicit restore in `subscription_section.dart` | — |
 | `paywall_dismissed` | `PaywallResult.cancelled` / closed without purchase | `trigger` |

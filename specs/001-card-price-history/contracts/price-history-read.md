@@ -11,16 +11,19 @@ GET /rest/v1/fab_price_history
   &select=card_id,captured_on,tcg_low,tcg_market,cm_low,cm_trend
 ```
 
-Mobile today: `CardRepository.priceHistory(cardId)` — `.from('fab_price_history').select().eq('card_id', cardId).order('captured_on')`.
+| Client | Call |
+| --- | --- |
+| Mobile | `CardRepository.priceHistory(cardId)` — `.from('fab_price_history').select().eq('card_id', cardId).order('captured_on')` |
+| Web | `priceHistory(printingId)` on `apps/web/src/services/fabDb.js` — same path via existing `restGet` |
 
 | Parameter | Required | Meaning |
 | --- | --- | --- |
-| `card_id` | yes | Printing id (`<product_id>-<subtype>`) |
+| `card_id` | yes | Printing id (`<product_id>-<subtype>`). Web: overlay `_uniqueId`. |
 | `order` | yes | `captured_on` ascending (oldest → newest) |
 
-No date filter in v1. Window clipping is client-side (see [history-section.md](./history-section.md)).
+No date filter in v1. Window clipping is client-side (see [price-history-series.md](./price-history-series.md) and [history-section.md](./history-section.md)).
 
-Auth: `anon` or `authenticated` bearer. RLS policy `"Public read fab_price_history"` (`using (true)`). Service role is the only writer (pipeline).
+Auth: `anon` or `authenticated` bearer (web `fabDb` uses the publishable key). RLS policy `"Public read fab_price_history"` (`using (true)`). Service role is the only writer (pipeline).
 
 ## Response row
 
@@ -50,9 +53,10 @@ Empty list `[]` is success: Printing has no snapshots yet → client empty state
 
 | Case | Client behavior |
 | --- | --- |
-| Network / 5xx / timeout | History **error + retry**. Prices box unchanged. |
+| Network / 5xx / timeout | History **error + retry**. Prices box unchanged. Overlay (web) / page (mobile) still usable. |
 | Unknown `card_id` | `[]` (no row), not 404. Empty state. |
 | Malformed row | Skip or fail that parse; do not coerce null Low to 0. |
+| Stale response after Printing switch | Ignore; do not paint the previous Printing’s line. |
 
 ## Writes
 

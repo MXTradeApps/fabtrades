@@ -39,6 +39,9 @@ with what the product should do — in which case change it and update both.
   sign of a comparison using ASCII names only.
 - **Scanning, binder reconciliation, and the trade filler.** Mobile-only, so
   there is no second implementation to keep honest.
+- **Price-history Pro CTA.** Mobile shows “See full history with Pro”; web does
+  not. `price_history_series.json` covers Low extraction, the 30-day clip,
+  gaps, and delta — not that chrome.
 
 ## Files
 
@@ -49,6 +52,7 @@ with what the product should do — in which case change it and update both.
 | `trade_math.json` | `apps/web/src/utils/trade.js` | `apps/mobile/lib/core/models/trade.dart` |
 | `free_limits.json` | `apps/web/src/utils/freeLimits.js` | `apps/mobile/lib/core/logic/free_limits.dart` |
 | `brand_palette.json` | `apps/web/src/contexts/ThemeContext.jsx` / `index.css` | `apps/mobile/lib/app/theme.dart` |
+| `price_history_series.json` | `apps/web/src/utils/priceHistorySeries.js` | `apps/mobile/lib/core/logic/price_history_series.dart` |
 
 `free_limits.json` is the one fixture where drift would destroy data rather than
 just look inconsistent. Both clients enforce the free trade window by tombstoning

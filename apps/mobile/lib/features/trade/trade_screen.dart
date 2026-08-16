@@ -17,7 +17,6 @@ import '../../core/providers.dart';
 import '../onboarding/onboarding_keys.dart';
 import '../onboarding/showcase_theme.dart';
 import '../onboarding/tour_copy.dart';
-import '../paywall/pro_gate.dart';
 import '../scan/scan_screen.dart';
 import '../search/card_picker.dart';
 import 'trade_filler_sheet.dart';
@@ -107,25 +106,7 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
                         trade: trade,
                         settings: settings,
                         pricing: pricing,
-                        fillerLocked: !ref.watch(isProProvider),
-                        onFindFiller: () async {
-                          if (!ref.read(isProProvider)) {
-                            ref.read(analyticsProvider).capture(
-                              'free_limit_hit',
-                              {
-                                'limit_type': 'trade_filler',
-                                'current_count': 0,
-                                'limit': 0,
-                              },
-                            );
-                          }
-                          if (!await ensurePro(context, ref,
-                              trigger: 'trade_filler')) {
-                            return;
-                          }
-                          if (!context.mounted) return;
-                          await showTradeFillerSheet(context, ref);
-                        },
+                        onFindFiller: () => showTradeFillerSheet(context, ref),
                         onDrag: (dy) {
                           setState(() {
                             _topFraction = (frac + dy / avail)
@@ -423,7 +404,6 @@ class _DragBar extends StatelessWidget {
     required this.pricing,
     required this.onDrag,
     required this.onFindFiller,
-    required this.fillerLocked,
   });
 
   final Trade trade;
@@ -431,10 +411,6 @@ class _DragBar extends StatelessWidget {
   final Pricing pricing;
   final ValueChanged<double> onDrag;
   final VoidCallback onFindFiller;
-
-  /// Marks Find Trade Filler as a Pro feature so the badge is visible before
-  /// the tap, rather than the paywall arriving as a surprise.
-  final bool fillerLocked;
 
   double _lowTotal(List<TradeItem> items, double cash) =>
       items.fold<double>(
@@ -518,7 +494,7 @@ class _DragBar extends StatelessWidget {
                   // When the sides don't match, offer a shortcut to find cards
                   // that fill the value gap; it lives in the bar's empty middle.
                   if (!balanced) ...[
-                    _FindFillerButton(onTap: onFindFiller, locked: fillerLocked),
+                    _FindFillerButton(onTap: onFindFiller),
                     const Spacer(),
                   ],
                   Column(
@@ -604,9 +580,8 @@ class _DragBar extends StatelessWidget {
 /// Compact "Find Trade Filler" pill shown in the drag bar's empty middle space
 /// whenever the two sides are not of equal value.
 class _FindFillerButton extends StatelessWidget {
-  const _FindFillerButton({required this.onTap, this.locked = false});
+  const _FindFillerButton({required this.onTap});
   final VoidCallback onTap;
-  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +597,7 @@ class _FindFillerButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(locked ? Icons.lock_outline : Icons.auto_fix_high,
+              Icon(Icons.auto_fix_high,
                   size: 14, color: scheme.onPrimaryContainer),
               const SizedBox(width: 5),
               Text(
@@ -633,10 +608,6 @@ class _FindFillerButton extends StatelessWidget {
                   color: scheme.onPrimaryContainer,
                 ),
               ),
-              if (locked) ...[
-                const SizedBox(width: 6),
-                const ProBadge(),
-              ],
             ],
           ),
         ),

@@ -1,0 +1,210 @@
+{
+  "$comment": "Low-series rules for card price history. Web (JS) and mobile (Dart) both assert these cases. Chrome such as the mobile Pro CTA is not in this fixture. See packages/contracts/README.md and specs/001-card-price-history/contracts/price-history-series.md.",
+  "now": "2026-08-16",
+  "windowStart": "2026-07-18",
+  "cases": [
+    {
+      "name": "Low is tcg_low for TCGplayer, never Market",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [
+        {
+          "captured_on": "2026-08-01",
+          "tcg_low": 1.25,
+          "tcg_market": 9.0,
+          "cm_low": null
+        },
+        {
+          "captured_on": "2026-08-10",
+          "tcg_low": 1.5,
+          "tcg_market": 9.0,
+          "cm_low": null
+        }
+      ],
+      "expected": {
+        "points": [
+          { "date": "2026-08-01", "low": 1.25 },
+          { "date": "2026-08-10", "low": 1.5 }
+        ],
+        "hasOlder": false,
+        "chartable": true,
+        "delta": 0.25
+      }
+    },
+    {
+      "name": "Low is cm_low for CardMarket, never tcg_low",
+      "source": "cardmarket",
+      "window": "last30",
+      "snapshots": [
+        {
+          "captured_on": "2026-08-01",
+          "tcg_low": 4.0,
+          "cm_low": 2.0
+        },
+        {
+          "captured_on": "2026-08-10",
+          "tcg_low": 5.0,
+          "cm_low": 2.5
+        }
+      ],
+      "expected": {
+        "points": [
+          { "date": "2026-08-01", "low": 2.0 },
+          { "date": "2026-08-10", "low": 2.5 }
+        ],
+        "hasOlder": false,
+        "chartable": true,
+        "delta": 0.5
+      }
+    },
+    {
+      "name": "null Low is dropped, never coerced to 0",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [
+        { "captured_on": "2026-08-01", "tcg_low": 1.0 },
+        {
+          "captured_on": "2026-08-05",
+          "tcg_low": null,
+          "tcg_market": 3.0
+        },
+        { "captured_on": "2026-08-10", "tcg_low": 2.0 }
+      ],
+      "expected": {
+        "points": [
+          { "date": "2026-08-01", "low": 1.0 },
+          { "date": "2026-08-10", "low": 2.0 }
+        ],
+        "hasOlder": false,
+        "chartable": true,
+        "delta": 1.0
+      }
+    },
+    {
+      "name": "a Market-only row is a gap, not an observation",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [
+        { "captured_on": "2026-08-05", "tcg_market": 4.0 }
+      ],
+      "expected": {
+        "points": [],
+        "hasOlder": false,
+        "chartable": false,
+        "delta": null
+      }
+    },
+    {
+      "name": "default window clips to last 30 calendar days",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [
+        { "captured_on": "2026-07-17", "tcg_low": 1.0 },
+        { "captured_on": "2026-07-18", "tcg_low": 2.0 },
+        { "captured_on": "2026-08-16", "tcg_low": 3.0 }
+      ],
+      "expected": {
+        "points": [
+          { "date": "2026-07-18", "low": 2.0 },
+          { "date": "2026-08-16", "low": 3.0 }
+        ],
+        "hasOlder": true,
+        "chartable": true,
+        "delta": 1.0
+      }
+    },
+    {
+      "name": "delta is last visible Low minus first visible Low",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [
+        { "captured_on": "2026-07-01", "tcg_low": 10.0 },
+        { "captured_on": "2026-08-01", "tcg_low": 1.0 },
+        { "captured_on": "2026-08-16", "tcg_low": 3.5 }
+      ],
+      "expected": {
+        "points": [
+          { "date": "2026-08-01", "low": 1.0 },
+          { "date": "2026-08-16", "low": 3.5 }
+        ],
+        "hasOlder": true,
+        "chartable": true,
+        "delta": 2.5
+      }
+    },
+    {
+      "name": "last30 with only one point in window is not chartable even if older Lows exist",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [
+        { "captured_on": "2026-06-01", "tcg_low": 1.0 },
+        { "captured_on": "2026-08-16", "tcg_low": 4.0 }
+      ],
+      "expected": {
+        "points": [{ "date": "2026-08-16", "low": 4.0 }],
+        "hasOlder": true,
+        "chartable": false,
+        "delta": null
+      }
+    },
+    {
+      "name": "full window includes older Lows and recomputes delta",
+      "source": "tcgplayer",
+      "window": "full",
+      "snapshots": [
+        { "captured_on": "2026-06-01", "tcg_low": 1.0 },
+        { "captured_on": "2026-08-16", "tcg_low": 4.0 }
+      ],
+      "expected": {
+        "points": [
+          { "date": "2026-06-01", "low": 1.0 },
+          { "date": "2026-08-16", "low": 4.0 }
+        ],
+        "hasOlder": true,
+        "chartable": true,
+        "delta": 3.0
+      }
+    },
+    {
+      "name": "CardMarket never falls back to tcg_low",
+      "source": "cardmarket",
+      "window": "last30",
+      "snapshots": [
+        { "captured_on": "2026-08-01", "tcg_low": 1.0 },
+        { "captured_on": "2026-08-16", "tcg_low": 2.0 }
+      ],
+      "expected": {
+        "points": [],
+        "hasOlder": false,
+        "chartable": false,
+        "delta": null
+      }
+    },
+    {
+      "name": "fewer than two usable Lows is not chartable",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [
+        { "captured_on": "2026-08-16", "tcg_low": 1.0 }
+      ],
+      "expected": {
+        "points": [{ "date": "2026-08-16", "low": 1.0 }],
+        "hasOlder": false,
+        "chartable": false,
+        "delta": null
+      }
+    },
+    {
+      "name": "empty snapshots are not chartable",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [],
+      "expected": {
+        "points": [],
+        "hasOlder": false,
+        "chartable": false,
+        "delta": null
+      }
+    }
+  ]
+}

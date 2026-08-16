@@ -30,7 +30,7 @@ import '../auth/sign_in_sheet.dart';
 /// marked **Current** in the dashboard so offerings can be swapped remotely.
 ///
 /// [trigger] identifies what surfaced the paywall (e.g. `settings`,
-/// `trade_filler`, `binder_limit`), for analytics.
+/// `price_history`, `binder_limit`), for analytics.
 Future<bool> presentProPaywall(
   BuildContext context,
   WidgetRef ref, {

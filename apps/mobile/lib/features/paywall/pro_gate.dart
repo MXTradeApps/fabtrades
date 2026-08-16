@@ -38,9 +38,9 @@ Future<bool> ensurePro(
 ///
 /// ```dart
 /// ProGate(
-///   feature: 'Trade Filler',
-///   description: 'Fill the rest of a lopsided trade from your Binder.',
-///   child: TradeFillerButton(),
+///   feature: 'Full price history',
+///   description: 'See every recorded Low, not just the last 30 days.',
+///   child: PriceHistorySpanControl(),
 /// )
 /// ```
 class ProGate extends ConsumerWidget {

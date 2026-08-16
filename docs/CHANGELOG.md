@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Find Trade Filler** is free on mobile. The Pro lock, badge, and paywall
+  gate are gone; anyone can open the sheet from an unbalanced trade.
+
 ## [1.0.2] — App Store review compliance
 
 ### Added

@@ -1,34 +1,36 @@
 # Implementation Plan: Card Price History
 
-**Branch**: `001-card-price-history` | **Date**: 2026-08-14 | **Spec**: [spec.md](./spec.md)
+**Branch**: `001-card-price-history` | **Date**: 2026-08-16 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/001-card-price-history/spec.md`
 
 ## Summary
 
-Show this Printing’s observed Low over time on the mobile card details page, immediately under the existing Prices box. The catalog already stores daily snapshots in `fab_price_history` and mobile already fetches them (`CardRepository.priceHistory`); this work is the chart, the 30-day / Pro full-span window, honest empty/error states, and a quiet Pro upgrade line — not a new ingest or a new screen.
+Mobile already shows this Printing’s observed Low under the Prices box. This pass **ports that glance to web**: the existing card overlay (`CardDetailModal`), immediately under `CardDetailPrices`. Same catalog table (`fab_price_history`), same 30-day default, same one Low line for the selected marketplace. Pipeline and schema stay unchanged.
 
-Everyone (including signed-out) defaults to the last 30 calendar days of Low for the selected marketplace. Free players cannot extend that window; when older snapshots exist they get “See full history with Pro,” which opens the existing paywall. Pro can switch to the full recorded span. One line only. Unpriced days are gaps, never $0.
+Web-specific product rules from clarification (2026-08-16): no upgrade CTA (free players stay on 30 days with no unlock prompt); inspect is hover (pointer) and tap (touch). Pro on web still gets the full-span control when older snapshots exist. Set browse charts and a new card route stay out of scope.
+
+Because both clients now implement the same Low-series rules, `packages/contracts` becomes the source of truth (constitution IV). Mobile UI does not change except to assert that fixture.
 
 ## Technical Context
 
-**Language/Version**: Dart SDK ^3.12.2 (Flutter mobile app `apps/mobile`, version 1.0.2+9)
+**Language/Version**: JavaScript (React 19, Vite 7) in `apps/web`. Mobile remains Dart SDK ^3.12.2; series math already ships there.
 
-**Primary Dependencies**: Flutter, flutter_riverpod ^3.3.2, supabase_flutter ^2.15.4, intl ^0.20.3, **fl_chart ^1.2.0** (new — LineChart + LineTouchData for tap/hold inspect). Existing RevenueCat paywall (`presentProPaywall`). No pipeline or schema change.
+**Primary Dependencies**: Existing web stack (`@mui/material` ^7, `@supabase/supabase-js`, React). **No new chart library** — a small SVG line in the overlay (linear connectors, hover/tap inspect). Fetch through existing `fabDb.js` REST helper (same pattern as catalog reads). Entitlement via `useEntitlement().isPro` (read-only). Marketplace via existing `PriceContext.priceSource` (defaults to `tcgplayer`; no new picker).
 
-**Storage**: Supabase Postgres `public.fab_price_history` (already exists; public SELECT). Current prices remain on the in-memory / SharedPreferences catalog (`fab_cards_with_prices`). History is fetched live per Printing; not written to the catalog cache.
+**Storage**: Supabase Postgres `public.fab_price_history` (already exists; public SELECT). Web catalog snapshot does **not** include history; fetch live per Printing when the overlay opens. No client writes.
 
-**Testing**: `flutter test` in `apps/mobile` (CI: `.github/workflows/ci.yml`). Unit tests for Low extraction, 30-day clip, change summary, and CTA/span visibility. Widget tests for placement under Prices, empty/error, and Pro vs free chrome. No `packages/contracts` fixture (web is out of scope).
+**Testing**: `npm test` in `apps/web` (Jest + Testing Library). New `packages/contracts/price_history_series.json` asserted by both `apps/web` and `apps/mobile`. Widget tests for overlay placement, states, no web CTA, Pro span control, inspect readout. Mobile `flutter test` stays green, including a new contract test that replaces duplicated series expectations.
 
-**Target Platform**: iOS and Android via the existing Flutter app. Web is out of scope (no card-details Prices box).
+**Target Platform**: Web (Netlify). Overlay is used on trade, binder, wants, and set browse. iOS/Android history remains the existing Flutter section.
 
-**Project Type**: Dual-client product; this feature is **mobile-only** UI on an existing public catalog table.
+**Project Type**: Dual-client product. This pass is **web UI + shared series fixture** on an existing public catalog table. Mobile chart already exists.
 
-**Performance Goals**: History section appears without blocking today’s Prices (SC-001/SC-002: direction and size of change readable within 5 seconds of the section appearing). Chart stays glanceable on the default 30-day view (no pinch-zoom required).
+**Performance Goals**: Overlay Prices stay visible while history loads (SC-001/SC-002: direction and size of change readable within 5 seconds of the section appearing). Default 30-day view needs no zoom. One Printing’s rows (hundreds, not millions).
 
-**Constraints**: No invented prices (null Low ≠ 0). Signed-out works as free. Page must not wait on the network to draw catalog data already on device. Clients MUST NOT write entitlements. CardMarket history columns are currently always null (`ENABLE_CARDMARKET = false`) — selecting CardMarket shows the empty state, not a silent TCG substitute.
+**Constraints**: No invented prices (null Low ≠ 0). Signed-out works as free. Overlay must not wait on history to draw today’s prices. Clients MUST NOT write entitlements. No in-browser paywall from this section. CardMarket history columns are currently always null (`ENABLE_CARDMARKET = false`) — selecting CardMarket shows empty, not a silent TCG substitute. Web `priceSource` currently has no UI toggle and defaults to TCGplayer; the chart still follows that value.
 
-**Scale/Scope**: One new section on one screen (`CardDetailScreen`). One printing’s daily rows (hundreds over years, not millions). Catalog-wide ingest already runs nightly; this feature only reads.
+**Scale/Scope**: One new section in `CardDetailModal`. Shared fixture + JS series helper + `fabDb` read. No new routes, no set-row sparklines, no web billing.
 
 ## Constitution Check
 
@@ -36,24 +38,25 @@ Everyone (including signed-out) defaults to the last 30 calendar days of Low for
 
 | Principle / constraint | Status | How this plan complies |
 | --- | --- | --- |
-| I. Good Enough Ships | Pass | Reuse `fab_price_history`, `priceHistory()`, `isProProvider`, and `presentProPaywall`. Add one chart library. No new tables, RPCs, caches, or web surface. |
-| II. Code That Reveals Intent | Pass | `PricePoint` stays the snapshot; a dedicated Low-series helper names observed Low vs derived change vs UI window. Printing key is `card.id`. |
-| III. Fail Fast, Never Silent | Pass | Fetch errors surface as retry under Prices, not a swallowed empty chart. Missing Low is a gap. CardMarket with no `cm_low` history is empty, not a TCG fallback. |
-| IV. Honest Tests, Shared Contracts | Pass | Logic tests use real `PricePoint` shapes. No mock that returns the chart the test wanted. No contracts JSON: the 30-day window is mobile-only (web has no card details). |
-| V. Reproducible Ingest | Pass | Pipeline unchanged. Apps still only read the catalog. No backfill of dates before ingest began. |
-| Table is the deadline | Pass | Default 30-day line + numeric change sits under Prices; no extra navigation. |
-| No gate before value | Pass | Signed-out and free still see recent history and today’s prices. |
-| Speak the trader's language | Pass | Printing, Prices, Low, Binder-adjacent actions unchanged. |
-| Real prices or nothing | Pass | Observed Low only; straight connectors between observed spots; no $0. |
-| Local reads, background sync | Pass | Prices box keeps using cached catalog. History fetch is sibling and non-blocking. |
-| Server-owned Pro | Pass | Read `isProProvider` only; upgrade uses existing paywall. |
-| Dual-client DRY | Pass | Mobile-only UI is not forced onto web “for symmetry.” |
+| I. Good Enough Ships | Pass | Port into the existing overlay. Reuse `fab_price_history`, `fabDb` REST, `isPro`, `priceSource`. No new page, RPC, cache, or chart package. |
+| II. Code That Reveals Intent | Pass | Snapshot rows stay snapshots. A JS `priceHistorySeries` helper names observed Low vs derived delta vs window, matching the Dart helper. |
+| III. Fail Fast, Never Silent | Pass | Fetch errors are retry under Prices, not a swallowed empty chart. Missing Low is a gap. CardMarket with no `cm_low` is empty, not a TCG fallback. |
+| IV. Honest Tests, Shared Contracts | Pass | New `price_history_series.json`. Both suites assert the same cases. Widget tests use catalog-shaped printings and real snapshot lists, not a mock that returns the chart. |
+| V. Reproducible Ingest | Pass | Pipeline unchanged. Apps only read. No backfill. |
+| Table is the deadline | Pass | History sits under Prices in the overlay already used mid-trade. |
+| No gate before value | Pass | Signed-out and free still see 30-day history and today’s prices. Web does not add a paywall in this section. |
+| One brand, two peer surfaces | Pass | Same glance (under Prices), native inspect (hover/tap). Mobile CTA is not copied onto web. |
+| Speak the trader's language | Pass | Printing, Prices, Low unchanged. |
+| Real prices or nothing | Pass | Observed Low only; straight connectors; no $0. |
+| Local reads, background sync | Pass | Prices stay on the catalog snapshot. History fetch is sibling and non-blocking. |
+| Server-owned Pro | Pass | Read `useEntitlement().isPro` only. |
+| Dual-client DRY | Pass | Shared *fixture and vocabulary*, not a fake shared runtime. Mobile-only paywall CTA is not forced onto web. |
 
 No unjustified violations. Complexity Tracking left empty.
 
 ### Post-design re-check
 
-Phase 1 (data-model, contracts, quickstart) does not add schema, a second client, a shared contracts fixture, or a blocking `ProGate` around the chart. Gates still pass.
+Phase 1 adds a golden fixture and dual-surface UI/read contracts. It does not add schema, web billing, a new route, or a chart dependency. Gates still pass. Mobile `showProCta` stays a mobile UI rule and is intentionally **absent** from the shared fixture.
 
 ## Project Structure
 
@@ -67,37 +70,40 @@ specs/001-card-price-history/
 ├── quickstart.md        # Phase 1 output
 ├── contracts/           # Phase 1 output
 │   ├── price-history-read.md
+│   ├── price-history-series.md
 │   └── history-section.md
 ```
 
 ### Source Code (repository root)
 
 ```text
-apps/mobile/
-├── lib/
-│   ├── core/
-│   │   ├── data/card_repository.dart          # existing priceHistory()
-│   │   ├── logic/pricing.dart                 # marketplace Low formatter
-│   │   ├── logic/price_history_series.dart    # NEW: Low extract, clip, delta
-│   │   ├── models/card_model.dart             # PricePoint
-│   │   ├── models/app_settings.dart           # PriceSource
-│   │   └── providers.dart                     # NEW: priceHistoryProvider family
-│   └── features/
-│       ├── card_detail/
-│       │   ├── card_detail_screen.dart        # insert section under _PriceCard
-│       │   └── price_history_section.dart     # NEW: chart + states + chrome
-│       └── paywall/pro_paywall.dart           # presentProPaywall (reuse)
-├── test/
-│   ├── core/logic/price_history_series_test.dart
-│   └── widgets/price_history_section_test.dart
-└── pubspec.yaml                               # add fl_chart
+packages/contracts/
+├── price_history_series.json          # NEW: shared Low-series cases
+└── README.md                          # list the new fixture
 
-supabase/migrations/20260714131523_create_fab_card_tables.sql  # existing table; no new migration
-services/price-pipeline/                                       # unchanged
-apps/web/                                                      # out of scope
+apps/web/
+├── src/
+│   ├── services/fabDb.js              # NEW: priceHistory(printingId) REST read
+│   ├── utils/priceHistorySeries.js    # NEW: Low extract, clip, delta
+│   └── components/cardDetail/
+│       ├── CardDetailModal.jsx        # insert section under CardDetailPrices
+│       └── PriceHistorySection.jsx    # NEW: SVG line + states + Pro span
+├── tests/
+│   ├── contracts/priceHistorySeries.contract.test.js
+│   ├── utils/priceHistorySeries.test.js
+│   ├── services/fabDb.priceHistory.test.js
+│   └── components/PriceHistorySection.test.jsx
+└── package.json                       # unchanged dependencies
+
+apps/mobile/                           # already shipped; this pass only
+├── lib/core/logic/price_history_series.dart
+└── test/contracts/price_history_series_contract_test.dart  # NEW: assert fixture
+
+supabase/migrations/…create_fab_card_tables.sql  # existing table; no new migration
+services/price-pipeline/                         # unchanged
 ```
 
-**Structure Decision**: Feature lives in the existing Flutter app next to card details. Series math is a small `core/logic` module so tests do not need a widget. The chart widget is a sibling of `_PriceCard`, not a new route. Catalog ingest and web stay untouched.
+**Structure Decision**: Web history is a sibling of `CardDetailPrices` inside the existing overlay, not a route. Series math is a pure module so Jest does not need SVG. The golden fixture lives in `packages/contracts` because both runtimes now implement the rule. Mobile chart code stays; only a contract test is added there.
 
 ## Complexity Tracking
 
