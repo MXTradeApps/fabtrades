@@ -53,3 +53,20 @@ CardModel buildCard({
     cmTrendFoil: cmTrendFoil,
   );
 }
+
+/// Builds a [PricePoint] snapshot. Null Lows stay null — never coerced to 0.
+PricePoint buildPricePoint({
+  required DateTime capturedOn,
+  double? tcgLow,
+  double? cmLow,
+  double? tcgMarket,
+  double? cmTrend,
+}) {
+  return PricePoint(
+    capturedOn: capturedOn,
+    tcgLow: tcgLow,
+    cmLow: cmLow,
+    tcgMarket: tcgMarket,
+    cmTrend: cmTrend,
+  );
+}
