@@ -1,0 +1,702 @@
+{
+  "$comment": "Binder-value snapshot math for the overlay opened from the Binder total. Web (JS) and mobile (Dart) both assert these cases. Overlay chrome (sheet vs dialog) is not in this fixture. See packages/contracts/README.md and specs/003-binder-value-detail/contracts/binder-value-snapshot.md.",
+  "tolerance": 1e-9,
+  "cases": [
+    {
+      "name": "empty binder",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [],
+      "expected": {
+        "copies": 0,
+        "distinctPrintings": 0,
+        "foilCopies": 0,
+        "regularCopies": 0,
+        "tcgMarket": { "amount": null, "pricedCopies": 0, "unpricedCopies": 0 },
+        "tcgLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 0 },
+        "cmTrend": { "amount": null, "pricedCopies": 0, "unpricedCopies": 0 },
+        "cmLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 0 },
+        "tcgUnpricedCopies": 0,
+        "cmUnpricedCopies": 0,
+        "topPrintings": []
+      }
+    },
+    {
+      "name": "quantity multiplies TCG Market and Low",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "alpha-Normal",
+          "name": "Alpha",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 3,
+          "tcgMarket": 2.0,
+          "tcgLow": 1.0,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 3,
+        "distinctPrintings": 1,
+        "foilCopies": 0,
+        "regularCopies": 3,
+        "tcgMarket": { "amount": 6.0, "pricedCopies": 3, "unpricedCopies": 0 },
+        "tcgLow": { "amount": 3.0, "pricedCopies": 3, "unpricedCopies": 0 },
+        "cmTrend": { "amount": null, "pricedCopies": 0, "unpricedCopies": 3 },
+        "cmLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 3 },
+        "tcgUnpricedCopies": 0,
+        "cmUnpricedCopies": 3,
+        "topPrintings": [
+          {
+            "printingId": "alpha-Normal",
+            "name": "Alpha",
+            "finish": "Normal",
+            "quantity": 3,
+            "contribution": 6.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "quantity below 1 is dropped",
+      "source": "tcgplayer",
+      "headline": "tcgMarketOnly",
+      "entries": [
+        {
+          "printingId": "keep-Normal",
+          "name": "Keep",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 2,
+          "tcgMarket": 1.5,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "drop-Normal",
+          "name": "Drop",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 0,
+          "tcgMarket": 99.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 2,
+        "distinctPrintings": 1,
+        "foilCopies": 0,
+        "regularCopies": 2,
+        "tcgMarket": { "amount": 3.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "tcgLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "cmTrend": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "cmLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "tcgUnpricedCopies": 0,
+        "cmUnpricedCopies": 2,
+        "topPrintings": [
+          {
+            "printingId": "keep-Normal",
+            "name": "Keep",
+            "finish": "Normal",
+            "quantity": 2,
+            "contribution": 3.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "null and 0 are omitted from field totals, never coerced to zero amounts",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "market-only",
+          "name": "Market Only",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 5.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "zero-market",
+          "name": "Zero Market",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 2,
+          "tcgMarket": 0,
+          "tcgLow": 2.0,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "unpriced",
+          "name": "Unpriced",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": null,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 4,
+        "distinctPrintings": 3,
+        "foilCopies": 0,
+        "regularCopies": 4,
+        "tcgMarket": { "amount": 5.0, "pricedCopies": 1, "unpricedCopies": 3 },
+        "tcgLow": { "amount": 4.0, "pricedCopies": 2, "unpricedCopies": 2 },
+        "cmTrend": { "amount": null, "pricedCopies": 0, "unpricedCopies": 4 },
+        "cmLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 4 },
+        "tcgUnpricedCopies": 1,
+        "cmUnpricedCopies": 4,
+        "topPrintings": [
+          {
+            "printingId": "market-only",
+            "name": "Market Only",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 5.0
+          },
+          {
+            "printingId": "zero-market",
+            "name": "Zero Market",
+            "finish": "Normal",
+            "quantity": 2,
+            "contribution": 4.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "foil CardMarket uses foil Trend/Low; non-foil ignores foil fields",
+      "source": "cardmarket",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "foil-1",
+          "name": "Foil Card",
+          "finish": "Rainbow Foil",
+          "isFoil": true,
+          "quantity": 1,
+          "tcgMarket": null,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": 4.0,
+          "cmLow": 2.0,
+          "cmAvg": null,
+          "cmTrendFoil": 6.0,
+          "cmLowFoil": 3.0,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "nf-1",
+          "name": "Normal Card",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": null,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": 4.0,
+          "cmLow": 2.0,
+          "cmAvg": null,
+          "cmTrendFoil": 99.0,
+          "cmLowFoil": 99.0,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 2,
+        "distinctPrintings": 2,
+        "foilCopies": 1,
+        "regularCopies": 1,
+        "tcgMarket": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "tcgLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "cmTrend": { "amount": 10.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "cmLow": { "amount": 5.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "tcgUnpricedCopies": 2,
+        "cmUnpricedCopies": 0,
+        "topPrintings": [
+          {
+            "printingId": "foil-1",
+            "name": "Foil Card",
+            "finish": "Rainbow Foil",
+            "quantity": 1,
+            "contribution": 6.0
+          },
+          {
+            "printingId": "nf-1",
+            "name": "Normal Card",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 4.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "foil CardMarket falls back to non-foil Trend/Low when foil fields are unpriced",
+      "source": "cardmarket",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "foil-fallback",
+          "name": "Foil Fallback",
+          "finish": "Cold Foil",
+          "isFoil": true,
+          "quantity": 2,
+          "tcgMarket": null,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": 4.0,
+          "cmLow": 1.5,
+          "cmAvg": null,
+          "cmTrendFoil": 0,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 2,
+        "distinctPrintings": 1,
+        "foilCopies": 2,
+        "regularCopies": 0,
+        "tcgMarket": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "tcgLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "cmTrend": { "amount": 8.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "cmLow": { "amount": 3.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "tcgUnpricedCopies": 2,
+        "cmUnpricedCopies": 0,
+        "topPrintings": [
+          {
+            "printingId": "foil-fallback",
+            "name": "Foil Fallback",
+            "finish": "Cold Foil",
+            "quantity": 2,
+            "contribution": 8.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "all-unpriced marketplace amount is null, not 0",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "cm-only",
+          "name": "EU Only",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 2,
+          "tcgMarket": null,
+          "tcgLow": 0,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": 3.0,
+          "cmLow": 2.0,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 2,
+        "distinctPrintings": 1,
+        "foilCopies": 0,
+        "regularCopies": 2,
+        "tcgMarket": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "tcgLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "cmTrend": { "amount": 6.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "cmLow": { "amount": 4.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "tcgUnpricedCopies": 2,
+        "cmUnpricedCopies": 0,
+        "topPrintings": []
+      }
+    },
+    {
+      "name": "pricingValue falls back Market then Low then Mid then High",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "low-only",
+          "name": "Low Only",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 2,
+          "tcgMarket": null,
+          "tcgLow": 3.0,
+          "tcgMid": 9.0,
+          "tcgHigh": 12.0,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 2,
+        "distinctPrintings": 1,
+        "foilCopies": 0,
+        "regularCopies": 2,
+        "tcgMarket": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "tcgLow": { "amount": 6.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "cmTrend": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "cmLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "tcgUnpricedCopies": 0,
+        "cmUnpricedCopies": 2,
+        "topPrintings": [
+          {
+            "printingId": "low-only",
+            "name": "Low Only",
+            "finish": "Normal",
+            "quantity": 2,
+            "contribution": 6.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "tcgMarketOnly does not fall back to Low",
+      "source": "tcgplayer",
+      "headline": "tcgMarketOnly",
+      "entries": [
+        {
+          "printingId": "low-only",
+          "name": "Low Only",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 2,
+          "tcgMarket": null,
+          "tcgLow": 3.0,
+          "tcgMid": 9.0,
+          "tcgHigh": 12.0,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 2,
+        "distinctPrintings": 1,
+        "foilCopies": 0,
+        "regularCopies": 2,
+        "tcgMarket": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "tcgLow": { "amount": 6.0, "pricedCopies": 2, "unpricedCopies": 0 },
+        "cmTrend": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "cmLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 2 },
+        "tcgUnpricedCopies": 0,
+        "cmUnpricedCopies": 2,
+        "topPrintings": []
+      }
+    },
+    {
+      "name": "top five is capped and not padded",
+      "source": "tcgplayer",
+      "headline": "tcgMarketOnly",
+      "entries": [
+        {
+          "printingId": "p6",
+          "name": "Six",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 5.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "p1",
+          "name": "One",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 10.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "p2",
+          "name": "Two",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 9.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "p3",
+          "name": "Three",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 8.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "p4",
+          "name": "Four",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 7.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "p5",
+          "name": "Five",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 6.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 6,
+        "distinctPrintings": 6,
+        "foilCopies": 0,
+        "regularCopies": 6,
+        "tcgMarket": { "amount": 45.0, "pricedCopies": 6, "unpricedCopies": 0 },
+        "tcgLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 6 },
+        "cmTrend": { "amount": null, "pricedCopies": 0, "unpricedCopies": 6 },
+        "cmLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 6 },
+        "tcgUnpricedCopies": 0,
+        "cmUnpricedCopies": 6,
+        "topPrintings": [
+          {
+            "printingId": "p1",
+            "name": "One",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 10.0
+          },
+          {
+            "printingId": "p2",
+            "name": "Two",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 9.0
+          },
+          {
+            "printingId": "p3",
+            "name": "Three",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 8.0
+          },
+          {
+            "printingId": "p4",
+            "name": "Four",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 7.0
+          },
+          {
+            "printingId": "p5",
+            "name": "Five",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 6.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "top-five ties break by name then printingId",
+      "source": "tcgplayer",
+      "headline": "tcgMarketOnly",
+      "entries": [
+        {
+          "printingId": "z-1",
+          "name": "Zulu",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 5.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "a-2",
+          "name": "Alpha",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "tcgMarket": 5.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "a-1",
+          "name": "Alpha",
+          "finish": "Rainbow Foil",
+          "isFoil": true,
+          "quantity": 1,
+          "tcgMarket": 5.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "copies": 3,
+        "distinctPrintings": 3,
+        "foilCopies": 1,
+        "regularCopies": 2,
+        "tcgMarket": { "amount": 15.0, "pricedCopies": 3, "unpricedCopies": 0 },
+        "tcgLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 3 },
+        "cmTrend": { "amount": null, "pricedCopies": 0, "unpricedCopies": 3 },
+        "cmLow": { "amount": null, "pricedCopies": 0, "unpricedCopies": 3 },
+        "tcgUnpricedCopies": 0,
+        "cmUnpricedCopies": 3,
+        "topPrintings": [
+          {
+            "printingId": "a-1",
+            "name": "Alpha",
+            "finish": "Rainbow Foil",
+            "quantity": 1,
+            "contribution": 5.0
+          },
+          {
+            "printingId": "a-2",
+            "name": "Alpha",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 5.0
+          },
+          {
+            "printingId": "z-1",
+            "name": "Zulu",
+            "finish": "Normal",
+            "quantity": 1,
+            "contribution": 5.0
+          }
+        ]
+      }
+    }
+  ]
+}

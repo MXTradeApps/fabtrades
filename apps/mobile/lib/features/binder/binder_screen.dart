@@ -26,6 +26,7 @@ import '../scan/scan_screen.dart';
 import '../search/card_picker.dart';
 import '../sync/binder_refresh.dart';
 import '../want_list/want_list_screen.dart';
+import 'binder_value_sheet.dart';
 
 class BinderScreen extends ConsumerStatefulWidget {
   const BinderScreen({super.key});
@@ -148,6 +149,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
                   description: TourCopy.binderTotalBody,
                   child: _BinderValueChip(
                     total: pricing.formatValue(binderTotal),
+                    onTap: () => showBinderValueSheet(context),
                   ),
                 )
               else
@@ -445,8 +447,9 @@ class _BinderEmptyState extends StatelessWidget {
 
 /// Compact FAB-height chip showing binder total, opposite the Add button.
 class _BinderValueChip extends StatelessWidget {
-  const _BinderValueChip({required this.total});
+  const _BinderValueChip({required this.total, required this.onTap});
   final String total;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -458,16 +461,25 @@ class _BinderValueChip extends StatelessWidget {
       shadowColor: Colors.black54,
       color: scheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        height: 56,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Center(
-            child: Text(
-              total,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: color,
+      child: InkWell(
+        key: const Key('binderValueChip'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Semantics(
+          button: true,
+          label: 'Binder value',
+          child: SizedBox(
+            height: 56,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Center(
+                child: Text(
+                  total,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
               ),
             ),
           ),

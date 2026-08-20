@@ -48,6 +48,7 @@ import {
 } from '../services/binder.js';
 import { canAddDistinctCard, cardsFor } from '../utils/freeLimits.js';
 import { formatCurrency } from '../utils/helpers.js';
+import BinderValueDialog from '../components/binder/BinderValueDialog.jsx';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -215,6 +216,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const [shareOpen, setShareOpen] = useState(false);
     const [share, setShare] = useState(null);
     const [shareBusy, setShareBusy] = useState(false);
+    const [valueOpen, setValueOpen] = useState(false);
 
     const listLabel = isWanted ? 'Want List' : 'Binder';
     const limit = cardsFor({ isWanted });
@@ -664,11 +666,32 @@ const BinderCollection = ({ isWanted = false }) => {
                             />
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                            <Typography
-                                sx={{ color: mutedColor, fontWeight: 600, fontSize: '0.8rem' }}
-                            >
-                                {formatCurrency(totalValue.toFixed(2))}
-                            </Typography>
+                            {!isWanted && entries.length > 0 ? (
+                                <Typography
+                                    component="button"
+                                    type="button"
+                                    data-testid="binder-value-total"
+                                    onClick={() => setValueOpen(true)}
+                                    sx={{
+                                        color: mutedColor,
+                                        fontWeight: 600,
+                                        fontSize: '0.8rem',
+                                        border: 'none',
+                                        background: 'transparent',
+                                        cursor: 'pointer',
+                                        p: 0,
+                                        fontFamily: 'inherit',
+                                    }}
+                                >
+                                    {formatCurrency(totalValue.toFixed(2))}
+                                </Typography>
+                            ) : (
+                                <Typography
+                                    sx={{ color: mutedColor, fontWeight: 600, fontSize: '0.8rem' }}
+                                >
+                                    {formatCurrency(totalValue.toFixed(2))}
+                                </Typography>
+                            )}
                             {!isWanted && (
                                 <Button
                                     variant="outlined"
@@ -1212,6 +1235,17 @@ const BinderCollection = ({ isWanted = false }) => {
                     {toast}
                 </Alert>
             </Snackbar>
+
+            {!isWanted && (
+                <BinderValueDialog
+                    open={valueOpen}
+                    onClose={() => setValueOpen(false)}
+                    headline={formatCurrency(totalValue.toFixed(2))}
+                    entries={entries}
+                    catalogById={catalogById}
+                    isDark={isDark}
+                />
+            )}
         </Box>
     );
 };
