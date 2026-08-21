@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fabtrades/core/models/app_settings.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/binder/binder_screen.dart';
 import 'package:fabtrades/features/binder/binder_value_sheet.dart';

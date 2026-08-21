@@ -276,7 +276,8 @@ const Header = ({ lastUpdatedTimestamp }) => {
                     </Typography>
                 </Box>
                 <List sx={{ px: 1 }}>
-                    {NAV_ITEMS.map(({ label, to, icon: Icon, match }) => {
+                    {NAV_ITEMS.map((item) => {
+                        const { label, to, icon: Icon, match } = item;
                         const active = match(location.pathname);
                         const accent = active
                             ? (isDark ? '#e4c09c' : '#8b4513')
@@ -312,7 +313,8 @@ const Header = ({ lastUpdatedTimestamp }) => {
                             </ListItem>
                         );
                     })}
-                    {LEGAL_ITEMS.map(({ label, to, icon: Icon, match }) => {
+                    {LEGAL_ITEMS.map((item) => {
+                        const { label, to, icon: Icon, match } = item;
                         const active = match(location.pathname);
                         const accent = active
                             ? (isDark ? '#e4c09c' : '#8b4513')
