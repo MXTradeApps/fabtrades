@@ -51,6 +51,42 @@ export function printingId(productId, subTypeName) {
   return `${productId}-${subtypeSlug(subTypeName)}`;
 }
 
+// CardMarket lists pitched cards as "Name (Red)"; TCGCSV sometimes omits the
+// color from `name` and only sets extPitchValue (1/2/3). Prefer the full name
+// so a Red printing does not steal a generic "Name" product.
+const PITCH_COLOR = { '1': 'Red', '2': 'Yellow', '3': 'Blue' };
+
+export function cardMarketLookupKeys(row) {
+  const name = row.name || '';
+  const clean = row.cleanName || '';
+  const keys = [];
+  const push = (value) => {
+    const key = normalizeCardName(value);
+    if (key && !keys.includes(key)) keys.push(key);
+  };
+  push(name);
+  push(clean);
+  const color = PITCH_COLOR[String(row.extPitchValue || '').trim()];
+  if (color && !/\(\s*(red|yellow|blue)\s*\)/i.test(name)) {
+    push(`${name} (${color})`);
+  }
+  return keys;
+}
+
+export function matchCardMarket(row, cmByName) {
+  for (const key of cardMarketLookupKeys(row)) {
+    const cm = cmByName.get(key);
+    if (cm) return cm;
+  }
+  return null;
+}
+
+// CardMarket uses 0 as "no listings" on foil fields; store that as unpriced.
+export function toPricedNumber(value) {
+  const n = toNumber(value);
+  return n === 0 ? null : n;
+}
+
 // Turn one set's raw product rows into DB rows for cards / card_prices / price_history.
 // setNumber feeds the SSSNNNN-style `unique_id` (mirrors the fabtrades/web-app convention).
 export function buildRows(groupProducts, groupId, setNumber, cmByName) {
@@ -70,11 +106,7 @@ export function buildRows(groupProducts, groupId, setNumber, cmByName) {
     const id = printingId(productId, row.subTypeName);
     const uniqueId = `${String(setNumber ?? 0).padStart(3, '0')}${String(index).padStart(4, '0')}`;
 
-    // Match CardMarket by cleanName first, then name.
-    const cm =
-      cmByName.get(normalizeCardName(row.cleanName)) ||
-      cmByName.get(normalizeCardName(row.name)) ||
-      null;
+    const cm = matchCardMarket(row, cmByName);
 
     cards.push({
       id,
@@ -108,8 +140,8 @@ export function buildRows(groupProducts, groupId, setNumber, cmByName) {
 
     const tcgMarket = toNumber(row.marketPrice);
     const tcgLow = toNumber(row.lowPrice);
-    const cmTrend = cm ? toNumber(cm.trend) : null;
-    const cmLow = cm ? toNumber(cm.low) : null;
+    const cmTrend = cm ? toPricedNumber(cm.trend) : null;
+    const cmLow = cm ? toPricedNumber(cm.low) : null;
 
     prices.push({
       card_id: id,
@@ -118,12 +150,12 @@ export function buildRows(groupProducts, groupId, setNumber, cmByName) {
       tcg_high: toNumber(row.highPrice),
       tcg_market: tcgMarket,
       tcg_direct_low: toNumber(row.directLowPrice),
-      cm_avg: cm ? toNumber(cm.avg) : null,
+      cm_avg: cm ? toPricedNumber(cm.avg) : null,
       cm_low: cmLow,
       cm_trend: cmTrend,
-      cm_avg_foil: cm ? toNumber(cm.avgFoil) : null,
-      cm_low_foil: cm ? toNumber(cm.lowFoil) : null,
-      cm_trend_foil: cm ? toNumber(cm.trendFoil) : null,
+      cm_avg_foil: cm ? toPricedNumber(cm.avgFoil) : null,
+      cm_low_foil: cm ? toPricedNumber(cm.lowFoil) : null,
+      cm_trend_foil: cm ? toPricedNumber(cm.trendFoil) : null,
       updated_at: now
     });
 

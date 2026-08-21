@@ -14,8 +14,9 @@ TCGCSV (TCGplayer, game 62)  ──►  transform  ──►  Supabase (upsert)
 3. Upserts everything into Supabase and appends a daily row to `fab_price_history`.
 4. Logs the run in `fab_pipeline_runs`.
 
-CardMarket EU prices are disabled for FAB (`ENABLE_CARDMARKET = false`), so all `cm_*`
-price fields stay null and the CardMarket fetch is skipped.
+CardMarket EU prices come from the public singles catalog for game 16 (Flesh and Blood),
+matched to TCGCSV printings by normalized name (including pitch color). Game 22 is
+Legends of Runeterra — do not point `CARDMARKET_GAME_ID` at it.
 
 Re-running is idempotent: `fab_cards`/`fab_card_prices` upsert by key, and `fab_price_history`
 upserts on `(card_id, captured_on)` so a same-day re-run overwrites that day's snapshot.
@@ -45,7 +46,7 @@ project as the Riftbound dataset without clobbering it.
 | --- | --- |
 | `fab_sets` | TCGplayer groups / expansions |
 | `fab_cards` | one row per printing (normal/foil, alt-art). `collector_number` = scan key |
-| `fab_card_prices` | current TCGplayer (USD) prices, 1:1 with cards (CardMarket disabled) |
+| `fab_card_prices` | current TCGplayer (USD) + CardMarket (EUR) prices, 1:1 with cards |
 | `fab_price_history` | one snapshot per card per day (for charts) |
 | `fab_pipeline_runs` | ingest run log (service-role only) |
 | `fab_cards_with_prices` | convenience view joining cards + set name + current prices |

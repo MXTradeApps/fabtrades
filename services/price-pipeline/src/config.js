@@ -3,8 +3,8 @@ import 'dotenv/config';
 
 // Flesh and Blood identifiers on the two data sources.
 export const TCG_GAME_ID = 62; // Flesh and Blood on TCGplayer / TCGCSV
-export const ENABLE_CARDMARKET = false;
-export const CARDMARKET_GAME_ID = 22; // unused while CardMarket is disabled (ENABLE_CARDMARKET = false)
+export const ENABLE_CARDMARKET = true;
+export const CARDMARKET_GAME_ID = 16; // Flesh and Blood on CardMarket (22 is Legends of Runeterra)
 
 export const TCGCSV_BASE = `https://tcgcsv.com/tcgplayer/${TCG_GAME_ID}`;
 export const CARDMARKET_PRODUCTS_URL = `https://downloads.s3.cardmarket.com/productCatalog/productList/products_singles_${CARDMARKET_GAME_ID}.json`;

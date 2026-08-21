@@ -1,4 +1,4 @@
-import { CARDMARKET_PRODUCTS_URL, CARDMARKET_PRICES_URL } from './config.js';
+import { CARDMARKET_PRODUCTS_URL, CARDMARKET_PRICES_URL, HTTP_HEADERS } from './config.js';
 
 // Normalize a name for cross-source matching (TCGplayer <-> CardMarket).
 export function normalizeCardName(name) {
@@ -10,7 +10,7 @@ export function normalizeCardName(name) {
 }
 
 async function fetchJSON(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: HTTP_HEADERS });
   if (!res.ok) {
     throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
   }

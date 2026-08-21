@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Daily pipeline: TCGCSV (TCGplayer) -> Supabase shared Flesh and Blood card & price database.",
+  "description": "Daily pipeline: TCGCSV (TCGplayer) + CardMarket -> Supabase shared Flesh and Blood card & price database.",
   "scripts": {
     "ingest": "node src/run.js",
     "dry-run": "node src/run.js --dry-run"

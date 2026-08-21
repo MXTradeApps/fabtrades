@@ -62,7 +62,7 @@ and upserts them daily; every app just reads Supabase.
 Sources — both free, no API key (TCGCSV needs a `User-Agent` header):
 - **TCGCSV** (`tcgcsv.com/tcgplayer/<gameId>/...`) for Flesh and Blood: sets via `/groups`,
   cards + USD prices + art via each set's `ProductsAndPrices.csv`.
-- **CardMarket** EU prices from public S3 (game 22), matched to cards by normalized name.
+- **CardMarket** EU prices from public S3 (game 16, Flesh and Blood), matched to cards by normalized name (including pitch color).
 
 The pipeline (`fetchGroups` → `fetchGroupProducts` → `fetchCardMarketByName` →
 `buildRows` → chunked `upsert`) writes to Supabase and appends a daily `price_history`

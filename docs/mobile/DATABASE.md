@@ -6,7 +6,7 @@ from. It hosts **two game datasets** in one project, split by table prefix:
 - **Riftbound** — the original tables (`sets`, `cards`, ...), TCGplayer game id 89,
   populated from TCGCSV (TCGplayer) + CardMarket.
 - **Flesh and Blood (FAB)** — the `fab_*` prefixed tables (`fab_sets`, `fab_cards`, ...),
-  TCGplayer game id 62, populated from TCGCSV only (CardMarket disabled for FAB).
+  TCGplayer game id 62, populated from TCGCSV + CardMarket (game 16).
 
 The FAB app and pipeline use the `fab_*` prefixed tables and the `fab_cards_with_prices`
 view. Both datasets are populated by [`../pipeline`](../pipeline).
@@ -37,14 +37,14 @@ read-only** via RLS; only the pipeline's `service_role` key can write. Never put
 ## Flesh and Blood tables (game id 62)
 The FAB pipeline writes to these `fab_*` prefixed tables. `fab_cards` carries the same
 columns as `cards` plus FAB-specific fields (`card_type`, `card_sub_type`, `card_class`,
-`talent`, `pitch`, `cost`, `power`, `defense`, `life`, `intellect`). CardMarket is disabled
-for FAB, so all `cm_*` price fields stay null.
+`talent`, `pitch`, `cost`, `power`, `defense`, `life`, `intellect`). CardMarket EUR fields
+are filled when a printing matches the public Flesh and Blood catalog (game 16).
 
 | Table | Notes |
 | --- | --- |
 | `fab_sets` | TCGplayer groups / expansions (`group_id`, `name`) |
 | `fab_cards` | one row per **printing**; PK `id` = `"<product_id>-<subtype>"`, `set_id` → `fab_sets.group_id`; includes FAB extended columns |
-| `fab_card_prices` | current TCGplayer (USD) prices; `card_id` → `fab_cards.id` (CardMarket disabled) |
+| `fab_card_prices` | current TCGplayer (USD) + CardMarket (EUR) prices; `card_id` → `fab_cards.id` |
 | `fab_price_history` | one snapshot per card per day for charts |
 | `fab_pipeline_runs` | ingest log (not client-readable) |
 | `fab_cards_with_prices` | view: cards + `set_name` + current prices (easiest to query) |

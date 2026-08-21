@@ -12,14 +12,18 @@
 jest.mock('../../../../services/price-pipeline/src/config.js', () => ({
   CARDMARKET_PRODUCTS_URL: 'http://example.test/products',
   CARDMARKET_PRICES_URL: 'http://example.test/prices',
+  HTTP_HEADERS: { 'User-Agent': 'test' },
 }));
 
 import {
   isSealedProduct,
   toNumber,
+  toPricedNumber,
   toBigInt,
   subtypeSlug,
   printingId,
+  cardMarketLookupKeys,
+  matchCardMarket,
   buildRows,
 } from '../../../../services/price-pipeline/src/transform.js';
 
@@ -44,6 +48,34 @@ describe('toNumber', () => {
   it('accepts a numeric argument', () => {
     expect(toNumber(0)).toBe(0);
     expect(toNumber(7.5)).toBe(7.5);
+  });
+});
+
+describe('toPricedNumber', () => {
+  it('treats zero as unpriced', () => {
+    expect(toPricedNumber(0)).toBeNull();
+    expect(toPricedNumber('0')).toBeNull();
+  });
+
+  it('keeps positive prices', () => {
+    expect(toPricedNumber('1.20')).toBe(1.2);
+  });
+});
+
+describe('cardMarketLookupKeys', () => {
+  it('prefers the pitched name over a generic cleanName', () => {
+    expect(cardMarketLookupKeys({
+      name: 'Lightning (Red)',
+      cleanName: 'Lightning',
+    })).toEqual(['lightning red', 'lightning']);
+  });
+
+  it('appends pitch color when the name has none', () => {
+    expect(cardMarketLookupKeys({
+      name: 'Head Jab',
+      cleanName: 'Head Jab',
+      extPitchValue: '3',
+    })).toEqual(['head jab', 'head jab blue']);
   });
 });
 
@@ -273,17 +305,68 @@ describe('buildRows', () => {
     expect(cards[2].is_sealed).toBe(true); // Alpha Booster Box
   });
 
-  it('matches CardMarket by cleanName, then falls back to name', () => {
+  it('matches CardMarket by name, then cleanName', () => {
     const { cards } = buildRows(makeProducts(), '42', 1, makeCmByName());
-    // matched via cleanName 'Lightning'
+    // name is 'Lightning (Red)' → 'lightning red' misses; cleanName 'Lightning' hits
     expect(cards[0].cardmarket_id).toBe(999);
     expect(cards[0].cardmarket_name).toBe('Lightning');
     // no match at all
     expect(cards[1].cardmarket_id).toBeNull();
     expect(cards[1].cardmarket_name).toBeNull();
-    // matched via the name fallback ('Blaze Storm')
+    // matched via the name ('Blaze Storm')
     expect(cards[3].cardmarket_id).toBe(888);
     expect(cards[3].cardmarket_name).toBe('Blaze Storm');
+  });
+
+  it('prefers a pitched CardMarket product over a generic same-name product', () => {
+    const cmByName = new Map([
+      ['lightning', { idProduct: 1, name: 'Lightning', trend: '1.00', low: '0.50' }],
+      ['lightning red', { idProduct: 2, name: 'Lightning (Red)', trend: '2.00', low: '1.50' }],
+    ]);
+    const { cards } = buildRows([
+      { productId: '101', name: 'Lightning (Red)', cleanName: 'Lightning', subTypeName: 'Normal' },
+    ], '42', 1, cmByName);
+    expect(cards[0].cardmarket_id).toBe(2);
+  });
+
+  it('matches CardMarket using extPitchValue when the name has no color', () => {
+    const cmByName = new Map([
+      ['head jab blue', { idProduct: 3, name: 'Head Jab (Blue)', trend: '0.40', low: '0.10' }],
+    ]);
+    const { cards } = buildRows([
+      {
+        productId: '201',
+        name: 'Head Jab',
+        cleanName: 'Head Jab',
+        subTypeName: 'Normal',
+        extPitchValue: '3',
+      },
+    ], '42', 1, cmByName);
+    expect(cards[0].cardmarket_id).toBe(3);
+    expect(matchCardMarket(
+      { name: 'Head Jab', cleanName: 'Head Jab', extPitchValue: '3' },
+      cmByName,
+    ).idProduct).toBe(3);
+  });
+
+  it('stores CardMarket foil zeros as unpriced rather than 0', () => {
+    const cmByName = new Map([
+      ['lightning', {
+        idProduct: 999,
+        name: 'Lightning',
+        avg: '1.50',
+        low: '1.00',
+        trend: '1.20',
+        avgFoil: '0',
+        lowFoil: null,
+        trendFoil: 0,
+      }],
+    ]);
+    const { prices } = buildRows([
+      { productId: '101', name: 'Lightning', cleanName: 'Lightning', subTypeName: 'Normal' },
+    ], '42', 1, cmByName);
+    expect(prices[0].cm_avg_foil).toBeNull();
+    expect(prices[0].cm_trend_foil).toBeNull();
   });
 
   it('parses TCGplayer prices and CardMarket prices into the prices row', () => {
