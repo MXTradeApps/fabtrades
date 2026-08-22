@@ -105,9 +105,6 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
         : ownedInBinder(owned, openId);
     final binderTotal = openRows.fold<double>(
         0, (s, e) => s + (pricing.value(e.card) ?? 0) * e.quantity);
-    final openBinder = openId == null
-        ? null
-        : ref.read(bindersProvider.notifier).byId(openId);
 
     return Scaffold(
       appBar: AppBar(
@@ -122,8 +119,16 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
                 },
               )
             : null,
-        title: Text(
-          onBinderTab && openBinder != null ? openBinder.name : 'Binder',
+        title: GestureDetector(
+          key: const Key('binderHomeTitle'),
+          behavior: HitTestBehavior.opaque,
+          onTap: onBinderTab && openId != null
+              ? () {
+                  ref.read(binderFiltersProvider.notifier).clear();
+                  ref.read(openBinderIdProvider.notifier).close();
+                }
+              : null,
+          child: Text(onBinderTab ? 'My Binders' : 'Want List'),
         ),
         actions: [
           if (onBinderTab && openId == null)

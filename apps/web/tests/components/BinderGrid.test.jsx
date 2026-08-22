@@ -138,6 +138,8 @@ describe('BinderGrid', () => {
         fireEvent.click(screen.getByTestId('binder-tile-system:trade'));
         expect(await screen.findByTestId('binder-value-total')).toBeInTheDocument();
         expect(screen.queryByTestId('binder-grid')).not.toBeInTheDocument();
+        expect(screen.getByTestId('binder-home-title')).toHaveTextContent('My Binders');
+        expect(screen.getByTestId('binder-open-name')).toHaveTextContent('Trade Binder');
 
         fireEvent.click(screen.getByTestId('binder-back'));
         expect(await screen.findByTestId('binder-grid')).toBeInTheDocument();
@@ -183,7 +185,64 @@ describe('BinderGrid', () => {
         );
         fireEvent.click(screen.getByLabelText('open drawer'));
         expect(screen.getByRole('link', { name: /Want List/i })).toHaveAttribute('href', '/wants');
-        expect(screen.getAllByRole('link', { name: /My Binder/i })[0]).toHaveAttribute('href', '/binder');
+        expect(screen.getAllByRole('link', { name: /My Binders/i })[0]).toHaveAttribute('href', '/binder');
+    });
+
+    test('My Binders heading and nav return to the grid from a drill-in', async () => {
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    {
+                        cardId: pricedPrinting._uniqueId,
+                        quantity: 1,
+                        isWanted: false,
+                        binderId: 'system:trade',
+                        card: pricedPrinting,
+                    },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        renderCollection(false);
+        expect(await screen.findByTestId('binder-home-title')).toHaveTextContent('My Binders');
+        fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
+        expect(await screen.findByTestId('binder-value-total')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByTestId('binder-home-title'));
+        expect(await screen.findByTestId('binder-grid')).toBeInTheDocument();
+
+        fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
+        expect(await screen.findByTestId('binder-value-total')).toBeInTheDocument();
+        fireEvent.click(screen.getAllByRole('link', { name: /My Binders/i })[0]);
+        expect(await screen.findByTestId('binder-grid')).toBeInTheDocument();
+    });
+
+    test('non-empty tile cover uses catalog art and falls back when the CDN 404s', async () => {
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    {
+                        cardId: pricedPrinting._uniqueId,
+                        quantity: 1,
+                        isWanted: false,
+                        binderId: 'system:trade',
+                        card: pricedPrinting,
+                    },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        renderCollection(false);
+        const cover = await screen.findByTestId('binder-tile-cover-system:trade');
+        expect(cover.tagName).toBe('IMG');
+        expect(cover).toHaveAttribute(
+            'src',
+            'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large/SUP001.webp',
+        );
+        fireEvent.error(cover);
+        expect(cover).toHaveAttribute('src', pricedPrinting.imageUrlFallback);
     });
 
     test('empty tiles show 0 and true-zero value; unpriced non-empty is a dash', async () => {

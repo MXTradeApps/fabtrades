@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/data/set_logo_cache.dart';
 import '../core/models/card_model.dart';
 import '../core/providers.dart';
+import 'fallback_network_image.dart';
 import 'theme.dart';
 
 /// Official FAB set logo for browse lists. Falls back to [setName] when the
@@ -302,6 +302,7 @@ class CardThumbnail extends StatelessWidget {
   const CardThumbnail({
     super.key,
     required this.url,
+    this.fallbackUrl,
     this.width = 46,
     this.height = 64,
     this.radius = 8,
@@ -309,6 +310,7 @@ class CardThumbnail extends StatelessWidget {
   });
 
   final String? url;
+  final String? fallbackUrl;
   final double width;
   final double height;
   final double radius;
@@ -327,8 +329,9 @@ class CardThumbnail extends StatelessWidget {
             size: width * 0.4, color: scheme.outline),
       );
     } else {
-      child = CachedNetworkImage(
+      child = FallbackNetworkImage(
         imageUrl: url!,
+        fallbackUrl: fallbackUrl,
         width: width,
         height: height,
         fit: BoxFit.cover,

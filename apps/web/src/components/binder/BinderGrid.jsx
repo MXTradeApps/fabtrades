@@ -1,6 +1,6 @@
 import { Box, Card, CardActionArea, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 import { MoreVert as MoreVertIcon } from '@mui/icons-material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { pickBinderCover } from '../../utils/binderCover.js';
 import { isPricedField } from '../../utils/binderValueSnapshot.js';
 import { gridOrderBinders, TRADE_BINDER_ID } from '../../services/binder.js';
@@ -35,6 +35,51 @@ export function formatBinderTileValue(ownedRows) {
 function ownedInBinder(entries, binderId) {
     return (entries || []).filter((e) =>
         !e.isWanted && (e.binderId || TRADE_BINDER_ID) === binderId && (e.quantity || 0) > 0,
+    );
+}
+
+/** Tile art: CDN first, then catalog/TCG fallback when the CDN 404s. */
+function BinderTileCover({ imageUrl, fallbackUrl, alt, binderId }) {
+    const [src, setSrc] = useState(imageUrl || fallbackUrl || '');
+    const [failed, setFailed] = useState(false);
+
+    useEffect(() => {
+        setSrc(imageUrl || fallbackUrl || '');
+        setFailed(false);
+    }, [imageUrl, fallbackUrl]);
+
+    const handleError = () => {
+        if (fallbackUrl && src !== fallbackUrl) {
+            setSrc(fallbackUrl);
+            return;
+        }
+        setFailed(true);
+    };
+
+    if (!src || failed) {
+        return (
+            <Box
+                data-testid={`binder-tile-cover-${binderId}`}
+                sx={{ width: '100%', height: '100%', bgcolor: 'rgba(0, 0, 0, 0.2)' }}
+            />
+        );
+    }
+
+    return (
+        <Box
+            component="img"
+            data-testid={`binder-tile-cover-${binderId}`}
+            src={src}
+            alt={alt || ''}
+            onError={handleError}
+            sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'top',
+                display: 'block',
+            }}
+        />
     );
 }
 
@@ -104,6 +149,7 @@ function BinderTile({
             tcgMarket: card.market ?? card.tcgMarket ?? entry.tcgMarket,
             market: card.market ?? card.tcgMarket ?? entry.tcgMarket,
             imageUrl: card.imageUrl,
+            imageUrlFallback: card.imageUrlFallback,
             isFoil: Boolean(card.isFoil),
             condition: entry.condition || 'NM',
             quantity: entry.quantity || 1,
@@ -128,19 +174,22 @@ function BinderTile({
                 onClick={() => onOpen?.(binder)}
                 sx={{ p: 1.25, textAlign: 'left' }}
             >
-                <Box sx={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Box
+                    sx={{
+                        height: 120,
+                        mb: 0.5,
+                        overflow: 'hidden',
+                        borderRadius: 1,
+                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    }}
+                >
                     {cover.printingId ? (
-                        coverRow?.imageUrl ? (
-                            <Box
-                                component="img"
-                                data-testid={`binder-tile-cover-${id}`}
-                                src={coverRow.imageUrl}
-                                alt=""
-                                sx={{ maxHeight: 112, maxWidth: '100%', objectFit: 'contain' }}
-                            />
-                        ) : (
-                            <Box data-testid={`binder-tile-cover-${id}`} sx={{ width: 72, height: 100, bgcolor: paperBorder }} />
-                        )
+                        <BinderTileCover
+                            binderId={id}
+                            imageUrl={coverRow?.imageUrl}
+                            fallbackUrl={coverRow?.imageUrlFallback}
+                            alt={coverRow?.name}
+                        />
                     ) : null}
                 </Box>
                 <Typography

@@ -23,7 +23,7 @@ import LoginButton from '../auth/LoginButton.jsx';
 
 const NAV_ITEMS = [
     { label: 'Trade Calculator', to: '/', icon: SwapHoriz, match: (path) => path === '/' },
-    { label: 'My Binder', to: '/binder', icon: CollectionsBookmark, match: (path) => path === '/binder' },
+    { label: 'My Binders', to: '/binder', icon: CollectionsBookmark, match: (path) => path === '/binder' },
     { label: 'Trade History', to: '/history', icon: History, match: (path) => path === '/history' },
     { label: 'Want List', to: '/wants', icon: BookmarkBorder, match: (path) => path === '/wants' },
     { label: 'Browse Sets', to: '/sets', icon: Style, match: (path) => path.startsWith('/sets') },
@@ -137,7 +137,7 @@ const Header = ({ lastUpdatedTimestamp }) => {
                             },
                         }}
                     >
-                        My Binder
+                        My Binders
                     </Button>
                 </Box>
 

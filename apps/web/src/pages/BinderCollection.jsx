@@ -29,7 +29,7 @@ import {
     Remove as RemoveIcon,
     Share as ShareIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useEntitlement } from '../contexts/EntitlementContext.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
@@ -215,7 +215,16 @@ const BinderCollection = ({ isWanted = false }) => {
     const [entries, setEntries] = useState([]);
     const [allOwned, setAllOwned] = useState([]);
     const [binders, setBinders] = useState([]);
-    const [openBinderId, setOpenBinder] = useState(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const openBinderId = isWanted ? null : searchParams.get('b');
+    const setOpenBinder = useCallback((id) => {
+        if (isWanted) return;
+        if (!id) {
+            setSearchParams({}, { replace: true });
+            return;
+        }
+        setSearchParams({ b: id });
+    }, [isWanted, setSearchParams]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -230,6 +239,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const [valueOpen, setValueOpen] = useState(false);
 
     const listLabel = isWanted ? 'Want List' : 'Binder';
+    const pageTitle = isWanted ? 'Want List' : 'My Binders';
     const limit = cardsFor({ isWanted });
 
     const bgGradient = isDark
@@ -784,15 +794,43 @@ const BinderCollection = ({ isWanted = false }) => {
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                             <Typography
+                                component={!isWanted && openBinderId ? 'button' : 'h1'}
+                                type={!isWanted && openBinderId ? 'button' : undefined}
+                                data-testid="binder-home-title"
+                                onClick={
+                                    !isWanted && openBinderId
+                                        ? () => setOpenBinder(null)
+                                        : undefined
+                                }
                                 sx={{
                                     fontWeight: 700,
                                     fontSize: '1rem',
                                     color: accentColor,
                                     lineHeight: 1.2,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: !isWanted && openBinderId ? 'pointer' : 'default',
+                                    p: 0,
+                                    fontFamily: 'inherit',
+                                    textAlign: 'left',
                                 }}
                             >
-                                {openBinder?.name || listLabel}
+                                {pageTitle}
                             </Typography>
+                            {!isWanted && openBinder?.name && (
+                                <Typography
+                                    data-testid="binder-open-name"
+                                    noWrap
+                                    sx={{
+                                        fontWeight: 600,
+                                        fontSize: '0.9rem',
+                                        color: mutedColor,
+                                        lineHeight: 1.2,
+                                    }}
+                                >
+                                    {openBinder.name}
+                                </Typography>
+                            )}
                             {isPro && (
                                 <Chip
                                     size="small"

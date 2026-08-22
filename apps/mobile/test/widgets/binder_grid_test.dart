@@ -144,6 +144,25 @@ void main() {
     expect(find.text('Alpha'), findsNothing);
   });
 
+  testWidgets('My Binders title returns to the grid from a drill-in',
+      (tester) async {
+    final container = await pumpGrid(tester);
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'a-Normal', name: 'Alpha', tcgMarket: 12.5),
+          binderId: BinderIds.trade,
+        );
+    await tester.pump();
+
+    expect(find.text('My Binders'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('binderGrid')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('binderHomeTitle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('binderGrid')), findsOneWidget);
+  });
+
   testWidgets('existing owned cards appear in Trade Binder; signed-out still grids',
       (tester) async {
     final container = await pumpGrid(tester);

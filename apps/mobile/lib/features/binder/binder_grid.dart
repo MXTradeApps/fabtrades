@@ -130,10 +130,12 @@ class BinderTile extends StatelessWidget {
       for (final e in rows) BinderValueRow.fromBinderEntry(e),
     ]);
     String? imageUrl;
+    String? fallbackUrl;
     if (cover.printingId != null) {
       for (final e in rows) {
         if (e.card.id == cover.printingId) {
-          imageUrl = e.card.imageUrl;
+          imageUrl = e.card.largeImageUrl ?? e.card.imageUrl;
+          fallbackUrl = e.card.artViewerFallbackUrl;
           break;
         }
       }
@@ -157,6 +159,7 @@ class BinderTile extends StatelessWidget {
                         child: CardThumbnail(
                           key: Key('binderTileCover-$id'),
                           url: imageUrl,
+                          fallbackUrl: fallbackUrl,
                           width: 72,
                           height: 100,
                         ),

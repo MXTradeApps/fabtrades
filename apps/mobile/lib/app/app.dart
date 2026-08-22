@@ -141,6 +141,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (i == _index) {
       // Re-tapping the current tab pops back to its root.
       _activeNav?.popUntil((r) => r.isFirst);
+      if (i == 2) {
+        ref.read(openBinderIdProvider.notifier).close();
+      }
       return;
     }
     // Cancel any in-progress tour before leaving the tab — IndexedStack keeps
