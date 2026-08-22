@@ -42,8 +42,8 @@ abstract final class TourCopy {
   // ── Binder ─────────────────────────────────────────────────────────────
   static const binderTabsTitle = 'Binder & Want List';
   static const binderTabsBody =
-      'Your tradeable collection lives here. Switch tabs to see cards you\'re '
-      'hunting for.';
+      'Your Binders are a grid — Trade Binder is what you trade, Collection '
+      'is a keep pile. Want List is the other tab, not a Binder.';
 
   static const binderTotalTitle = 'Binder value';
   static const binderTotalBody =

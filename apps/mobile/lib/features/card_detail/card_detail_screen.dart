@@ -9,6 +9,7 @@ import '../../app/widgets.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/data/card_repository.dart';
 import '../../core/models/app_settings.dart';
+import '../../core/models/binder.dart';
 import '../../core/models/card_model.dart';
 import '../../core/models/trade.dart';
 import '../../core/providers.dart';
@@ -181,9 +182,12 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
       },
     );
     if (saved == null || !mounted) return;
-    ref
-        .read(binderProvider.notifier)
-        .setQuantity(_selected.id, false, saved);
+    ref.read(binderProvider.notifier).setQuantity(
+          _selected.id,
+          false,
+          saved,
+          binderId: ref.read(openBinderIdProvider) ?? BinderIds.trade,
+        );
   }
 }
 

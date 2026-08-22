@@ -15,6 +15,7 @@ import '../../app/card_actions.dart';
 import '../../app/widgets.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/data/card_repository.dart';
+import '../../core/models/binder.dart';
 import '../../core/models/card_model.dart';
 import '../../core/models/trade.dart';
 import '../../core/providers.dart';
@@ -833,7 +834,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
       case ScanDestination.binder:
         // Stop scanning if the free binder is full — continuing to rack up
         // rejected scans would be worse than surfacing the limit once.
-        if (!await addToBinderOrUpsell(context, ref, card, source: 'scan')) {
+        if (!await addToBinderOrUpsell(
+          context,
+          ref,
+          card,
+          source: 'scan',
+          binderId: ref.read(openBinderIdProvider) ?? BinderIds.trade,
+        )) {
           return;
         }
         if (!mounted) return;
@@ -889,7 +896,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         _captureCardAdded(card);
         _showAddedSnackBar(card, destinationLabel: 'trade');
       case ScanDestination.binder:
-        if (!await addToBinderOrUpsell(context, ref, card, source: 'scan')) {
+        if (!await addToBinderOrUpsell(
+          context,
+          ref,
+          card,
+          source: 'scan',
+          binderId: ref.read(openBinderIdProvider) ?? BinderIds.trade,
+        )) {
           return;
         }
         if (!mounted) return;

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/analytics/analytics.dart';
 import '../../core/logic/free_limits.dart';
+import '../../core/models/binder.dart';
 import '../../core/models/card_model.dart';
 import '../../core/providers.dart';
 import 'pro_paywall.dart';
@@ -29,12 +30,15 @@ Future<bool> addToBinderOrUpsell(
   CardModel card, {
   bool isWanted = false,
   int quantity = 1,
+  String? binderId,
   String? successMessage,
   String source = 'unknown',
 }) async {
   final binder = ref.read(binderProvider.notifier);
+  final targetBinderId =
+      isWanted ? null : (binderId ?? ref.read(openBinderIdProvider) ?? BinderIds.trade);
 
-  if (binder.add(card, quantity: quantity, isWanted: isWanted)) {
+  if (binder.add(card, quantity: quantity, isWanted: isWanted, binderId: targetBinderId)) {
     _captureAdded(ref, card, isWanted: isWanted, source: source);
     _syncBinderSoon(ref);
     if (successMessage != null) _showMessage(context, successMessage);
@@ -57,7 +61,7 @@ Future<bool> addToBinderOrUpsell(
     trigger: isWanted ? 'want_limit' : 'binder_limit',
     message: '$listName hold $limit cards on the free plan.',
     onUpgraded: () {
-      binder.add(card, quantity: quantity, isWanted: isWanted);
+      binder.add(card, quantity: quantity, isWanted: isWanted, binderId: targetBinderId);
       _captureAdded(ref, card, isWanted: isWanted, source: source);
       _syncBinderSoon(ref);
       if (context.mounted) {

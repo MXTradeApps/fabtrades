@@ -105,6 +105,8 @@ void main() {
         'got',
       );
     });
+
+    test('skips binder mutations when both checkboxes are off but still clears wants', () {
       final given = buildCard(id: 'g');
       final recv = buildCard(id: 'r');
       final trade = Trade(

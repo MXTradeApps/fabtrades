@@ -41,14 +41,22 @@ import SignInDialog from '../components/auth/SignInDialog.jsx';
 import {
     ensureBinderShare,
     getBinderEntries,
+    getBinders,
     regenerateBinderShare,
     removeEntry,
     setBinderShareEnabled,
     upsertEntry,
+    createBinder,
+    renameBinder,
+    deleteBinder,
+    applyBinderMove,
+    TRADE_BINDER_ID,
 } from '../services/binder.js';
-import { canAddDistinctCard, cardsFor } from '../utils/freeLimits.js';
+import { canAddDistinctCard, canCreateBinder, cardsFor, distinctOwnedCount } from '../utils/freeLimits.js';
 import { formatCurrency } from '../utils/helpers.js';
 import BinderValueDialog from '../components/binder/BinderValueDialog.jsx';
+import BinderGrid from '../components/binder/BinderGrid.jsx';
+import { setOpenBinderId } from '../utils/openBinder.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -205,6 +213,9 @@ const BinderCollection = ({ isWanted = false }) => {
     const { cards, cardGroups, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
     const [entries, setEntries] = useState([]);
+    const [allOwned, setAllOwned] = useState([]);
+    const [binders, setBinders] = useState([]);
+    const [openBinderId, setOpenBinder] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -237,15 +248,38 @@ const BinderCollection = ({ isWanted = false }) => {
         if (fetchError) {
             setError(fetchError.message || `Failed to load ${listLabel.toLowerCase()}`);
             setEntries([]);
+            setAllOwned([]);
         } else {
-            setEntries(isWanted ? data.wants : data.binder);
+            const owned = data.binder || [];
+            setAllOwned(owned);
+            if (isWanted) {
+                setEntries(data.wants || []);
+            } else if (openBinderId) {
+                setEntries(owned.filter((e) => (e.binderId || TRADE_BINDER_ID) === openBinderId));
+            } else {
+                setEntries(owned);
+            }
         }
         setLoading(false);
-    }, [isWanted, listLabel]);
+    }, [isWanted, listLabel, openBinderId]);
+
+    const loadBinders = useCallback(async () => {
+        if (isWanted) return;
+        const { data } = await getBinders();
+        setBinders(data?.binders || []);
+    }, [isWanted]);
 
     useEffect(() => {
-        if (user) loadEntries();
-    }, [user, loadEntries]);
+        if (user) {
+            loadEntries();
+            loadBinders();
+        }
+    }, [user, loadEntries, loadBinders]);
+
+    useEffect(() => {
+        setOpenBinderId(isWanted ? null : openBinderId);
+        return () => setOpenBinderId(null);
+    }, [isWanted, openBinderId]);
 
     const catalogById = useMemo(() => {
         const map = new Map();
@@ -354,16 +388,23 @@ const BinderCollection = ({ isWanted = false }) => {
     const atFreeLimit =
         !entitlementLoading &&
         !isPro &&
-        !canAddDistinctCard(entries.length, { isWanted, isPro: false });
+        !canAddDistinctCard(
+            isWanted ? entries.length : distinctOwnedCount(allOwned),
+            { isWanted, isPro: false },
+        );
+    const showingGrid = !isWanted && !openBinderId;
+    const openBinder = binders.find((b) => b.clientId === openBinderId);
 
     const handleAddCard = async (option) => {
         const catalogCard = option?.card;
         if (!catalogCard?._uniqueId) return;
 
         const cardId = catalogCard._uniqueId;
+        const binderId = isWanted ? undefined : (openBinderId || TRADE_BINDER_ID);
         const existing = entries.find((e) => e.cardId === cardId);
+        const distinct = isWanted ? entries.length : distinctOwnedCount(allOwned);
 
-        if (!existing && !canAddDistinctCard(entries.length, { isWanted, isPro })) {
+        if (!existing && !canAddDistinctCard(distinct, { isWanted, isPro })) {
             setLimitMessage(
                 `${isWanted ? 'Want lists' : 'Binders'} hold ${limit} cards on the free plan. Subscribe in the FABTrades app to add more.`,
             );
@@ -377,6 +418,7 @@ const BinderCollection = ({ isWanted = false }) => {
             isWanted,
             quantity: nextQty,
             condition: existing?.condition || 'NM',
+            binderId,
             card: catalogCard,
             addedAt: existing?.addedAt,
         });
@@ -397,7 +439,10 @@ const BinderCollection = ({ isWanted = false }) => {
     const updateQuantity = async (entry, quantity) => {
         setBusyCardId(entry.cardId);
         if (quantity <= 0) {
-            const { error: delError } = await removeEntry(entry.cardId, isWanted);
+            const { error: delError } = await removeEntry(entry.cardId, isWanted, {
+                binderId: entry.binderId,
+                condition: entry.condition,
+            });
             setBusyCardId(null);
             if (delError) {
                 setToast(delError.message || 'Failed to remove card');
@@ -412,6 +457,7 @@ const BinderCollection = ({ isWanted = false }) => {
             isWanted,
             quantity,
             condition: entry.condition,
+            binderId: entry.binderId,
             card: entry.stub || entry.card,
             addedAt: entry.addedAt,
         });
@@ -447,6 +493,7 @@ const BinderCollection = ({ isWanted = false }) => {
             isWanted,
             quantity: mergeTarget ? mergeTarget.quantity + qty : qty,
             condition: mergeTarget?.condition || condition,
+            binderId: isWanted ? undefined : (openBinderId || TRADE_BINDER_ID),
             card: newCard,
             addedAt: mergeTarget?.addedAt || entry.addedAt,
         });
@@ -457,7 +504,10 @@ const BinderCollection = ({ isWanted = false }) => {
             return;
         }
 
-        const { error: delError } = await removeEntry(entry.cardId, isWanted);
+        const { error: delError } = await removeEntry(entry.cardId, isWanted, {
+            binderId: entry.binderId,
+            condition: entry.condition,
+        });
         setBusyCardId(null);
 
         if (delError) {
@@ -477,13 +527,119 @@ const BinderCollection = ({ isWanted = false }) => {
     const handleRemove = async (entry) => {
         if (!entry) return;
         setBusyCardId(entry.cardId);
-        const { error: delError } = await removeEntry(entry.cardId, isWanted);
+        const { error: delError } = await removeEntry(entry.cardId, isWanted, {
+            binderId: entry.binderId,
+            condition: entry.condition,
+        });
         setBusyCardId(null);
         if (delError) {
             setToast(delError.message || 'Failed to remove card');
             return;
         }
         setEntries((prev) => prev.filter((e) => e.cardId !== entry.cardId));
+    };
+
+    const promptName = (title, initial = '') => {
+        const next = window.prompt(title, initial);
+        return next;
+    };
+
+    const handleCreateBinder = async () => {
+        const { data: latest } = await getBinders();
+        const liveCount = (latest?.binders || binders).length;
+        if (!canCreateBinder(liveCount, { isPro })) {
+            setLimitMessage(
+                'Binders hold 4 on the free plan. Subscribe in the FABTrades app to add more.',
+            );
+            return;
+        }
+        const name = promptName('New Binder');
+        if (name == null) return;
+        const { data, error: createError } = await createBinder({ name, isPro, liveCount: binders.length });
+        if (createError) {
+            if (createError.reason === 'paywall') {
+                setLimitMessage(
+                    'Binders hold 4 on the free plan. Subscribe in the FABTrades app to add more.',
+                );
+            } else {
+                setToast(createError.reason === 'duplicate'
+                    ? 'A Binder with that name already exists'
+                    : (createError.message || 'Could not create Binder'));
+            }
+            return;
+        }
+        setBinders((prev) => [...prev, data]);
+    };
+
+    const handleRenameBinder = async (binder) => {
+        const name = promptName('Rename Binder', binder.name);
+        if (name == null) return;
+        const { data, error: renameError } = await renameBinder({
+            clientId: binder.clientId,
+            name,
+        });
+        if (renameError) {
+            setToast(renameError.reason === 'duplicate'
+                ? 'A Binder with that name already exists'
+                : (renameError.message || 'Could not rename'));
+            return;
+        }
+        setBinders((prev) => prev.map((b) => (b.clientId === data.clientId ? data : b)));
+    };
+
+    const handleDeleteBinder = async (binder) => {
+        const { error: deleteError } = await deleteBinder({
+            clientId: binder.clientId,
+            entries: allOwned,
+        });
+        if (deleteError) {
+            const message = deleteError.reason === 'trade'
+                ? 'Trade Binder cannot be deleted'
+                : deleteError.reason === 'not-empty'
+                    ? 'Move or remove cards before deleting this Binder'
+                    : (deleteError.message || 'Could not delete Binder');
+            setToast(message);
+            return;
+        }
+        setBinders((prev) => prev.filter((b) => b.clientId !== binder.clientId));
+    };
+
+    const handleMove = async (entry) => {
+        const dests = binders.filter((b) => b.clientId !== (openBinderId || TRADE_BINDER_ID));
+        if (!dests.length) {
+            setToast('No other Binder to move into');
+            return;
+        }
+        const names = dests.map((b) => b.name).join(', ');
+        const picked = window.prompt(`Move to Binder (${names})`, dests[0].name);
+        if (!picked) return;
+        const dest = dests.find((b) => b.name.toLowerCase() === picked.trim().toLowerCase())
+            || dests.find((b) => b.clientId === picked);
+        if (!dest) {
+            setToast('Want List is not a Binder destination');
+            return;
+        }
+        let qty = entry.quantity || 1;
+        if (qty > 1) {
+            const raw = window.prompt(`How many copies to move? (1–${qty})`, String(Math.min(2, qty)));
+            if (raw == null) return;
+            qty = Number(raw);
+        }
+        const { error: moveError } = await applyBinderMove({
+            binders,
+            entries: allOwned,
+            fromBinderId: openBinderId || TRADE_BINDER_ID,
+            toBinderId: dest.clientId,
+            printingId: entry.cardId,
+            condition: entry.condition || 'NM',
+            quantity: qty,
+        });
+        if (moveError) {
+            setToast(moveError.message || 'Could not move');
+            return;
+        }
+        await loadEntries();
+        await loadBinders();
     };
 
     const openShareDialog = async () => {
@@ -635,7 +791,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                     lineHeight: 1.2,
                                 }}
                             >
-                                {listLabel}
+                                {openBinder?.name || listLabel}
                             </Typography>
                             {isPro && (
                                 <Chip
@@ -666,7 +822,7 @@ const BinderCollection = ({ isWanted = false }) => {
                             />
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                            {!isWanted && entries.length > 0 ? (
+                            {!isWanted && !showingGrid && entries.length > 0 ? (
                                 <Typography
                                     component="button"
                                     type="button"
@@ -692,7 +848,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                     {formatCurrency(totalValue.toFixed(2))}
                                 </Typography>
                             )}
-                            {!isWanted && (
+                            {!isWanted && openBinderId === TRADE_BINDER_ID && (
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -715,11 +871,35 @@ const BinderCollection = ({ isWanted = false }) => {
                                     Share
                                 </Button>
                             )}
+                            {showingGrid && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    data-testid="binder-create"
+                                    onClick={handleCreateBinder}
+                                    sx={{
+                                        color: accentColor,
+                                        borderColor: paperBorder,
+                                        fontSize: '0.75rem',
+                                        minHeight: 28,
+                                        px: 0.75,
+                                    }}
+                                >
+                                    New Binder
+                                </Button>
+                            )}
                             <Button
                                 variant="text"
                                 size="small"
+                                data-testid="binder-back"
                                 startIcon={<ArrowBackIcon sx={{ fontSize: '1rem !important' }} />}
-                                onClick={() => navigate('/')}
+                                onClick={() => {
+                                    if (openBinderId) {
+                                        setOpenBinder(null);
+                                        return;
+                                    }
+                                    navigate('/');
+                                }}
                                 sx={{
                                     color: accentColor,
                                     fontSize: '0.75rem',
@@ -732,6 +912,23 @@ const BinderCollection = ({ isWanted = false }) => {
                         </Box>
                     </Box>
 
+                    {showingGrid && (
+                        <BinderGrid
+                            binders={binders}
+                            entries={allOwned}
+                            resolveCard={resolveCard}
+                            onOpen={(binder) => setOpenBinder(binder.clientId)}
+                            onRename={handleRenameBinder}
+                            onDelete={handleDeleteBinder}
+                            mutedColor={mutedColor}
+                            accentColor={accentColor}
+                            paperBg={paperBg}
+                            paperBorder={paperBorder}
+                        />
+                    )}
+
+                    {!showingGrid && (
+                    <>
                     {!entitlementLoading && !isPro && entries.length / limit >= 0.7 && (
                         <Alert severity="info" icon={false} sx={{ mb: 1, py: 0.25, fontSize: '0.8rem' }}>
                             Free plan — {listLabel.toLowerCase()} holds {limit} cards
@@ -764,7 +961,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                 size="small"
                                 placeholder={
                                     atFreeLimit
-                                        ? 'Search your binder…'
+                                        ? 'Search your Binder…'
                                         : 'Search to add cards…'
                                 }
                                 items={cardOptions}
@@ -1130,12 +1327,24 @@ const BinderCollection = ({ isWanted = false }) => {
                                                         <DeleteIcon sx={{ fontSize: 16 }} />
                                                     )}
                                                 </IconButton>
+                                                {!isWanted && (
+                                                    <Button
+                                                        size="small"
+                                                        data-testid={`binder-move-${entry.cardId}`}
+                                                        onClick={() => handleMove(entry)}
+                                                        sx={{ fontSize: '0.7rem', minWidth: 0, px: 0.5 }}
+                                                    >
+                                                        Move
+                                                    </Button>
+                                                )}
                                             </Box>
                                         </Box>
                                     </Box>
                                 );
                             })}
                         </Box>
+                    )}
+                    </>
                     )}
                 </Paper>
             </Container>

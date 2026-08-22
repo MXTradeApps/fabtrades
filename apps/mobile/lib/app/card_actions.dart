@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/models/binder.dart';
 import '../core/models/card_model.dart';
 import '../core/models/trade.dart';
 import '../core/providers.dart';
@@ -32,6 +33,9 @@ Future<void> showCardActions(
           ref,
           card,
           isWanted: isWanted,
+          binderId: isWanted
+              ? null
+              : (ref.read(openBinderIdProvider) ?? BinderIds.trade),
           successMessage: isWanted ? 'Added to Want List' : 'Added to Binder',
           source: 'card_detail',
         );

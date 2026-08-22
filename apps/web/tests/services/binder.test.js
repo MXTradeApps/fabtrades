@@ -390,7 +390,9 @@ describe('binder share helpers', () => {
             quantity: 2,
             condition: 'LP',
             isWanted: false,
+            binderId: 'system:trade',
         });
+        expect(data.entries.every((e) => e.binderId === 'system:trade')).toBe(true);
         expect(data.entries[0].card.name).toBe('Fyendal\'s Spring Tunic');
     });
 

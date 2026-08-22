@@ -74,6 +74,8 @@ void main() {
         isTrue,
       );
     });
+
+    test('raising quantity on an already-listed card is never capped', () async {
       final c = await makeContainer(isPro: false);
       final binder = c.read(binderProvider.notifier);
       for (var i = 0; i < FreeLimits.binderCards; i++) {

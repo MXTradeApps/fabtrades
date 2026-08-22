@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
-import { canAddDistinctCard } from '../utils/freeLimits';
+import { canAddDistinctCard, canCreateBinder } from '../utils/freeLimits';
+import { validateBinderName } from '../utils/binderNames';
+import { moveBinderCopies as planMove } from '../utils/binderMove';
 import { fetchEntitlement } from './entitlements';
 
 export const BINDER_CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
@@ -682,4 +684,178 @@ export async function getPublicBinder(token) {
         console.error('Error fetching public binder:', error);
         return { data: null, error };
     }
+}
+
+export async function createBinder({ name, isPro = false, liveCount }) {
+    try {
+        const { user, error: authError } = await requireAuthenticatedUser(
+            'You must be logged in to create a binder',
+        );
+        if (authError) return { data: null, error: authError };
+
+        const check = validateBinderName({ proposedName: name, binders: [] });
+        if (!check.ok && check.reason === 'empty') {
+            return { data: null, error: { message: 'Name cannot be empty', reason: 'empty' } };
+        }
+
+        const { data: existing, error: listError } = await getBinders();
+        if (listError) return { data: null, error: listError };
+        const live = existing.binders || [];
+        const unique = validateBinderName({ proposedName: name, binders: existing.all || live });
+        if (!unique.ok) {
+            return { data: null, error: { message: unique.reason, reason: unique.reason } };
+        }
+        if (!canCreateBinder(live.length, { isPro })) {
+            return { data: null, error: { message: 'paywall', reason: 'paywall' } };
+        }
+
+        const now = new Date().toISOString();
+        const clientId = (globalThis.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `user:${Date.now()}`;
+        const row = {
+            user_id: user.id,
+            client_id: clientId,
+            name: unique.normalized,
+            role: 'standard',
+            created_at: now,
+            updated_at: now,
+            deleted_at: null,
+        };
+        const { data, error } = await supabase
+            .from('binders')
+            .upsert(row, { onConflict: 'user_id,client_id' })
+            .select()
+            .single();
+        if (error) throw error;
+        return { data: mapBinder(data), error: null };
+    } catch (error) {
+        console.error('Error creating binder:', error);
+        return { data: null, error };
+    }
+}
+
+export async function renameBinder({ clientId, name }) {
+    try {
+        const { user, error: authError } = await requireAuthenticatedUser(
+            'You must be logged in to rename a binder',
+        );
+        if (authError) return { data: null, error: authError };
+        const { data: existing, error: listError } = await getBinders();
+        if (listError) return { data: null, error: listError };
+        const unique = validateBinderName({
+            proposedName: name,
+            binders: existing.all || existing.binders || [],
+            binderId: clientId,
+        });
+        if (!unique.ok) {
+            return { data: null, error: { message: unique.reason, reason: unique.reason } };
+        }
+        const now = new Date().toISOString();
+        const { data, error } = await supabase
+            .from('binders')
+            .update({ name: unique.normalized, updated_at: now })
+            .eq('user_id', user.id)
+            .eq('client_id', clientId)
+            .select()
+            .single();
+        if (error) throw error;
+        return { data: mapBinder(data), error: null };
+    } catch (error) {
+        console.error('Error renaming binder:', error);
+        return { data: null, error };
+    }
+}
+
+export async function deleteBinder({ clientId, entries = [] }) {
+    try {
+        const { user, error: authError } = await requireAuthenticatedUser(
+            'You must be logged in to delete a binder',
+        );
+        if (authError) return { data: null, error: authError };
+        if (clientId === TRADE_BINDER_ID) {
+            return { data: null, error: { message: 'trade', reason: 'trade' } };
+        }
+        const occupied = (entries || []).some((e) =>
+            !e.isWanted && (e.binderId || TRADE_BINDER_ID) === clientId && (e.quantity || 0) >= 1,
+        );
+        if (occupied) {
+            return { data: null, error: { message: 'not-empty', reason: 'not-empty' } };
+        }
+        const now = new Date().toISOString();
+        const { error } = await supabase
+            .from('binders')
+            .update({ deleted_at: now, updated_at: now })
+            .eq('user_id', user.id)
+            .eq('client_id', clientId);
+        if (error) throw error;
+        return { data: { success: true }, error: null };
+    } catch (error) {
+        console.error('Error deleting binder:', error);
+        return { data: null, error };
+    }
+}
+
+export async function applyBinderMove({
+    binders,
+    entries,
+    fromBinderId,
+    toBinderId,
+    printingId,
+    condition = 'NM',
+    quantity,
+}) {
+    const planned = planMove({
+        binders,
+        entries,
+        fromBinderId,
+        toBinderId,
+        printingId,
+        condition,
+        quantity,
+    });
+    if (!planned.ok) {
+        return { data: null, error: { message: planned.reason, reason: planned.reason } };
+    }
+    const source = (entries || []).find((e) =>
+        !e.isWanted &&
+        e.cardId === printingId &&
+        (e.binderId || TRADE_BINDER_ID) === fromBinderId &&
+        (e.condition || 'NM') === condition,
+    );
+    const destExisting = (entries || []).find((e) =>
+        !e.isWanted &&
+        e.cardId === printingId &&
+        (e.binderId || TRADE_BINDER_ID) === toBinderId &&
+        (e.condition || 'NM') === condition,
+    );
+    const remaining = (Number(source?.quantity) || 0) - Number(quantity);
+    if (remaining <= 0) {
+        const removed = await removeEntry(printingId, false, {
+            binderId: fromBinderId,
+            condition,
+        });
+        if (removed.error) return removed;
+    } else {
+        const updated = await upsertEntry({
+            cardId: printingId,
+            isWanted: false,
+            quantity: remaining,
+            condition,
+            binderId: fromBinderId,
+            card: source?.card || source?.stub,
+            addedAt: source?.addedAt,
+        });
+        if (updated.error) return updated;
+    }
+    const destQty = (Number(destExisting?.quantity) || 0) + Number(quantity);
+    return upsertEntry({
+        cardId: printingId,
+        isWanted: false,
+        quantity: destQty,
+        condition,
+        binderId: toBinderId,
+        card: destExisting?.card || source?.card || source?.stub,
+        addedAt: destExisting?.addedAt || source?.addedAt,
+    });
 }

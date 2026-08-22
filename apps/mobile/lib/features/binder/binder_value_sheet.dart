@@ -5,6 +5,7 @@ import '../../app/theme.dart';
 import '../../core/logic/binder_value_snapshot.dart';
 import '../../core/logic/pricing.dart';
 import '../../core/models/app_settings.dart';
+import '../../core/models/binder.dart';
 import '../../core/providers.dart';
 
 /// Overlay inspect of the Binder total. Reads live Binder + Settings so qty
@@ -32,7 +33,10 @@ class BinderValueSheet extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final binder = ref
         .watch(binderProvider)
-        .where((e) => !e.isWanted)
+        .where((e) =>
+            !e.isWanted &&
+            e.resolvedBinderId ==
+                (ref.watch(openBinderIdProvider) ?? BinderIds.trade))
         .toList(growable: false);
 
     final headlineTotal = binder.fold<double>(

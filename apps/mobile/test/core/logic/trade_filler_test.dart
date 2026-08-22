@@ -81,6 +81,8 @@ void main() {
       expect(partition.boosted, isEmpty);
       expect(partition.catalog.map((m) => m.card.id), contains('collection'));
     });
+
+    test('does not boost an empty binder', () {
       final catalog = [
         buildCard(id: 'x', tcgMarket: 2),
         buildCard(id: 'y', tcgMarket: 6),

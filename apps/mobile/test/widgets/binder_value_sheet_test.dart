@@ -30,11 +30,12 @@ void main() {
       seed: _onboarded(),
     );
     await tester.pump();
-
     container.read(binderProvider.notifier).add(
           buildCard(id: 'a-Normal', name: 'Alpha', tcgMarket: 12.5, tcgLow: 8),
         );
     await tester.pump();
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('binderValueChip')), findsOneWidget);
     expect(find.text('\$12.50'), findsWidgets);
@@ -71,6 +72,8 @@ void main() {
           buildCard(id: 'a-Normal', name: 'Alpha', tcgMarket: 12.5),
         );
     await tester.pump();
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('binderValueChip')), findsOneWidget);
 
     await tester.tap(find.widgetWithText(Tab, 'Want List (0)'));

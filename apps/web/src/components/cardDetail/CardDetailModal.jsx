@@ -23,6 +23,7 @@ import CardDetailPrices from './CardDetailPrices.jsx';
 import { printingsForCard } from '../../utils/printingsForCard.js';
 import { upsertEntry, getBinderEntries } from '../../services/binder.js';
 import { canAddDistinctCard, cardsFor } from '../../utils/freeLimits.js';
+import { targetOwnedBinderId } from '../../utils/openBinder.js';
 import { formatCardType } from '../../utils/searchUtils.js';
 
 const WANT_LIMIT_MESSAGE = `Want lists hold ${cardsFor({ isWanted: true })} cards on the free plan. Subscribe in the FABTrades app to add more.`;
@@ -144,6 +145,57 @@ export function CardDetailModal({
             return;
         }
         showSuccess(`Added ${shown.name} to Want List`);
+    };
+
+    const BINDER_LIMIT_MESSAGE = `Binders hold ${cardsFor({ isWanted: false })} cards on the free plan. Subscribe in the FABTrades app to add more.`;
+
+    const handleAddToBinder = async () => {
+        if (!shown?._uniqueId) return;
+        if (!user) {
+            setSignInOpen(true);
+            return;
+        }
+        setWantBusy(true);
+        const { data: lists, error: listError } = await getBinderEntries();
+        if (listError || !lists) {
+            setWantBusy(false);
+            setToast({
+                open: true,
+                message: listError?.message || 'Could not update Binder',
+                severity: 'error',
+            });
+            return;
+        }
+        const binderId = targetOwnedBinderId();
+        const owned = lists.binder || [];
+        const existing = owned.find((e) =>
+            e.cardId === shown._uniqueId && (e.binderId || 'system:trade') === binderId,
+        );
+        const distinct = new Set(owned.map((e) => e.cardId)).size;
+        if (!existing && !canAddDistinctCard(distinct, { isWanted: false, isPro })) {
+            setWantBusy(false);
+            setToast({ open: true, message: BINDER_LIMIT_MESSAGE, severity: 'warning' });
+            return;
+        }
+        const { error } = await upsertEntry({
+            cardId: shown._uniqueId,
+            isWanted: false,
+            quantity: existing ? existing.quantity + 1 : 1,
+            condition: existing?.condition || 'NM',
+            binderId,
+            card: shown,
+            addedAt: existing?.addedAt,
+        });
+        setWantBusy(false);
+        if (error) {
+            setToast({
+                open: true,
+                message: error.message || 'Could not add to Binder',
+                severity: 'error',
+            });
+            return;
+        }
+        showSuccess(`Added ${shown.name} to Binder`);
     };
 
     const textColor = isDark ? '#f5f1ed' : '#2c1810';
@@ -321,12 +373,19 @@ export function CardDetailModal({
                                 Add to trade
                             </Button>
                         )}
-                        <Button
+        <Button
                             variant={showAddToTrade ? 'outlined' : 'contained'}
                             onClick={handleWantList}
                             disabled={wantBusy}
                         >
                             Want List
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            onClick={handleAddToBinder}
+                            disabled={wantBusy}
+                        >
+                            Binder
                         </Button>
                     </Box>
                 </DialogContent>
