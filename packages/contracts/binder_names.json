@@ -1,0 +1,181 @@
+{
+  "$comment": "Binder name uniqueness. Normalize with trim then case-fold. Live Binders only; deleted names may be reused. Trade Binder rename keeps role=trade. See packages/contracts/README.md and specs/004-multi-binder-grid/contracts/binders.md.",
+  "cases": [
+    {
+      "name": "create with a unique name is allowed",
+      "action": "create",
+      "binders": [
+        {
+          "clientId": "system:trade",
+          "name": "Trade Binder",
+          "role": "trade",
+          "deletedAt": null
+        },
+        {
+          "clientId": "system:collection",
+          "name": "Collection",
+          "role": "standard",
+          "deletedAt": null
+        }
+      ],
+      "binderId": null,
+      "proposedName": "Side Event",
+      "expected": {
+        "ok": true,
+        "normalized": "Side Event",
+        "reason": null,
+        "role": "standard"
+      }
+    },
+    {
+      "name": "trim plus case-fold collision is refused",
+      "action": "create",
+      "binders": [
+        {
+          "clientId": "system:trade",
+          "name": "Trade Binder",
+          "role": "trade",
+          "deletedAt": null
+        },
+        {
+          "clientId": "system:collection",
+          "name": "Collection",
+          "role": "standard",
+          "deletedAt": null
+        }
+      ],
+      "binderId": null,
+      "proposedName": "  collection ",
+      "expected": {
+        "ok": false,
+        "normalized": "collection",
+        "reason": "duplicate",
+        "role": null
+      }
+    },
+    {
+      "name": "empty after trim is invalid",
+      "action": "create",
+      "binders": [
+        {
+          "clientId": "system:trade",
+          "name": "Trade Binder",
+          "role": "trade",
+          "deletedAt": null
+        }
+      ],
+      "binderId": null,
+      "proposedName": "   ",
+      "expected": {
+        "ok": false,
+        "normalized": "",
+        "reason": "empty",
+        "role": null
+      }
+    },
+    {
+      "name": "rename to the same Binder own name is allowed",
+      "action": "rename",
+      "binders": [
+        {
+          "clientId": "system:trade",
+          "name": "Trade Binder",
+          "role": "trade",
+          "deletedAt": null
+        },
+        {
+          "clientId": "system:collection",
+          "name": "Collection",
+          "role": "standard",
+          "deletedAt": null
+        }
+      ],
+      "binderId": "system:collection",
+      "proposedName": "Collection",
+      "expected": {
+        "ok": true,
+        "normalized": "Collection",
+        "reason": null,
+        "role": "standard"
+      }
+    },
+    {
+      "name": "rename to another live Binder name is refused",
+      "action": "rename",
+      "binders": [
+        {
+          "clientId": "system:trade",
+          "name": "Trade Binder",
+          "role": "trade",
+          "deletedAt": null
+        },
+        {
+          "clientId": "system:collection",
+          "name": "Collection",
+          "role": "standard",
+          "deletedAt": null
+        }
+      ],
+      "binderId": "system:trade",
+      "proposedName": "COLLECTION",
+      "expected": {
+        "ok": false,
+        "normalized": "COLLECTION",
+        "reason": "duplicate",
+        "role": "trade"
+      }
+    },
+    {
+      "name": "deleted Binder name may be reused",
+      "action": "create",
+      "binders": [
+        {
+          "clientId": "system:trade",
+          "name": "Trade Binder",
+          "role": "trade",
+          "deletedAt": null
+        },
+        {
+          "clientId": "system:collection",
+          "name": "Collection",
+          "role": "standard",
+          "deletedAt": "2026-08-01T00:00:00.000Z"
+        }
+      ],
+      "binderId": null,
+      "proposedName": "Collection",
+      "expected": {
+        "ok": true,
+        "normalized": "Collection",
+        "reason": null,
+        "role": "standard"
+      }
+    },
+    {
+      "name": "Trade Binder rename keeps role trade",
+      "action": "rename",
+      "binders": [
+        {
+          "clientId": "system:trade",
+          "name": "Trade Binder",
+          "role": "trade",
+          "deletedAt": null
+        },
+        {
+          "clientId": "system:collection",
+          "name": "Collection",
+          "role": "standard",
+          "deletedAt": null
+        }
+      ],
+      "binderId": "system:trade",
+      "proposedName": "Event Binder",
+      "expected": {
+        "ok": true,
+        "normalized": "Event Binder",
+        "reason": null,
+        "role": "trade"
+      }
+    }
+  ]
+}

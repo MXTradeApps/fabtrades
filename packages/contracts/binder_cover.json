@@ -1,0 +1,355 @@
+{
+  "$comment": "Binder tile cover pick. Same source/headline split as binder_value_snapshot.json (pricingValue vs tcgMarketOnly). Empty Binders have no cover; all-unpriced still picks by name so the tile does not look empty. See packages/contracts/README.md and specs/004-multi-binder-grid/contracts/binders.md.",
+  "cases": [
+    {
+      "name": "empty Binder has no cover",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [],
+      "expected": {
+        "printingId": null
+      }
+    },
+    {
+      "name": "highest qty times sourceValue wins",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "cheap-Normal",
+          "name": "Cheap",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 10,
+          "condition": "NM",
+          "tcgMarket": 1.0,
+          "tcgLow": 0.5,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "pricey-Normal",
+          "name": "Pricey",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": 8.0,
+          "tcgLow": 7.0,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "printingId": "pricey-Normal"
+      }
+    },
+    {
+      "name": "tcgMarketOnly ignores Low fallback when Market is missing",
+      "source": "tcgplayer",
+      "headline": "tcgMarketOnly",
+      "entries": [
+        {
+          "printingId": "market-Normal",
+          "name": "Market",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 2.0,
+          "tcgLow": 9.0,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "low-only-Normal",
+          "name": "Low Only",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": null,
+          "tcgLow": 50.0,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "printingId": "market-Normal"
+      }
+    },
+    {
+      "name": "pricingValue uses Low when Market is missing",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "market-Normal",
+          "name": "Market",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 2.0,
+          "tcgLow": 9.0,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "low-only-Normal",
+          "name": "Low Only",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": null,
+          "tcgLow": 50.0,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "printingId": "low-only-Normal"
+      }
+    },
+    {
+      "name": "equal contribution ties break by name A-Z then printing id then condition",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "zeta-Normal",
+          "name": "Zeta",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 5.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "alpha-b-Normal",
+          "name": "Alpha",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "LP",
+          "tcgMarket": 5.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "alpha-a-Normal",
+          "name": "Alpha",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 5.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "printingId": "alpha-a-Normal"
+      }
+    },
+    {
+      "name": "same name and printing id ties break by condition A-Z",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "same-Normal",
+          "name": "Same",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 3.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "same-Normal",
+          "name": "Same",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "LP",
+          "tcgMarket": 3.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "printingId": "same-Normal",
+        "condition": "LP"
+      }
+    },
+    {
+      "name": "all-unpriced still picks a cover by name so the tile is not empty",
+      "source": "tcgplayer",
+      "headline": "pricingValue",
+      "entries": [
+        {
+          "printingId": "zulu-Normal",
+          "name": "Zulu",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": null,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "able-Normal",
+          "name": "Able",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "printingId": "able-Normal"
+      }
+    },
+    {
+      "name": "quantity below 1 is ignored for cover",
+      "source": "tcgplayer",
+      "headline": "tcgMarketOnly",
+      "entries": [
+        {
+          "printingId": "ghost-Normal",
+          "name": "Ghost",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 0,
+          "condition": "NM",
+          "tcgMarket": 100.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        },
+        {
+          "printingId": "keep-Normal",
+          "name": "Keep",
+          "finish": "Normal",
+          "isFoil": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 1.0,
+          "tcgLow": null,
+          "tcgMid": null,
+          "tcgHigh": null,
+          "cmTrend": null,
+          "cmLow": null,
+          "cmAvg": null,
+          "cmTrendFoil": null,
+          "cmLowFoil": null,
+          "cmAvgFoil": null
+        }
+      ],
+      "expected": {
+        "printingId": "keep-Normal"
+      }
+    }
+  ]
+}
