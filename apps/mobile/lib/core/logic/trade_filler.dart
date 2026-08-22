@@ -1,4 +1,5 @@
 import '../models/binder_entry.dart';
+import '../models/binder.dart';
 import '../models/card_model.dart';
 import '../models/trade.dart';
 import 'pricing.dart';
@@ -39,11 +40,16 @@ FillerPartition partitionFillerMatches({
   required TradeSide fillSide,
   required List<BinderEntry> binderEntries,
   int maxResults = 60,
+  String tradeBinderId = BinderIds.trade,
 }) {
   final boostWanted = fillSide == TradeSide.want;
   final boostIds = <String>{
     for (final e in binderEntries)
-      if (e.isWanted == boostWanted && e.quantity > 0) e.card.id,
+      if (e.quantity > 0 &&
+          (boostWanted
+              ? e.isWanted
+              : (!e.isWanted && e.resolvedBinderId == tradeBinderId)))
+        e.card.id,
   };
 
   final boosted = <FillerMatch>[];

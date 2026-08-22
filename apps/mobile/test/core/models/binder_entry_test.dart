@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fabtrades/core/models/binder_entry.dart';
+import 'package:fabtrades/core/models/binder.dart';
 
 import '../../support/fixtures.dart';
 
@@ -35,6 +36,7 @@ void main() {
       expect(restored.quantity, 3);
       expect(restored.condition, 'MP');
       expect(restored.isWanted, isTrue);
+      expect(restored.binderId, isNull);
       expect(restored.addedAt, DateTime.utc(2026, 4, 5, 6, 7, 8));
     });
 
@@ -45,7 +47,38 @@ void main() {
       expect(restored.quantity, 1);
       expect(restored.condition, 'NM');
       expect(restored.isWanted, isFalse);
+      expect(restored.binderId, BinderIds.trade);
       expect(restored.addedAt, isA<DateTime>());
+    });
+
+    test('fromJson assigns Trade Binder to owned rows missing binder_id', () {
+      final restored = BinderEntry.fromJson({
+        'card': buildCard(id: 'legacy').toStub(),
+        'is_wanted': false,
+      });
+      expect(restored.binderId, BinderIds.trade);
+      expect(restored.isWanted, isFalse);
+    });
+
+    test('fromJson keeps Want List binderId null', () {
+      final restored = BinderEntry.fromJson({
+        'card': buildCard(id: 'want').toStub(),
+        'is_wanted': true,
+        'binder_id': 'system:trade',
+      });
+      expect(restored.isWanted, isTrue);
+      expect(restored.binderId, isNull);
+    });
+
+    test('toJson round-trips binder_id for owned rows', () {
+      final entry = BinderEntry(
+        card: buildCard(id: 'c3'),
+        quantity: 1,
+        binderId: BinderIds.collection,
+        addedAt: DateTime.utc(2026, 4, 5),
+      );
+      final restored = BinderEntry.fromJson(entry.toJson());
+      expect(restored.binderId, BinderIds.collection);
     });
 
     test('conditions constant lists all grades', () {

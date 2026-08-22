@@ -6,6 +6,7 @@ import 'package:fabtrades/core/data/settings_repository.dart';
 import 'package:fabtrades/core/data/trade_repository.dart';
 import 'package:fabtrades/core/models/app_settings.dart';
 import 'package:fabtrades/core/models/binder_entry.dart';
+import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/models/lend_group.dart';
 import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/sync/sync_journal.dart';
@@ -84,6 +85,7 @@ void main() {
       expect(loaded.single.card.id, 'legacy');
       expect(loaded.single.quantity, 4);
       expect(loaded.single.isWanted, isFalse);
+      expect(loaded.single.binderId, BinderIds.trade);
     });
   });
 
@@ -179,10 +181,10 @@ void main() {
 
       // Restamping every record on every save would make this device win every
       // merge, so an untouched entry must keep its original timestamp.
-      expect(afterEdit['binder|a'], afterFirstSave['binder|a']);
+      expect(afterEdit['binder|system:trade|a|NM'], afterFirstSave['binder|system:trade|a|NM']);
       expect(
-        afterEdit['binder|b']!.isAfter(afterFirstSave['binder|b']!) ||
-            afterEdit['binder|b'] == afterFirstSave['binder|b'],
+        afterEdit['binder|system:trade|b|NM']!.isAfter(afterFirstSave['binder|system:trade|b|NM']!) ||
+            afterEdit['binder|system:trade|b|NM'] == afterFirstSave['binder|system:trade|b|NM'],
         isTrue,
       );
     });
@@ -200,7 +202,7 @@ void main() {
       await repo.save(const []);
 
       expect(journal.localTimestamps(SyncDomain.binder), isEmpty);
-      expect(journal.tombstones(SyncDomain.binder).keys, ['binder|a']);
+      expect(journal.tombstones(SyncDomain.binder).keys, ['binder|system:trade|a|NM']);
     });
 
     test('re-adding a deleted record clears its tombstone', () async {
@@ -217,7 +219,7 @@ void main() {
       await repo.save([entry]);
 
       expect(journal.tombstones(SyncDomain.binder), isEmpty);
-      expect(journal.localTimestamps(SyncDomain.binder).keys, ['binder|a']);
+      expect(journal.localTimestamps(SyncDomain.binder).keys, ['binder|system:trade|a|NM']);
     });
 
     test('settings are only stamped once a choice is actually made', () async {

@@ -35,6 +35,7 @@
  * @param {boolean} params.removeGivenFromBinder
  * @param {boolean} params.addReceivedToBinder
  * @param {string} [params.now] - ISO timestamp for new rows
+ * @param {string} [params.tradeBinderId='system:trade'] - Trade Binder client id
  * @returns {BinderEntryLike[]}
  */
 export function reconcileBinderAfterTrade({
@@ -44,13 +45,16 @@ export function reconcileBinderAfterTrade({
     removeGivenFromBinder,
     addReceivedToBinder,
     now,
+    tradeBinderId = 'system:trade',
+    binders,
 }) {
     let next = Array.isArray(entries) ? entries.map((e) => ({ ...e })) : [];
     const stamp = now || new Date().toISOString();
+    const tradeId = resolveTradeBinderId(tradeBinderId, binders);
 
     if (removeGivenFromBinder) {
         for (const item of haveItems) {
-            next = decrement(next, item.cardId, item.quantity, false);
+            next = decrement(next, item.cardId, item.quantity, false, tradeId);
         }
     }
 
@@ -65,6 +69,7 @@ export function reconcileBinderAfterTrade({
                     condition: 'NM',
                     card: item.card,
                     now: stamp,
+                    binderId: tradeId,
                 },
             );
         }
@@ -76,6 +81,18 @@ export function reconcileBinderAfterTrade({
     }
 
     return next;
+}
+
+export const TRADE_BINDER_ID = 'system:trade';
+export const COLLECTION_BINDER_ID = 'system:collection';
+
+function resolveTradeBinderId(tradeBinderId, binders) {
+    if (tradeBinderId) return tradeBinderId;
+    if (Array.isArray(binders)) {
+        const trade = binders.find((b) => b.role === 'trade' && !b.deletedAt);
+        if (trade?.clientId) return trade.clientId;
+    }
+    return TRADE_BINDER_ID;
 }
 
 /**
@@ -116,11 +133,13 @@ export function tradeLinesFromList(list) {
  * @param {boolean} isWanted
  * @returns {BinderEntryLike[]}
  */
-function decrement(entries, cardId, quantity, isWanted) {
+function decrement(entries, cardId, quantity, isWanted, binderId) {
     if (!cardId || !quantity) return entries;
-    const idx = entries.findIndex(
-        (e) => e.cardId === cardId && Boolean(e.isWanted) === Boolean(isWanted),
-    );
+    const idx = entries.findIndex((e) => {
+        if (e.cardId !== cardId || Boolean(e.isWanted) !== Boolean(isWanted)) return false;
+        if (isWanted) return true;
+        return resolvedBinderId(e) === binderId;
+    });
     if (idx < 0) return entries;
 
     const existing = entries[idx];
@@ -133,18 +152,19 @@ function decrement(entries, cardId, quantity, isWanted) {
     return updated;
 }
 
-/**
- * @param {BinderEntryLike[]} entries
- * @param {string} cardId
- * @param {number} quantity
- * @param {{ isWanted: boolean, condition: string, card?: Object, now: string }} opts
- * @returns {BinderEntryLike[]}
- */
-function add(entries, cardId, quantity, { isWanted, condition, card, now }) {
+function resolvedBinderId(entry) {
+    if (entry?.isWanted) return null;
+    return entry.binderId || TRADE_BINDER_ID;
+}
+
+function add(entries, cardId, quantity, { isWanted, condition, card, now, binderId }) {
     if (!cardId || !quantity) return entries;
-    const idx = entries.findIndex(
-        (e) => e.cardId === cardId && Boolean(e.isWanted) === Boolean(isWanted),
-    );
+    const targetBinder = isWanted ? null : (binderId || TRADE_BINDER_ID);
+    const idx = entries.findIndex((e) => {
+        if (e.cardId !== cardId || Boolean(e.isWanted) !== Boolean(isWanted)) return false;
+        if (isWanted) return true;
+        return resolvedBinderId(e) === targetBinder && (e.condition || 'NM') === (condition || 'NM');
+    });
     if (idx >= 0) {
         const existing = entries[idx];
         const updated = [...entries];
@@ -158,6 +178,7 @@ function add(entries, cardId, quantity, { isWanted, condition, card, now }) {
         {
             cardId,
             isWanted: Boolean(isWanted),
+            binderId: targetBinder,
             quantity,
             condition: condition || 'NM',
             card: card || null,

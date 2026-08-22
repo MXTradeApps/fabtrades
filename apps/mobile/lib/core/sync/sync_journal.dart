@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// The collections that sync, one per local storage key.
 enum SyncDomain {
   binder('binder'),
+  binders('binders'),
   lend('lend'),
   trades('trades'),
   settings('settings');

@@ -36,10 +36,12 @@ describe('reconcileBinderAfterTrade', () => {
             addReceivedToBinder: true,
             now,
         });
-        expect(next).toHaveLength(1);
-        expect(next[0].quantity).toBe(3);
-        expect(next[0].condition).toBe('LP');
-        expect(next[0].isWanted).toBe(false);
+        expect(next).toHaveLength(2);
+        const lp = next.find((e) => e.condition === 'LP');
+        const nm = next.find((e) => e.condition === 'NM');
+        expect(lp.quantity).toBe(1);
+        expect(nm.quantity).toBe(2);
+        expect(nm.binderId).toBe('system:trade');
     });
 
     test('creates new NM binder row for received cards', () => {

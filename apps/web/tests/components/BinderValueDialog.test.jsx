@@ -33,11 +33,33 @@ jest.mock('../../src/contexts/CardDetailContext.jsx', () => ({
 
 jest.mock('../../src/services/binder.js', () => ({
     getBinderEntries: (...args) => mockGetBinderEntries(...args),
+    getBinders: () => Promise.resolve({
+        data: {
+            binders: [
+                { clientId: 'system:trade', name: 'Trade Binder', role: 'trade', deletedAt: null },
+                { clientId: 'system:collection', name: 'Collection', role: 'standard', deletedAt: null },
+            ],
+        },
+        error: null,
+    }),
     upsertEntry: jest.fn(),
     removeEntry: jest.fn(),
     ensureBinderShare: jest.fn(),
     regenerateBinderShare: jest.fn(),
     setBinderShareEnabled: jest.fn(),
+    createBinder: jest.fn(),
+    renameBinder: jest.fn(),
+    deleteBinder: jest.fn(),
+    applyBinderMove: jest.fn(),
+    TRADE_BINDER_ID: 'system:trade',
+    COLLECTION_BINDER_ID: 'system:collection',
+    gridOrderBinders: (binders) => {
+        const live = (binders || []).filter((b) => !b.deletedAt);
+        const trade = live.find((b) => b.role === 'trade');
+        const collection = live.find((b) => b.clientId === 'system:collection');
+        const rest = live.filter((b) => b !== trade && b !== collection);
+        return [...(trade ? [trade] : []), ...(collection ? [collection] : []), ...rest];
+    },
 }));
 
 jest.mock('../../src/components/elements/Header.jsx', () => () => (
@@ -172,6 +194,8 @@ describe('BinderCollection entry', () => {
 
     test('/binder total opens the value dialog matching the header', async () => {
         renderCollection(false);
+        const tile = await screen.findByTestId('binder-tile-system:trade');
+        fireEvent.click(tile);
         const total = await waitFor(() => {
             const el = screen.getByTestId('binder-value-total');
             expect(el).toHaveTextContent('$12.5');

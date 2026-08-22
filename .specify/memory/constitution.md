@@ -1,24 +1,18 @@
 <!--
 Sync Impact Report
-- Version change: (none) → 1.0.0
-- Modified principles: template placeholders → FAB Trades principles
-  - [PRINCIPLE_1_NAME] → I. Good Enough Ships
-  - [PRINCIPLE_2_NAME] → II. Code That Reveals Intent
-  - [PRINCIPLE_3_NAME] → III. Fail Fast, Never Silent
-  - [PRINCIPLE_4_NAME] → IV. Honest Tests, Shared Contracts
-  - [PRINCIPLE_5_NAME] → V. Reproducible Ingest, Explicit Config
-- Added sections:
-  - Product Constraints (table speed, no-gate, vocabulary, prices, sync, entitlements, environments)
-  - Engineering Practice (monorepo, review, docs, dual-client DRY)
-- Removed sections: none (template placeholders only)
+- Version change: 1.0.0 → 1.1.0 (MINOR)
+- Modified principles: none
+- Modified constraints:
+  - Product Constraint 4 — Collection is allowed as the default keep-pile
+    Binder *name*. The product noun remains Binder. Trade Binder is
+    tradeable stock. Do not rename the Binder destination to Collection.
+    Want List is still not a Binder.
+- Added sections: none
+- Removed sections: none
 - Follow-up TODOs: none
 - Sources:
-  - docs/CONTEXT.md, docs/PRODUCT.md, README.md, docs/CLOUD_SYNC.md,
-    docs/ENTITLEMENTS.md, docs/ENVIRONMENTS.md, packages/contracts/README.md,
-    services/price-pipeline/README.md
-  - matsen/bipartite agents/clean-code-reviewer.md
-  - matsengrp/plugins agents/snakemake-pipeline-expert.md (adapted to the
-    Node price pipeline; FAB Trades does not use Snakemake)
+  - specs/004-multi-binder-grid/spec.md, plan.md, research.md
+  - docs/CONTEXT.md
 -->
 
 # FAB Trades Constitution
@@ -172,10 +166,13 @@ scope until the constitution is amended.
    the brand on the other. iOS and Android are one Flutter codebase, not
    two ports.
 4. **Speak the trader's language.** `docs/CONTEXT.md` is authoritative.
-   Use Binder (not collection), Want List, Trade Filler, Confirm Trade
-   (not Save Trade), Printing (`<product_id>-<subtype>`), Condition
-   (NM/LP/MP/HP/DMG, descriptive only — no price adjustment). Do not
-   rename domain terms per surface.
+   The product noun is **Binder**. **Trade Binder** is tradeable stock
+   (Confirm Trade, Trade Filler, public share). **Collection** is allowed
+   as the default keep-pile Binder *name*; do not rename the Binder
+   destination or tab to Collection. Want List is still not a Binder.
+   Use Trade Filler, Confirm Trade (not Save Trade), Printing
+   (`<product_id>-<subtype>`), Condition (NM/LP/MP/HP/DMG, descriptive
+   only — no price adjustment). Do not rename domain terms per surface.
 5. **Real prices or nothing.** Values trace to the ingested TCGplayer
    catalog. The product MUST NOT fabricate prices, testimonials, or
    affiliation with Legend Story Studios or TCGplayer.
@@ -271,4 +268,4 @@ Compliance:
   Product Constraints — never the other way around. We ship the simple
   correct thing, not the pretty wrong thing.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-14 | **Last Amended**: 2026-08-14
+**Version**: 1.1.0 | **Ratified**: 2026-08-14 | **Last Amended**: 2026-08-22

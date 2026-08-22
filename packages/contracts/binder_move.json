@@ -1,0 +1,570 @@
+{
+  "$comment": "Binder-to-Binder move. Web (JS) and mobile (Dart) both assert these cases. Want List is never a destination. Shared binderCards must not refuse a valid move. See packages/contracts/README.md and specs/004-multi-binder-grid/contracts/binder-move.md.",
+  "cases": [
+    {
+      "name": "partial quantity leaves remainder in the source Binder",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "alpha-Normal",
+          "name": "Alpha",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 3,
+          "condition": "NM",
+          "tcgMarket": 2.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "alpha-Normal",
+      "condition": "NM",
+      "quantity": 2,
+      "expected": {
+        "ok": true,
+        "reason": null,
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "alpha-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 1,
+            "condition": "NM"
+          },
+          {
+            "printingId": "alpha-Normal",
+            "binderId": "system:collection",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "destination merges on printing and condition",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "bravo-Normal",
+          "name": "Bravo",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 4,
+          "condition": "LP",
+          "tcgMarket": 1.5
+        },
+        {
+          "printingId": "bravo-Normal",
+          "name": "Bravo",
+          "binderId": "system:collection",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "LP",
+          "tcgMarket": 1.5
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "bravo-Normal",
+      "condition": "LP",
+      "quantity": 2,
+      "expected": {
+        "ok": true,
+        "reason": null,
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "bravo-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "LP"
+          },
+          {
+            "printingId": "bravo-Normal",
+            "binderId": "system:collection",
+            "isWanted": false,
+            "quantity": 3,
+            "condition": "LP"
+          }
+        ]
+      }
+    },
+    {
+      "name": "different conditions do not merge",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "charlie-Normal",
+          "name": "Charlie",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": 3.0
+        },
+        {
+          "printingId": "charlie-Normal",
+          "name": "Charlie",
+          "binderId": "system:collection",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "MP",
+          "tcgMarket": 3.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "charlie-Normal",
+      "condition": "NM",
+      "quantity": 2,
+      "expected": {
+        "ok": true,
+        "reason": null,
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "charlie-Normal",
+            "binderId": "system:collection",
+            "isWanted": false,
+            "quantity": 1,
+            "condition": "MP"
+          },
+          {
+            "printingId": "charlie-Normal",
+            "binderId": "system:collection",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "moving the last copy removes the source row",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "delta-Normal",
+          "name": "Delta",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 4.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "delta-Normal",
+      "condition": "NM",
+      "quantity": 1,
+      "expected": {
+        "ok": true,
+        "reason": null,
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "delta-Normal",
+            "binderId": "system:collection",
+            "isWanted": false,
+            "quantity": 1,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "quantity below 1 is refused",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "echo-Normal",
+          "name": "Echo",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": 1.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "echo-Normal",
+      "condition": "NM",
+      "quantity": 0,
+      "expected": {
+        "ok": false,
+        "reason": "invalid-quantity",
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "echo-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "quantity greater than the source is refused",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "foxtrot-Normal",
+          "name": "Foxtrot",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": 1.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "foxtrot-Normal",
+      "condition": "NM",
+      "quantity": 3,
+      "expected": {
+        "ok": false,
+        "reason": "invalid-quantity",
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "foxtrot-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "same Binder is refused",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "golf-Normal",
+          "name": "Golf",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": 1.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:trade",
+      "printingId": "golf-Normal",
+      "condition": "NM",
+      "quantity": 1,
+      "expected": {
+        "ok": false,
+        "reason": "same-binder",
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "golf-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "missing source row is refused",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "hotel-Normal",
+          "name": "Hotel",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "LP",
+          "tcgMarket": 1.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "hotel-Normal",
+      "condition": "NM",
+      "quantity": 1,
+      "expected": {
+        "ok": false,
+        "reason": "missing-source",
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "hotel-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 1,
+            "condition": "LP"
+          }
+        ]
+      }
+    },
+    {
+      "name": "tombstoned destination is refused",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": "2026-08-01T00:00:00.000Z" }
+      ],
+      "entries": [
+        {
+          "printingId": "india-Normal",
+          "name": "India",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": 1.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "india-Normal",
+      "condition": "NM",
+      "quantity": 1,
+      "expected": {
+        "ok": false,
+        "reason": "invalid-destination",
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "india-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Want List is never a destination",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "juliet-Normal",
+          "name": "Juliet",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": 1.0
+        },
+        {
+          "printingId": "juliet-Normal",
+          "name": "Juliet",
+          "binderId": null,
+          "isWanted": true,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 1.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "want",
+      "printingId": "juliet-Normal",
+      "condition": "NM",
+      "quantity": 1,
+      "expected": {
+        "ok": false,
+        "reason": "invalid-destination",
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "juliet-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "NM"
+          },
+          {
+            "printingId": "juliet-Normal",
+            "binderId": null,
+            "isWanted": true,
+            "quantity": 1,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Want List rows are unchanged and distinct owned count is unchanged",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "kilo-Normal",
+          "name": "Kilo",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 3,
+          "condition": "NM",
+          "tcgMarket": 2.0
+        },
+        {
+          "printingId": "lima-Normal",
+          "name": "Lima",
+          "binderId": "system:collection",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 5.0
+        },
+        {
+          "printingId": "mike-Normal",
+          "name": "Mike",
+          "binderId": null,
+          "isWanted": true,
+          "quantity": 4,
+          "condition": "NM",
+          "tcgMarket": 9.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "system:collection",
+      "printingId": "kilo-Normal",
+      "condition": "NM",
+      "quantity": 3,
+      "expected": {
+        "ok": true,
+        "reason": null,
+        "distinctOwned": 2,
+        "entries": [
+          {
+            "printingId": "lima-Normal",
+            "binderId": "system:collection",
+            "isWanted": false,
+            "quantity": 1,
+            "condition": "NM"
+          },
+          {
+            "printingId": "mike-Normal",
+            "binderId": null,
+            "isWanted": true,
+            "quantity": 4,
+            "condition": "NM"
+          },
+          {
+            "printingId": "kilo-Normal",
+            "binderId": "system:collection",
+            "isWanted": false,
+            "quantity": 3,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Trade Binder as destination is allowed",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null },
+        { "clientId": "system:collection", "role": "standard", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "november-Normal",
+          "name": "November",
+          "binderId": "system:collection",
+          "isWanted": false,
+          "quantity": 2,
+          "condition": "NM",
+          "tcgMarket": 1.0
+        }
+      ],
+      "fromBinderId": "system:collection",
+      "toBinderId": "system:trade",
+      "printingId": "november-Normal",
+      "condition": "NM",
+      "quantity": 2,
+      "expected": {
+        "ok": true,
+        "reason": null,
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "november-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 2,
+            "condition": "NM"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown destination is refused",
+      "binders": [
+        { "clientId": "system:trade", "role": "trade", "deletedAt": null }
+      ],
+      "entries": [
+        {
+          "printingId": "oscar-Normal",
+          "name": "Oscar",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "NM",
+          "tcgMarket": 1.0
+        }
+      ],
+      "fromBinderId": "system:trade",
+      "toBinderId": "missing-binder",
+      "printingId": "oscar-Normal",
+      "condition": "NM",
+      "quantity": 1,
+      "expected": {
+        "ok": false,
+        "reason": "invalid-destination",
+        "distinctOwned": 1,
+        "entries": [
+          {
+            "printingId": "oscar-Normal",
+            "binderId": "system:trade",
+            "isWanted": false,
+            "quantity": 1,
+            "condition": "NM"
+          }
+        ]
+      }
+    }
+  ]
+}

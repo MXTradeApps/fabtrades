@@ -28,6 +28,8 @@ jest.mock('../../src/hooks/useCardData.jsx', () => {
 });
 
 jest.mock('../../src/services/binder.js', () => ({
+    TRADE_BINDER_ID: 'system:trade',
+    targetOwnedBinderId: () => 'system:trade',
     getBinderEntries: (...args) => mockGetBinderEntries(...args),
     upsertEntry: (...args) => mockUpsertEntry(...args),
 }));

@@ -13,6 +13,7 @@ import 'data/auth_repository.dart';
 import 'data/card_repository.dart';
 import 'data/catalog_repository.dart';
 import 'data/binder_repository.dart';
+import 'data/binders_repository.dart';
 import 'data/entitlement_repository.dart';
 import 'data/lend_repository.dart';
 import 'data/purchases_repository.dart';
@@ -23,9 +24,12 @@ import 'data/settings_repository.dart';
 import 'data/trade_repository.dart';
 import 'logic/confirm_trade.dart';
 import 'logic/free_limits.dart';
+import 'logic/binder_move.dart';
+import 'logic/binder_names.dart';
 import 'logic/pricing.dart';
 import 'models/account.dart';
 import 'models/app_settings.dart';
+import 'models/binder.dart';
 import 'models/binder_entry.dart';
 import 'models/card_model.dart';
 import 'models/entitlement.dart';
@@ -287,6 +291,7 @@ final syncServiceProvider = Provider<SyncService>(
     client: ref.watch(supabaseClientProvider),
     journal: ref.watch(syncJournalProvider),
     binder: ref.watch(binderRepositoryProvider),
+    binders: ref.watch(bindersRepositoryProvider),
     lend: ref.watch(lendRepositoryProvider),
     trades: ref.watch(tradeRepositoryProvider),
     settings: ref.watch(settingsRepositoryProvider),
@@ -456,6 +461,7 @@ class SyncNotifier extends Notifier<SyncStatus> {
   /// they loaded at startup.
   void _refreshChangedScreens(SyncOutcome outcome) {
     if (outcome.binderChanged) ref.invalidate(binderProvider);
+    if (outcome.bindersChanged) ref.invalidate(bindersProvider);
     if (outcome.lendChanged) ref.invalidate(lendProvider);
     if (outcome.tradesChanged) ref.invalidate(tradeHistoryProvider);
     if (outcome.settingsChanged) ref.invalidate(settingsProvider);
@@ -660,10 +666,15 @@ final freeUsageProvider = Provider<FreeUsage?>((ref) {
       .where((g) => !g.isBorrowing)
       .fold<int>(0, (sum, g) => sum + g.cardCount);
   return FreeUsage(
-    binderCards: entries.where((e) => !e.isWanted).length,
-    wantListCards: entries.where((e) => e.isWanted).length,
+    binderCards: entries
+        .where((e) => !e.isWanted)
+        .map((e) => e.card.id)
+        .toSet()
+        .length,
+    wantListCards: entries.where((e) => e.isWanted).map((e) => e.card.id).toSet().length,
     loanedCards: loanedCards,
     savedTrades: ref.watch(tradeHistoryProvider).length,
+    binders: ref.watch(bindersProvider).where((b) => b.isLive).length,
   );
 });
 
@@ -745,7 +756,10 @@ class BinderFiltersNotifier extends Notifier<CardFilters> {
 /// Binder-tab entries (`!isWanted`) after the same query / sort rules
 /// as Browse. Non-card products are kept if the user already added them.
 final filteredBinderProvider = Provider<List<BinderEntry>>((ref) {
-  final entries = ref.watch(binderProvider).where((e) => !e.isWanted);
+  final binderId = ref.watch(openBinderIdProvider) ?? BinderIds.trade;
+  final entries = ref.watch(binderProvider).where(
+        (e) => !e.isWanted && e.resolvedBinderId == binderId,
+      );
   final filters = ref.watch(binderFiltersProvider);
   return filterByCardFilters(
     entries,
@@ -759,6 +773,118 @@ final binderRepositoryProvider = Provider<BinderRepository>((ref) =>
     BinderRepository(
         ref.watch(sharedPreferencesProvider), ref.watch(syncJournalProvider)));
 
+final bindersRepositoryProvider = Provider<BindersRepository>((ref) =>
+    BindersRepository(
+        ref.watch(sharedPreferencesProvider), ref.watch(syncJournalProvider)));
+
+/// Currently drilled-in Binder, or null when the grid is showing.
+final openBinderIdProvider = NotifierProvider<OpenBinderIdNotifier, String?>(
+    OpenBinderIdNotifier.new);
+
+class OpenBinderIdNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void open(String binderId) => state = binderId;
+
+  void close() => state = null;
+}
+
+class BindersNotifier extends Notifier<List<Binder>> {
+  @override
+  List<Binder> build() {
+    final repo = ref.watch(bindersRepositoryProvider);
+    return repo.loadAndPersistSeed();
+  }
+
+  void _persist() => ref.read(bindersRepositoryProvider).save(state);
+
+  List<Binder> get live => Binder.gridOrder(state);
+
+  Binder? byId(String clientId) {
+    for (final binder in state) {
+      if (binder.clientId == clientId) return binder;
+    }
+    return null;
+  }
+
+  String get tradeBinderId {
+    for (final binder in live) {
+      if (binder.isTrade) return binder.clientId;
+    }
+    return BinderIds.trade;
+  }
+
+  BinderNameResult create(String name, {required bool isPro}) {
+    final check = validateBinderName(proposedName: name, binders: state);
+    if (!check.ok) return check;
+    if (!FreeLimits.canCreateBinder(live.length, isPro: isPro)) {
+      return BinderNameResult(
+        ok: false,
+        normalized: check.normalized,
+        reason: 'paywall',
+        role: BinderRole.standard,
+      );
+    }
+    final stamp = DateTime.now();
+    state = [
+      ...state,
+      Binder(
+        clientId: stamp.microsecondsSinceEpoch.toString(),
+        name: check.normalized,
+        role: BinderRole.standard,
+        createdAt: stamp,
+        updatedAt: stamp,
+      ),
+    ];
+    _persist();
+    return check;
+  }
+
+  BinderNameResult rename(String clientId, String name) {
+    final check = validateBinderName(
+      proposedName: name,
+      binders: state,
+      binderId: clientId,
+    );
+    if (!check.ok) return check;
+    final stamp = DateTime.now();
+    state = [
+      for (final b in state)
+        if (b.clientId == clientId)
+          b.copyWith(name: check.normalized, updatedAt: stamp)
+        else
+          b,
+    ];
+    _persist();
+    return check;
+  }
+
+  /// Null on success. `trade` / `not-empty` / `missing` on refusal.
+  String? delete(String clientId) {
+    final binder = byId(clientId);
+    if (binder == null || !binder.isLive) return 'missing';
+    if (binder.isTrade) return 'trade';
+    final entries = ref.read(binderProvider);
+    final occupied = entries.any((e) =>
+        !e.isWanted && e.resolvedBinderId == clientId && e.quantity >= 1);
+    if (occupied) return 'not-empty';
+    final stamp = DateTime.now();
+    state = [
+      for (final b in state)
+        if (b.clientId == clientId)
+          b.copyWith(deletedAt: stamp, updatedAt: stamp)
+        else
+          b,
+    ];
+    _persist();
+    return null;
+  }
+}
+
+final bindersProvider =
+    NotifierProvider<BindersNotifier, List<Binder>>(BindersNotifier.new);
+
 class BinderNotifier extends Notifier<List<BinderEntry>> {
   @override
   List<BinderEntry> build() => ref.watch(binderRepositoryProvider).load();
@@ -769,25 +895,42 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
   /// nothing changed — callers should offer an upgrade rather than appear to
   /// do nothing. See `addToBinderOrUpsell`.
   ///
-  /// Only distinct cards count against the cap, so topping up the quantity of
-  /// something already listed always works.
-  bool add(CardModel card,
-      {int quantity = 1, String condition = 'NM', bool isWanted = false}) {
-    final idx = state.indexWhere(
-        (e) => e.card.id == card.id && e.isWanted == isWanted);
+  /// Owned identity is `(printing, binderId, condition)`. Distinct owned
+  /// Printings are counted across all Binders. Topping up a Printing already
+  /// owned in any Binder always works.
+  bool add(
+    CardModel card, {
+    int quantity = 1,
+    String condition = 'NM',
+    bool isWanted = false,
+    String? binderId,
+  }) {
+    final targetBinder =
+        isWanted ? null : (binderId ?? ref.read(openBinderIdProvider) ?? BinderIds.trade);
+    final idx = state.indexWhere((e) {
+      if (e.card.id != card.id || e.isWanted != isWanted) return false;
+      if (isWanted) return true;
+      return e.resolvedBinderId == targetBinder && e.condition == condition;
+    });
     if (idx >= 0) {
       final existing = state[idx];
       final updated = [...state];
       updated[idx] = existing.copyWith(quantity: existing.quantity + quantity);
       state = updated;
     } else {
-      if (!_canAddNewCard(isWanted: isWanted)) return false;
+      if (isWanted) {
+        if (!_canAddNewCard(isWanted: true)) return false;
+      } else {
+        final alreadyOwned = state.any((e) => !e.isWanted && e.card.id == card.id);
+        if (!alreadyOwned && !_canAddNewCard(isWanted: false)) return false;
+      }
       state = [
         BinderEntry(
           card: card,
           quantity: quantity,
           condition: condition,
           isWanted: isWanted,
+          binderId: targetBinder,
           addedAt: DateTime.now(),
         ),
         ...state,
@@ -799,18 +942,33 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
 
   bool _canAddNewCard({required bool isWanted}) {
     if (ref.read(isProProvider)) return true;
-    final listed = state.where((e) => e.isWanted == isWanted).length;
-    return listed < FreeLimits.cardsFor(isWanted: isWanted);
+    if (isWanted) {
+      final listed = state.where((e) => e.isWanted).map((e) => e.card.id).toSet().length;
+      return listed < FreeLimits.wantListCards;
+    }
+    final listed =
+        state.where((e) => !e.isWanted).map((e) => e.card.id).toSet().length;
+    return listed < FreeLimits.binderCards;
   }
 
-  void setQuantity(String cardId, bool isWanted, int quantity) {
+  String _ownedTarget(String? binderId) =>
+      binderId ?? ref.read(openBinderIdProvider) ?? BinderIds.trade;
+
+  bool _matchesOwned(BinderEntry e, String cardId, String? binderId) {
+    if (e.isWanted || e.card.id != cardId) return false;
+    return e.resolvedBinderId == _ownedTarget(binderId);
+  }
+
+  void setQuantity(String cardId, bool isWanted, int quantity, {String? binderId}) {
     if (quantity <= 0) {
-      remove(cardId, isWanted);
+      remove(cardId, isWanted, binderId: binderId);
       return;
     }
     state = [
       for (final e in state)
-        if (e.card.id == cardId && e.isWanted == isWanted)
+        if (isWanted
+            ? (e.card.id == cardId && e.isWanted)
+            : _matchesOwned(e, cardId, binderId))
           e.copyWith(quantity: quantity)
         else
           e
@@ -822,10 +980,13 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
     );
   }
 
-  void setCondition(String cardId, bool isWanted, String condition) {
+  void setCondition(String cardId, bool isWanted, String condition,
+      {String? binderId}) {
     state = [
       for (final e in state)
-        if (e.card.id == cardId && e.isWanted == isWanted)
+        if (isWanted
+            ? (e.card.id == cardId && e.isWanted)
+            : _matchesOwned(e, cardId, binderId))
           e.copyWith(condition: condition)
         else
           e
@@ -840,14 +1001,20 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
   /// Swaps the printing of an existing binder/want entry (e.g. First Edition →
   /// Unlimited), keeping quantity and condition. Merges if the target printing
   /// is already present on the same list.
-  void replaceCard(String oldCardId, bool isWanted, CardModel newCard) {
+  void replaceCard(String oldCardId, bool isWanted, CardModel newCard,
+      {String? binderId}) {
     if (oldCardId == newCard.id) return;
-    final idx =
-        state.indexWhere((e) => e.card.id == oldCardId && e.isWanted == isWanted);
+    final target = isWanted ? null : _ownedTarget(binderId);
+    final idx = state.indexWhere((e) => isWanted
+        ? (e.card.id == oldCardId && e.isWanted)
+        : _matchesOwned(e, oldCardId, target));
     if (idx < 0) return;
     final existing = state[idx];
-    final mergeIdx = state.indexWhere(
-        (e) => e.card.id == newCard.id && e.isWanted == isWanted);
+    final mergeIdx = state.indexWhere((e) {
+      if (e.card.id != newCard.id || e.isWanted != isWanted) return false;
+      if (isWanted) return true;
+      return e.resolvedBinderId == target && e.condition == existing.condition;
+    });
     final updated = [...state];
     if (mergeIdx >= 0 && mergeIdx != idx) {
       updated[mergeIdx] = updated[mergeIdx]
@@ -860,10 +1027,11 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
     _persist();
   }
 
-  void remove(String cardId, bool isWanted) {
-    state = state
-        .where((e) => !(e.card.id == cardId && e.isWanted == isWanted))
-        .toList();
+  void remove(String cardId, bool isWanted, {String? binderId}) {
+    state = state.where((e) {
+      if (isWanted) return !(e.card.id == cardId && e.isWanted);
+      return !_matchesOwned(e, cardId, binderId);
+    }).toList();
     _persist();
     ref.read(analyticsProvider).capture(
       isWanted ? 'want_list_card_removed' : 'binder_card_removed',
@@ -872,14 +1040,42 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
   }
 
   /// Decrements binder/want qty, clamping at zero (silent — no warnings).
-  void decrement(String cardId, int quantity, {bool isWanted = false}) {
-    final current = quantityOf(cardId, isWanted: isWanted);
-    setQuantity(cardId, isWanted, current - quantity);
+  void decrement(String cardId, int quantity,
+      {bool isWanted = false, String? binderId}) {
+    final current =
+        quantityOf(cardId, isWanted: isWanted, binderId: binderId);
+    setQuantity(cardId, isWanted, current - quantity, binderId: binderId);
   }
 
-  int quantityOf(String cardId, {bool isWanted = false}) => state
-      .where((e) => e.card.id == cardId && e.isWanted == isWanted)
-      .fold<int>(0, (s, e) => s + e.quantity);
+  int quantityOf(String cardId, {bool isWanted = false, String? binderId}) =>
+      state
+          .where((e) => isWanted
+              ? (e.card.id == cardId && e.isWanted)
+              : _matchesOwned(e, cardId, binderId))
+          .fold<int>(0, (s, e) => s + e.quantity);
+
+  BinderMoveResult moveCopies({
+    required String printingId,
+    required String fromBinderId,
+    required String toBinderId,
+    required int quantity,
+    String condition = 'NM',
+  }) {
+    final result = moveBinderCopies(
+      binders: ref.read(bindersProvider),
+      entries: state,
+      fromBinderId: fromBinderId,
+      toBinderId: toBinderId,
+      printingId: printingId,
+      condition: condition,
+      quantity: quantity,
+    );
+    if (result.ok) {
+      state = result.entries;
+      _persist();
+    }
+    return result;
+  }
 
   bool isWanted(String cardId) =>
       state.any((e) => e.card.id == cardId && e.isWanted && e.quantity > 0);
@@ -899,6 +1095,7 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
       trade: trade,
       removeGivenFromBinder: removeGivenFromBinder,
       addReceivedToBinder: addReceivedToBinder,
+      binders: ref.read(bindersProvider),
     );
     _persist();
   }

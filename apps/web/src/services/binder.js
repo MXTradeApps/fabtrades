@@ -1,9 +1,31 @@
 import { supabase } from '../lib/supabase';
-import { canAddDistinctCard } from '../utils/freeLimits';
+import { canAddDistinctCard, canCreateBinder } from '../utils/freeLimits';
+import { validateBinderName } from '../utils/binderNames';
+import { moveBinderCopies as planMove } from '../utils/binderMove';
 import { fetchEntitlement } from './entitlements';
 
-/** Conditions accepted by binder_entries / mobile BinderEntry. */
 export const BINDER_CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
+export const TRADE_BINDER_ID = 'system:trade';
+export const COLLECTION_BINDER_ID = 'system:collection';
+
+export function entryClientId({ cardId, isWanted, binderId, condition = 'NM' }) {
+    if (isWanted) return `want|${cardId}`;
+    return `binder|${binderId || TRADE_BINDER_ID}|${cardId}|${condition || 'NM'}`;
+}
+
+export function gridOrderBinders(binders) {
+    const live = (binders || []).filter((b) => !b.deletedAt);
+    const trade = live.find((b) => b.role === 'trade');
+    const collection = live.find((b) => b.clientId === COLLECTION_BINDER_ID);
+    const rest = live
+        .filter((b) => b !== trade && b !== collection)
+        .sort((a, b) => {
+            const byCreated = String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+            if (byCreated !== 0) return byCreated;
+            return String(a.clientId).localeCompare(String(b.clientId));
+        });
+    return [...(trade ? [trade] : []), ...(collection ? [collection] : []), ...rest];
+}
 
 /**
  * Ensure Supabase is configured and a user is authenticated.
@@ -145,9 +167,12 @@ function numOrNull(value) {
 }
 
 function mapRow(row) {
+    const isWanted = Boolean(row.is_wanted);
     return {
         cardId: row.card_id,
-        isWanted: Boolean(row.is_wanted),
+        isWanted,
+        binderId: isWanted ? null : (row.binder_id || TRADE_BINDER_ID),
+        clientId: row.client_id || null,
         quantity: Number(row.quantity) || 1,
         condition: row.condition || 'NM',
         card: parseCardStub(row.card),
@@ -155,6 +180,99 @@ function mapRow(row) {
         addedAt: row.added_at,
         updatedAt: row.updated_at,
     };
+}
+
+function mapBinder(row) {
+    if (!row) return null;
+    return {
+        clientId: row.client_id,
+        name: row.name,
+        role: row.role === 'trade' ? 'trade' : 'standard',
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        deletedAt: row.deleted_at || null,
+    };
+}
+
+function defaultBinderRows(userId, now) {
+    return [
+        {
+            user_id: userId,
+            client_id: TRADE_BINDER_ID,
+            name: 'Trade Binder',
+            role: 'trade',
+            created_at: now,
+            updated_at: now,
+            deleted_at: null,
+        },
+        {
+            user_id: userId,
+            client_id: COLLECTION_BINDER_ID,
+            name: 'Collection',
+            role: 'standard',
+            created_at: now,
+            updated_at: now,
+            deleted_at: null,
+        },
+    ];
+}
+
+/**
+ * Load Binder records for the signed-in user, seeding Trade Binder + Collection
+ * when missing. Does not invent signed-out local Binder storage.
+ *
+ * @returns {Promise<{ data: { binders: Array, all: Array }|null, error: Object|null }>}
+ */
+export async function getBinders() {
+    try {
+        const { user, error: authError } = await requireAuthenticatedUser(
+            'You must be logged in to view your binders',
+        );
+        if (authError) {
+            return { data: null, error: authError };
+        }
+
+        const { data, error } = await supabase
+            .from('binders')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        let rows = data || [];
+        const hasTrade = rows.some((r) => r.role === 'trade' && !r.deleted_at);
+        const hasCollectionRow = rows.some((r) => r.client_id === COLLECTION_BINDER_ID);
+        if (!hasTrade || !hasCollectionRow) {
+            const now = new Date().toISOString();
+            const missing = defaultBinderRows(user.id, now).filter((row) => {
+                if (row.client_id === TRADE_BINDER_ID) return !hasTrade;
+                return !hasCollectionRow;
+            });
+            const { data: upserted, error: seedError } = await supabase
+                .from('binders')
+                .upsert(missing, { onConflict: 'user_id,client_id' })
+                .select();
+            if (seedError) throw seedError;
+            const byId = new Map(rows.map((r) => [r.client_id, r]));
+            for (const row of upserted || missing) {
+                byId.set(row.client_id, row);
+            }
+            rows = [...byId.values()];
+        }
+
+        const all = rows.map(mapBinder);
+        return {
+            data: {
+                binders: gridOrderBinders(all.filter((b) => !b.deletedAt)),
+                all,
+            },
+            error: null,
+        };
+    } catch (error) {
+        console.error('Error fetching binders:', error);
+        return { data: null, error };
+    }
 }
 
 /**
@@ -196,7 +314,8 @@ export async function getBinderEntries() {
 }
 
 /**
- * Upsert a binder/want entry. Identity is `(user_id, card_id, is_wanted)`.
+ * Upsert a binder/want entry. Identity is
+ * `binder|{binderId}|{cardId}|{condition}` vs `want|{cardId}` (`client_id`).
  * Quantity must stay > 0; pass 0 (or less) to tombstone via {@link removeEntry}.
  * Sets client `updated_at` and clears `deleted_at` so a re-add resurrects a tombstone.
  *
@@ -205,6 +324,7 @@ export async function getBinderEntries() {
  * @param {boolean} params.isWanted
  * @param {number} params.quantity
  * @param {string} [params.condition='NM']
+ * @param {string} [params.binderId] - Required for owned rows; ignored for Want List
  * @param {Object} params.card - Web card or stub
  * @param {string} [params.addedAt] - Preserve existing added_at on updates
  * @returns {Promise<{ data: Object|null, error: Object|null }>}
@@ -214,6 +334,7 @@ export async function upsertEntry({
     isWanted,
     quantity,
     condition = 'NM',
+    binderId,
     card,
     addedAt,
 }) {
@@ -230,17 +351,28 @@ export async function upsertEntry({
         }
 
         const qty = Number(quantity);
+        const wanted = Boolean(isWanted);
+        const cond = BINDER_CONDITIONS.includes(condition) ? condition : 'NM';
+        const ownedBinderId = wanted ? null : (binderId || TRADE_BINDER_ID);
         if (!Number.isFinite(qty) || qty <= 0) {
-            return removeEntry(cardId, isWanted);
+            return removeEntry(cardId, wanted, { binderId: ownedBinderId, condition: cond });
         }
 
         const now = new Date().toISOString();
+        const clientId = entryClientId({
+            cardId,
+            isWanted: wanted,
+            binderId: ownedBinderId,
+            condition: cond,
+        });
         const row = {
             user_id: user.id,
+            client_id: clientId,
             card_id: cardId,
-            is_wanted: Boolean(isWanted),
+            is_wanted: wanted,
+            binder_id: ownedBinderId,
             quantity: Math.floor(qty),
-            condition: BINDER_CONDITIONS.includes(condition) ? condition : 'NM',
+            condition: cond,
             card: cardStub(card),
             added_at: addedAt || now,
             updated_at: now,
@@ -249,7 +381,7 @@ export async function upsertEntry({
 
         const { data, error } = await supabase
             .from('binder_entries')
-            .upsert(row, { onConflict: 'user_id,card_id,is_wanted' })
+            .upsert(row, { onConflict: 'user_id,client_id' })
             .select()
             .single();
 
@@ -269,7 +401,7 @@ export async function upsertEntry({
  * @param {boolean} isWanted
  * @returns {Promise<{ data: Object|null, error: Object|null }>}
  */
-export async function removeEntry(cardId, isWanted) {
+export async function removeEntry(cardId, isWanted, { binderId, condition = 'NM' } = {}) {
     try {
         const { user, error: authError } = await requireAuthenticatedUser(
             'You must be logged in to update your binder',
@@ -283,12 +415,18 @@ export async function removeEntry(cardId, isWanted) {
         }
 
         const now = new Date().toISOString();
+        const wanted = Boolean(isWanted);
+        const clientId = entryClientId({
+            cardId,
+            isWanted: wanted,
+            binderId: wanted ? null : (binderId || TRADE_BINDER_ID),
+            condition,
+        });
         const { error } = await supabase
             .from('binder_entries')
             .update({ deleted_at: now, updated_at: now })
             .eq('user_id', user.id)
-            .eq('card_id', cardId)
-            .eq('is_wanted', Boolean(isWanted));
+            .eq('client_id', clientId);
 
         if (error) throw error;
 
@@ -532,6 +670,7 @@ export async function getPublicBinder(token) {
         const entries = rows.map((row) => ({
             cardId: row.card_id,
             isWanted: false,
+            binderId: TRADE_BINDER_ID,
             quantity: Number(row.quantity) || 1,
             condition: row.condition || 'NM',
             card: parseCardStub(row.card),
@@ -545,4 +684,178 @@ export async function getPublicBinder(token) {
         console.error('Error fetching public binder:', error);
         return { data: null, error };
     }
+}
+
+export async function createBinder({ name, isPro = false, liveCount }) {
+    try {
+        const { user, error: authError } = await requireAuthenticatedUser(
+            'You must be logged in to create a binder',
+        );
+        if (authError) return { data: null, error: authError };
+
+        const check = validateBinderName({ proposedName: name, binders: [] });
+        if (!check.ok && check.reason === 'empty') {
+            return { data: null, error: { message: 'Name cannot be empty', reason: 'empty' } };
+        }
+
+        const { data: existing, error: listError } = await getBinders();
+        if (listError) return { data: null, error: listError };
+        const live = existing.binders || [];
+        const unique = validateBinderName({ proposedName: name, binders: existing.all || live });
+        if (!unique.ok) {
+            return { data: null, error: { message: unique.reason, reason: unique.reason } };
+        }
+        if (!canCreateBinder(live.length, { isPro })) {
+            return { data: null, error: { message: 'paywall', reason: 'paywall' } };
+        }
+
+        const now = new Date().toISOString();
+        const clientId = (globalThis.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `user:${Date.now()}`;
+        const row = {
+            user_id: user.id,
+            client_id: clientId,
+            name: unique.normalized,
+            role: 'standard',
+            created_at: now,
+            updated_at: now,
+            deleted_at: null,
+        };
+        const { data, error } = await supabase
+            .from('binders')
+            .upsert(row, { onConflict: 'user_id,client_id' })
+            .select()
+            .single();
+        if (error) throw error;
+        return { data: mapBinder(data), error: null };
+    } catch (error) {
+        console.error('Error creating binder:', error);
+        return { data: null, error };
+    }
+}
+
+export async function renameBinder({ clientId, name }) {
+    try {
+        const { user, error: authError } = await requireAuthenticatedUser(
+            'You must be logged in to rename a binder',
+        );
+        if (authError) return { data: null, error: authError };
+        const { data: existing, error: listError } = await getBinders();
+        if (listError) return { data: null, error: listError };
+        const unique = validateBinderName({
+            proposedName: name,
+            binders: existing.all || existing.binders || [],
+            binderId: clientId,
+        });
+        if (!unique.ok) {
+            return { data: null, error: { message: unique.reason, reason: unique.reason } };
+        }
+        const now = new Date().toISOString();
+        const { data, error } = await supabase
+            .from('binders')
+            .update({ name: unique.normalized, updated_at: now })
+            .eq('user_id', user.id)
+            .eq('client_id', clientId)
+            .select()
+            .single();
+        if (error) throw error;
+        return { data: mapBinder(data), error: null };
+    } catch (error) {
+        console.error('Error renaming binder:', error);
+        return { data: null, error };
+    }
+}
+
+export async function deleteBinder({ clientId, entries = [] }) {
+    try {
+        const { user, error: authError } = await requireAuthenticatedUser(
+            'You must be logged in to delete a binder',
+        );
+        if (authError) return { data: null, error: authError };
+        if (clientId === TRADE_BINDER_ID) {
+            return { data: null, error: { message: 'trade', reason: 'trade' } };
+        }
+        const occupied = (entries || []).some((e) =>
+            !e.isWanted && (e.binderId || TRADE_BINDER_ID) === clientId && (e.quantity || 0) >= 1,
+        );
+        if (occupied) {
+            return { data: null, error: { message: 'not-empty', reason: 'not-empty' } };
+        }
+        const now = new Date().toISOString();
+        const { error } = await supabase
+            .from('binders')
+            .update({ deleted_at: now, updated_at: now })
+            .eq('user_id', user.id)
+            .eq('client_id', clientId);
+        if (error) throw error;
+        return { data: { success: true }, error: null };
+    } catch (error) {
+        console.error('Error deleting binder:', error);
+        return { data: null, error };
+    }
+}
+
+export async function applyBinderMove({
+    binders,
+    entries,
+    fromBinderId,
+    toBinderId,
+    printingId,
+    condition = 'NM',
+    quantity,
+}) {
+    const planned = planMove({
+        binders,
+        entries,
+        fromBinderId,
+        toBinderId,
+        printingId,
+        condition,
+        quantity,
+    });
+    if (!planned.ok) {
+        return { data: null, error: { message: planned.reason, reason: planned.reason } };
+    }
+    const source = (entries || []).find((e) =>
+        !e.isWanted &&
+        e.cardId === printingId &&
+        (e.binderId || TRADE_BINDER_ID) === fromBinderId &&
+        (e.condition || 'NM') === condition,
+    );
+    const destExisting = (entries || []).find((e) =>
+        !e.isWanted &&
+        e.cardId === printingId &&
+        (e.binderId || TRADE_BINDER_ID) === toBinderId &&
+        (e.condition || 'NM') === condition,
+    );
+    const remaining = (Number(source?.quantity) || 0) - Number(quantity);
+    if (remaining <= 0) {
+        const removed = await removeEntry(printingId, false, {
+            binderId: fromBinderId,
+            condition,
+        });
+        if (removed.error) return removed;
+    } else {
+        const updated = await upsertEntry({
+            cardId: printingId,
+            isWanted: false,
+            quantity: remaining,
+            condition,
+            binderId: fromBinderId,
+            card: source?.card || source?.stub,
+            addedAt: source?.addedAt,
+        });
+        if (updated.error) return updated;
+    }
+    const destQty = (Number(destExisting?.quantity) || 0) + Number(quantity);
+    return upsertEntry({
+        cardId: printingId,
+        isWanted: false,
+        quantity: destQty,
+        condition,
+        binderId: toBinderId,
+        card: destExisting?.card || source?.card || source?.stub,
+        addedAt: destExisting?.addedAt || source?.addedAt,
+    });
 }

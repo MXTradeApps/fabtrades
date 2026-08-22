@@ -1,6 +1,6 @@
 # Cloud sync
 
-How a customer's binder, want list, lend groups, trades, and settings get to the
+How a customer's binders, want list, lend groups, trades, and settings get to the
 server and back, and why it works the way it does.
 
 ## The constraint that shapes everything
@@ -24,7 +24,8 @@ reads, and the server is reconciled against it in the background.**
 
 | Table | Holds | Key |
 | --- | --- | --- |
-| `binder_entries` | Binder and want-list rows | `(user_id, client_id)` |
+| `binders` | Binder records (name, role, tombstone) | `(user_id, client_id)` |
+| `binder_entries` | Owned Binder rows and Want List rows | `(user_id, client_id)` |
 | `lend_groups` | Lend groups and their cards | `(user_id, client_id)` |
 | `trades` | Confirmed and saved trades | `(user_id, client_id)` |
 | `user_settings` | One row per account | `user_id` |
@@ -36,6 +37,30 @@ and no client can see another account's rows.
 referred to before the server has ever heard of it, and an insert can be retried
 without creating a duplicate. `id` remains the primary key for web's existing
 foreign-key-shaped code, but sync never keys on it.
+
+### Binders and owned-entry identity
+
+`binders` holds one row per Binder: `client_id` (`system:trade`,
+`system:collection`, or a UUID), display `name`, `role` (`trade` or
+`standard`), and `deleted_at`. Live names are unique per user after
+`lower(btrim(name))`. Exactly one live Trade Binder (`role = trade`) exists
+per user; it is never tombstoned.
+
+Owned `binder_entries` belong to a Binder (`binder_id` = that Binder's
+`client_id`). Want List rows stay `is_wanted = true` with `binder_id` null —
+Want List is not a Binder.
+
+Entry identity, also stored as `binder_entries.client_id` for upsert:
+
+| List | Identity |
+| --- | --- |
+| Owned | `binder|{binderId}|{cardId}|{condition}` |
+| Want List | `want|{cardId}` |
+
+Conflict target is `(user_id, client_id)`. Live product uniqueness is a
+partial unique on owned `(user_id, card_id, binder_id, condition)` and want
+`(user_id, card_id)`. Last write wins per record. A unique-violation on a
+live Binder name is a surfaced error, not a silent rename.
 
 `trades` was FAB-web's table before mobile had accounts, so this migration
 generalized it rather than replacing it: `name` became nullable (mobile saves a
@@ -115,7 +140,7 @@ the sync row in Settings) rather than in place of it.
 
 Each collection is reconciled independently and a failure in one does not abandon
 the others: one unreachable table should not strand a binder. `SyncService.run`
-throws only when all four failed, which is the signal that the problem is the
+throws only when all five failed, which is the signal that the problem is the
 connection rather than the data.
 
 ## The one asymmetry between clients
@@ -139,7 +164,8 @@ apps/mobile/lib/core/sync/
   collection_sync.dart  The engine, one instance per collection
   settings_sync.dart    The singleton-row variant
   remote_store.dart     RemoteCollection / RemoteSettings + Supabase impls
-  binder_sync.dart      Per-domain row mapping
+  binder_sync.dart      Per-domain row mapping (entries)
+  binders_sync.dart     Binder records (`public.binders`)
   lend_sync.dart
   trade_sync.dart
   sync_service.dart     Orchestration + account-switch handling

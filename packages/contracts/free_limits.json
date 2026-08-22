@@ -4,13 +4,15 @@
     "binderCards": 50,
     "wantListCards": 50,
     "savedTrades": 3,
-    "loanedCards": 10
+    "loanedCards": 10,
+    "binders": 4
   },
   "behaviour": {
     "binderCards": "refuse",
     "wantListCards": "refuse",
     "savedTrades": "trim-oldest",
-    "loanedCards": "refuse"
+    "loanedCards": "refuse",
+    "binders": "paywall"
   },
   "cases": [
     {
@@ -24,6 +26,20 @@
       "limit": "binderCards",
       "existing": 50,
       "allowed": false
+    },
+    {
+      "name": "fifty distinct owned printings split across Trade Binder and Collection still refuse a fifty-first",
+      "limit": "binderCards",
+      "existing": 50,
+      "splitAcrossBinders": true,
+      "allowed": false
+    },
+    {
+      "name": "a valid move among fifty distinct owned printings is allowed",
+      "limit": "binderCards",
+      "existing": 50,
+      "action": "move",
+      "allowed": true
     },
     {
       "name": "a free want list accepts the fiftieth distinct card",
@@ -69,6 +85,35 @@
       "existing": 6,
       "allowed": true,
       "trimmed": 4
+    },
+    {
+      "name": "a free account with three live Binders may create another",
+      "limit": "binders",
+      "existing": 3,
+      "isPro": false,
+      "allowed": true
+    },
+    {
+      "name": "a free account with four live Binders cannot create a fifth",
+      "limit": "binders",
+      "existing": 4,
+      "isPro": false,
+      "allowed": false
+    },
+    {
+      "name": "a Pro account with four live Binders may create a fifth",
+      "limit": "binders",
+      "existing": 4,
+      "isPro": true,
+      "allowed": true
+    },
+    {
+      "name": "a tombstoned Collection does not count toward four live Binders",
+      "limit": "binders",
+      "existing": 3,
+      "tombstonedCollection": true,
+      "isPro": false,
+      "allowed": true
     }
   ]
 }

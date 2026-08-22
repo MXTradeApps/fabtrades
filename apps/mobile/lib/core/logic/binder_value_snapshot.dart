@@ -90,6 +90,7 @@ class BinderValueRow {
     required this.finish,
     required this.isFoil,
     required this.quantity,
+    this.condition = '',
     this.tcgMarket,
     this.tcgLow,
     this.tcgMid,
@@ -107,6 +108,7 @@ class BinderValueRow {
   final String finish;
   final bool isFoil;
   final int quantity;
+  final String condition;
   final double? tcgMarket;
   final double? tcgLow;
   final double? tcgMid;
@@ -126,6 +128,7 @@ class BinderValueRow {
       finish: card.subTypeName ?? (card.isFoil ? 'Foil' : 'Normal'),
       isFoil: card.isFoil,
       quantity: entry.quantity,
+      condition: entry.condition,
       tcgMarket: card.tcgMarket,
       tcgLow: card.tcgLow,
       tcgMid: card.tcgMid,
@@ -152,6 +155,7 @@ class BinderValueRow {
       finish: json['finish'] as String,
       isFoil: json['isFoil'] as bool? ?? false,
       quantity: (json['quantity'] as num).toInt(),
+      condition: (json['condition'] as String?) ?? '',
       tcgMarket: n('tcgMarket'),
       tcgLow: n('tcgLow'),
       tcgMid: n('tcgMid'),

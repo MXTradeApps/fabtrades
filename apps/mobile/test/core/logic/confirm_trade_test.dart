@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fabtrades/core/logic/confirm_trade.dart';
+import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/models/binder_entry.dart';
 import 'package:fabtrades/core/models/trade.dart';
 
@@ -71,7 +72,41 @@ void main() {
       expect(next.single.isWanted, isTrue);
     });
 
-    test('skips binder mutations when both checkboxes are off', () {
+    test('does not edit Collection when reconciling Trade Binder', () {
+      final trade = Trade(
+        id: 't',
+        createdAt: now,
+        haveItems: [
+          TradeItem(card: buildCard(id: 'keep'), quantity: 1, priceEach: 1),
+        ],
+        wantItems: [
+          TradeItem(card: buildCard(id: 'got'), quantity: 1, priceEach: 1),
+        ],
+      );
+      final collection = BinderEntry(
+        card: buildCard(id: 'keep'),
+        quantity: 4,
+        binderId: BinderIds.collection,
+        addedAt: now,
+      );
+      final next = reconcileBinderAfterTrade(
+        entries: [collection],
+        trade: trade,
+        removeGivenFromBinder: true,
+        addReceivedToBinder: true,
+        now: now,
+      );
+      expect(
+        next.where((e) => e.resolvedBinderId == BinderIds.collection).single.quantity,
+        4,
+      );
+      expect(
+        next.where((e) => e.resolvedBinderId == BinderIds.trade).single.card.id,
+        'got',
+      );
+    });
+
+    test('skips binder mutations when both checkboxes are off but still clears wants', () {
       final given = buildCard(id: 'g');
       final recv = buildCard(id: 'r');
       final trade = Trade(

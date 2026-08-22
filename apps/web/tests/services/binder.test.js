@@ -222,7 +222,7 @@ describe('upsertEntry / removeEntry', () => {
                     set_name: 'Welcome to Rathe',
                 }),
             }),
-            { onConflict: 'user_id,card_id,is_wanted' },
+            { onConflict: 'user_id,client_id' },
         );
         const payload = chain.upsert.mock.calls[0][0];
         const updatedAt = Date.parse(payload.updated_at);
@@ -250,8 +250,7 @@ describe('upsertEntry / removeEntry', () => {
                 updated_at: expect.any(String),
             }),
         );
-        expect(chain.eq).toHaveBeenCalledWith('card_id', '12345-foil');
-        expect(chain.eq).toHaveBeenCalledWith('is_wanted', true);
+        expect(chain.eq).toHaveBeenCalledWith('client_id', 'want|12345-foil');
         expect(chain.upsert).not.toHaveBeenCalled();
     });
 
@@ -391,7 +390,9 @@ describe('binder share helpers', () => {
             quantity: 2,
             condition: 'LP',
             isWanted: false,
+            binderId: 'system:trade',
         });
+        expect(data.entries.every((e) => e.binderId === 'system:trade')).toBe(true);
         expect(data.entries[0].card.name).toBe('Fyendal\'s Spring Tunic');
     });
 
