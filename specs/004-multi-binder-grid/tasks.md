@@ -116,14 +116,14 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T040 [P] [US2] Extend `apps/mobile/test/widgets/binder_grid_test.dart`: Binder | Want List tabs still present; Want List is not a grid tile; Want List rows do not affect Trade Binder / Collection count or value; returning from Want List shows the grid (or the Want List tab), not a blank Binder
-- [ ] T041 [P] [US2] Extend `apps/web/tests/components/BinderGrid.test.jsx`: `/wants` is unchanged list chrome; `/binder` grid has no Want List tile; Header still links Want List in one step
+- [X] T040 [P] [US2] Extend `apps/mobile/test/widgets/binder_grid_test.dart`: Binder | Want List tabs still present; Want List is not a grid tile; Want List rows do not affect Trade Binder / Collection count or value; returning from Want List shows the grid (or the Want List tab), not a blank Binder
+- [X] T041 [P] [US2] Extend `apps/web/tests/components/BinderGrid.test.jsx`: `/wants` is unchanged list chrome; `/binder` grid has no Want List tile; Header still links Want List in one step
 
 ### Implementation for User Story 2
 
-- [ ] T042 [US2] Keep the Want List tab as index 1 (sibling, not a tile) and keep `apps/mobile/lib/features/want_list/want_list_screen.dart` wired from `apps/mobile/lib/features/binder/binder_screen.dart`
-- [ ] T043 [P] [US2] Keep `/wants` and the Want List nav item in `apps/web/src/App.jsx` and `apps/web/src/components/elements/Header.jsx` (Binder dest = `/binder` grid; Want List remains a sibling route)
-- [ ] T044 [US2] Leave the `isWanted === true` path as the existing Want List (no Binder tiles, no move-into-Want-List) in `apps/web/src/pages/BinderCollection.jsx`
+- [X] T042 [US2] Keep the Want List tab as index 1 (sibling, not a tile) and keep `apps/mobile/lib/features/want_list/want_list_screen.dart` wired from `apps/mobile/lib/features/binder/binder_screen.dart`
+- [X] T043 [P] [US2] Keep `/wants` and the Want List nav item in `apps/web/src/App.jsx` and `apps/web/src/components/elements/Header.jsx` (Binder dest = `/binder` grid; Want List remains a sibling route)
+- [X] T044 [US2] Leave the `isWanted === true` path as the existing Want List (no Binder tiles, no move-into-Want-List) in `apps/web/src/pages/BinderCollection.jsx`
 
 **Checkpoint**: User Stories 1 and 2 both work; Want List is reachable in one step and is not a Binder
 
