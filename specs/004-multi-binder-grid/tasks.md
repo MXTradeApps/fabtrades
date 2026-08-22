@@ -163,21 +163,21 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T055 [P] [US4] Write failing contract tests that load `binder_names.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_names_contract_test.dart`
-- [ ] T056 [P] [US4] Write failing contract tests that import `packages/contracts/binder_names.json` in `apps/web/tests/contracts/binderNames.contract.test.js`
-- [ ] T057 [P] [US4] Widget tests in `apps/mobile/test/widgets/binder_grid_test.dart`: unique create; rename collision refused; Trade Binder delete hidden or refused (empty or not); non-empty Collection delete refused; empty delete leaves the grid; 5th create on free calls `presentProPaywall` and does not add a Binder
-- [ ] T058 [P] [US4] Page/component tests with the same create/rename/delete/Pro assertions in `apps/web/tests/components/BinderGrid.test.jsx`
+- [X] T055 [P] [US4] Write failing contract tests that load `binder_names.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_names_contract_test.dart`
+- [X] T056 [P] [US4] Write failing contract tests that import `packages/contracts/binder_names.json` in `apps/web/tests/contracts/binderNames.contract.test.js`
+- [X] T057 [P] [US4] Widget tests in `apps/mobile/test/widgets/binder_grid_test.dart`: unique create; rename collision refused; Trade Binder delete hidden or refused (empty or not); non-empty Collection delete refused; empty delete leaves the grid; 5th create on free calls `presentProPaywall` and does not add a Binder
+- [X] T058 [P] [US4] Page/component tests with the same create/rename/delete/Pro assertions in `apps/web/tests/components/BinderGrid.test.jsx`
 
 ### Implementation for User Story 4
 
-- [ ] T059 [US4] Implement name normalize/uniqueness (trim + case-fold; own-name ok; empty invalid) in `apps/mobile/lib/core/logic/binder_names.dart` until T055 passes
-- [ ] T060 [P] [US4] Implement the same rules in `apps/web/src/utils/binderNames.js` until T056 passes
-- [ ] T061 [US4] Implement create / rename / delete on `BindersNotifier` in `apps/mobile/lib/core/providers.dart`: `canCreateBinder` for free; refuse `role=trade` delete; refuse delete when any live owned entry has `quantity ≥ 1`; tombstone otherwise; unique live names
-- [ ] T062 [P] [US4] Implement create / rename / delete Binders (same refusals; `behaviour.binders = "paywall"` creates no 5th row) in `apps/web/src/services/binder.js`
-- [ ] T063 [US4] Add create / rename / delete chrome on the grid; hide or no-op delete on Trade Binder; surface duplicate-name and non-empty-delete errors in `apps/mobile/lib/features/binder/binder_grid.dart` and `apps/mobile/lib/features/binder/binder_screen.dart`
-- [ ] T064 [US4] Add the same chrome in `apps/web/src/components/binder/BinderGrid.jsx` and `apps/web/src/pages/BinderCollection.jsx`
-- [ ] T065 [US4] On a free 5th create, call `presentProPaywall` (`trigger: 'binders_limit'`, do not write entitlements) from `apps/mobile/lib/features/binder/binder_screen.dart` using `apps/mobile/lib/features/paywall/pro_paywall.dart`; after Pro, retry create
-- [ ] T066 [US4] On a free 5th create, show the existing web Pro CTA (subscribe-in-app copy; no 5th row; do not write `entitlements`) in `apps/web/src/pages/BinderCollection.jsx`
+- [X] T059 [US4] Implement name normalize/uniqueness (trim + case-fold; own-name ok; empty invalid) in `apps/mobile/lib/core/logic/binder_names.dart` until T055 passes
+- [X] T060 [P] [US4] Implement the same rules in `apps/web/src/utils/binderNames.js` until T056 passes
+- [X] T061 [US4] Implement create / rename / delete on `BindersNotifier` in `apps/mobile/lib/core/providers.dart`: `canCreateBinder` for free; refuse `role=trade` delete; refuse delete when any live owned entry has `quantity ≥ 1`; tombstone otherwise; unique live names
+- [X] T062 [P] [US4] Implement create / rename / delete Binders (same refusals; `behaviour.binders = "paywall"` creates no 5th row) in `apps/web/src/services/binder.js`
+- [X] T063 [US4] Add create / rename / delete chrome on the grid; hide or no-op delete on Trade Binder; surface duplicate-name and non-empty-delete errors in `apps/mobile/lib/features/binder/binder_grid.dart` and `apps/mobile/lib/features/binder/binder_screen.dart`
+- [X] T064 [US4] Add the same chrome in `apps/web/src/components/binder/BinderGrid.jsx` and `apps/web/src/pages/BinderCollection.jsx`
+- [X] T065 [US4] On a free 5th create, call `presentProPaywall` (`trigger: 'binders_limit'`, do not write entitlements) from `apps/mobile/lib/features/binder/binder_screen.dart` using `apps/mobile/lib/features/paywall/pro_paywall.dart`; after Pro, retry create
+- [X] T066 [US4] On a free 5th create, show the existing web Pro CTA (subscribe-in-app copy; no 5th row; do not write `entitlements`) in `apps/web/src/pages/BinderCollection.jsx`
 
 **Checkpoint**: All four stories independently functional; Trade Binder cannot be deleted; names unique and syncable; 5th Binder is Pro
 
