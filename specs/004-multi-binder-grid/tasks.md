@@ -137,19 +137,19 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T045 [P] [US3] Write failing contract tests that load `binder_move.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_move_contract_test.dart` using catalog-shaped rows
-- [ ] T046 [P] [US3] Write failing contract tests that import `packages/contracts/binder_move.json` in `apps/web/tests/contracts/binderMove.contract.test.js`
-- [ ] T047 [P] [US3] Widget tests in `apps/mobile/test/widgets/binder_grid_test.dart` (or `apps/mobile/test/widgets/binder_list_test.dart`): move 2 of 3 Trade Binder → Collection; merge on same printing+condition; Want List absent from destinations; tiles update count/value/cover
-- [ ] T048 [P] [US3] Page/component tests with the same move assertions in `apps/web/tests/components/BinderGrid.test.jsx`
+- [X] T045 [P] [US3] Write failing contract tests that load `binder_move.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_move_contract_test.dart` using catalog-shaped rows
+- [X] T046 [P] [US3] Write failing contract tests that import `packages/contracts/binder_move.json` in `apps/web/tests/contracts/binderMove.contract.test.js`
+- [X] T047 [P] [US3] Widget tests in `apps/mobile/test/widgets/binder_grid_test.dart` (or `apps/mobile/test/widgets/binder_list_test.dart`): move 2 of 3 Trade Binder → Collection; merge on same printing+condition; Want List absent from destinations; tiles update count/value/cover
+- [X] T048 [P] [US3] Page/component tests with the same move assertions in `apps/web/tests/components/BinderGrid.test.jsx`
 
 ### Implementation for User Story 3
 
-- [ ] T049 [US3] Implement `moveBinderCopies` (partial qty, merge printing+condition, refuse invalid qty / same Binder / non-live dest / Want List; never refuse for `binderCards`) in `apps/mobile/lib/core/logic/binder_move.dart` until T045 passes
-- [ ] T050 [P] [US3] Implement the same helper in `apps/web/src/utils/binderMove.js` until T046 passes
-- [ ] T051 [US3] Apply moves through `BinderNotifier` (source qty / delete at 0; dest upsert) in `apps/mobile/lib/core/providers.dart`
-- [ ] T052 [P] [US3] Apply moves (update/delete source + upsert dest; conflict on new owned unique) in `apps/web/src/services/binder.js`
-- [ ] T053 [US3] Add Move on an open owned Binder row (destination = other live Binders; qty 1…n) in `apps/mobile/lib/features/binder/binder_list.dart`
-- [ ] T054 [US3] Add the same Move control in `apps/web/src/pages/BinderCollection.jsx` (hidden on `/wants`)
+- [X] T049 [US3] Implement `moveBinderCopies` (partial qty, merge printing+condition, refuse invalid qty / same Binder / non-live dest / Want List; never refuse for `binderCards`) in `apps/mobile/lib/core/logic/binder_move.dart` until T045 passes
+- [X] T050 [P] [US3] Implement the same helper in `apps/web/src/utils/binderMove.js` until T046 passes
+- [X] T051 [US3] Apply moves through `BinderNotifier` (source qty / delete at 0; dest upsert) in `apps/mobile/lib/core/providers.dart`
+- [X] T052 [P] [US3] Apply moves (update/delete source + upsert dest; conflict on new owned unique) in `apps/web/src/services/binder.js`
+- [X] T053 [US3] Add Move on an open owned Binder row (destination = other live Binders; qty 1…n) in `apps/mobile/lib/features/binder/binder_list.dart`
+- [X] T054 [US3] Add the same Move control in `apps/web/src/pages/BinderCollection.jsx` (hidden on `/wants`)
 
 **Checkpoint**: User Stories 1–3 work; Collection exists as a keep pile because stock can change Binders
 
