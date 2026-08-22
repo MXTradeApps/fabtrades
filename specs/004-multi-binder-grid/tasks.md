@@ -187,11 +187,11 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 **Purpose**: Vocabulary, share surface, onboarding, and quickstart validation
 
-- [ ] T067 [P] Update Binder tour copy so the grid and Trade Binder vs Collection are mentioned, and Want List is not taught as a Binder, in `apps/mobile/lib/features/onboarding/tour_copy.dart` (`binderTabsBody` / related strings)
-- [ ] T068 Confirm labels use Binder / Trade Binder / Collection (name) / Printing / Want List (not “inventory”, not Want List as a Binder) in `apps/mobile/lib/features/binder/binder_grid.dart`, `apps/mobile/lib/features/binder/binder_list.dart`, `apps/web/src/components/binder/BinderGrid.jsx`, and `apps/web/src/pages/BinderCollection.jsx`
-- [ ] T069 [P] Keep public `/b/:token` as Trade Binder only (no Collection leak) in `apps/web/src/pages/SharedBinder.jsx` and `apps/web/src/services/binder.js` (`getPublicBinder`)
-- [ ] T070 Keep distinct-card overflow on the existing refuse + Upgrade snackbar path (not a mandatory paywall modal) in `apps/mobile/lib/features/paywall/pro_limits.dart` and the `/binder` card-cap Alert in `apps/web/src/pages/BinderCollection.jsx`; `paywall` is only for `binders`
-- [ ] T071 Run `cd apps/mobile && flutter test` and `cd apps/web && npm test`, then walk [quickstart.md](./quickstart.md) (grid + defaults + migration, Want List sibling, move 3→2+1, unique names, Trade Binder delete refusal, 5th Binder Pro upgrade, Confirm Trade / share / filler Trade Binder only, signed-out mobile, constitution + `docs/CONTEXT.md` vocabulary in this change)
+- [X] T067 [P] Update Binder tour copy so the grid and Trade Binder vs Collection are mentioned, and Want List is not taught as a Binder, in `apps/mobile/lib/features/onboarding/tour_copy.dart` (`binderTabsBody` / related strings)
+- [X] T068 Confirm labels use Binder / Trade Binder / Collection (name) / Printing / Want List (not “inventory”, not Want List as a Binder) in `apps/mobile/lib/features/binder/binder_grid.dart`, `apps/mobile/lib/features/binder/binder_list.dart`, `apps/web/src/components/binder/BinderGrid.jsx`, and `apps/web/src/pages/BinderCollection.jsx`
+- [X] T069 [P] Keep public `/b/:token` as Trade Binder only (no Collection leak) in `apps/web/src/pages/SharedBinder.jsx` and `apps/web/src/services/binder.js` (`getPublicBinder`)
+- [X] T070 Keep distinct-card overflow on the existing refuse + Upgrade snackbar path (not a mandatory paywall modal) in `apps/mobile/lib/features/paywall/pro_limits.dart` and the `/binder` card-cap Alert in `apps/web/src/pages/BinderCollection.jsx`; `paywall` is only for `binders`
+- [X] T071 Run `cd apps/mobile && flutter test` and `cd apps/web && npm test`, then walk [quickstart.md](./quickstart.md) (grid + defaults + migration, Want List sibling, move 3→2+1, unique names, Trade Binder delete refusal, 5th Binder Pro upgrade, Confirm Trade / share / filler Trade Binder only, signed-out mobile, constitution + `docs/CONTEXT.md` vocabulary in this change)
 
 ---
 
