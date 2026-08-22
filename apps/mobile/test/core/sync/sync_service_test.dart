@@ -1,12 +1,15 @@
 import 'package:fabtrades/core/data/binder_repository.dart';
+import 'package:fabtrades/core/data/binders_repository.dart';
 import 'package:fabtrades/core/data/lend_repository.dart';
 import 'package:fabtrades/core/data/settings_repository.dart';
 import 'package:fabtrades/core/data/trade_repository.dart';
 import 'package:fabtrades/core/models/app_settings.dart';
 import 'package:fabtrades/core/models/binder_entry.dart';
+import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/models/lend_group.dart';
 import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/sync/binder_sync.dart';
+import 'package:fabtrades/core/sync/binders_sync.dart';
 import 'package:fabtrades/core/sync/collection_sync.dart';
 import 'package:fabtrades/core/sync/lend_sync.dart';
 import 'package:fabtrades/core/sync/remote_store.dart';
@@ -67,10 +70,12 @@ void main() {
 
   late SyncJournal journal;
   late BinderRepository binder;
+  late BindersRepository binders;
   late LendRepository lend;
   late TradeRepository trades;
   late SettingsRepository settings;
   late FakeTable binderTable;
+  late FakeTable bindersTable;
   late FakeTable lendTable;
   late FakeTable tradesTable;
   late FakeRemoteSettings settingsRow;
@@ -93,6 +98,7 @@ void main() {
     return SyncService(
       journal: journal,
       binder: collection(const BinderSyncAdapter(), binder, binderTable),
+      binders: collection(const BindersSyncAdapter(), binders, bindersTable),
       lend: collection(const LendSyncAdapter(), lend, lendTable),
       trades: collection(const TradeSyncAdapter(), trades, tradesTable),
       settings: SettingsSync(
@@ -108,12 +114,14 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     journal = SyncJournal(prefs);
     binder = BinderRepository(prefs, journal);
+    binders = BindersRepository(prefs, journal);
     lend = LendRepository(prefs, journal);
     trades = TradeRepository(prefs, journal);
     settings = SettingsRepository(prefs, journal);
 
-    binderTable =
-        FakeTable((row) => '${row['is_wanted']}|${row['card_id']}');
+    binderTable = FakeTable((row) => (row['client_id'] as String?) ??
+        '${row['is_wanted']}|${row['card_id']}');
+    bindersTable = FakeTable((row) => row['client_id'] as String);
     lendTable = FakeTable((row) => row['client_id'] as String);
     tradesTable = FakeTable((row) => row['client_id'] as String);
     settingsRow = FakeRemoteSettings();
@@ -259,6 +267,7 @@ void main() {
     test('throws when nothing at all could be reached', () async {
       await seedLocalCollection();
       binderTable.failOnRead = true;
+      bindersTable.failOnRead = true;
       lendTable.failOnRead = true;
       tradesTable.failOnRead = true;
       settingsRow.failOnRead = true;

@@ -9,13 +9,15 @@
  *
  * Binder and want-list caps refuse new distinct cards (never trim existing rows).
  * Raising quantity on a card that is already listed is never capped — same as
- * mobile's `_canAddNewCard`.
+ * mobile's `_canAddNewCard`. Distinct owned cards are counted across all Binders.
+ * Creating a 5th Binder is paywall (show Pro, create nothing).
  */
 export const FreeLimits = {
     binderCards: 50,
     wantListCards: 50,
     savedTrades: 3,
     loanedCards: 10,
+    binders: 4,
 };
 
 /**
@@ -33,7 +35,7 @@ export function cardsFor({ isWanted }) {
  *
  * Matches mobile: Pro always allowed; free accounts are blocked once they already
  * hold the cap. Callers that are only raising quantity on an existing entry should
- * not use this — that path is uncapped.
+ * not use this — that path is uncapped. Owned count is across all Binders.
  *
  * @param {number} existingDistinctCount - How many distinct cards are already listed
  * @param {{ isWanted: boolean, isPro?: boolean }} opts
@@ -42,6 +44,35 @@ export function cardsFor({ isWanted }) {
 export function canAddDistinctCard(existingDistinctCount, { isWanted, isPro = false } = {}) {
     if (isPro) return true;
     return existingDistinctCount < cardsFor({ isWanted });
+}
+
+/**
+ * Whether a free account may create another Binder. Pro always allowed.
+ * At the cap, callers present the Pro upgrade and create nothing.
+ *
+ * @param {number} liveBinderCount
+ * @param {{ isPro?: boolean }} [opts]
+ * @returns {boolean}
+ */
+export function canCreateBinder(liveBinderCount, { isPro = false } = {}) {
+    if (isPro) return true;
+    return liveBinderCount < FreeLimits.binders;
+}
+
+/**
+ * Distinct owned printing ids across Binders (Want List excluded).
+ *
+ * @param {Array<{ isWanted?: boolean, cardId?: string, printingId?: string }>} entries
+ * @returns {number}
+ */
+export function distinctOwnedCount(entries) {
+    const ids = new Set();
+    for (const entry of entries || []) {
+        if (entry?.isWanted) continue;
+        const id = entry.cardId || entry.printingId;
+        if (id) ids.add(id);
+    }
+    return ids.size;
 }
 
 /**

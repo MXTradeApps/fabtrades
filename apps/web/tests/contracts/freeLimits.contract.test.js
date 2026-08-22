@@ -8,6 +8,7 @@ import contract from '../../../../packages/contracts/free_limits.json';
 import {
     FreeLimits,
     canAddDistinctCard,
+    canCreateBinder,
     cardsFor,
     tradesOverFreeLimit,
 } from '../../src/utils/freeLimits.js';
@@ -29,13 +30,36 @@ describe('free limits contract', () => {
         });
 
     contract.cases
-        .filter((testCase) => testCase.limit === 'binderCards' || testCase.limit === 'wantListCards')
+        .filter((testCase) =>
+            (testCase.limit === 'binderCards' || testCase.limit === 'wantListCards') &&
+            testCase.action !== 'move',
+        )
         .forEach((testCase) => {
             it(testCase.name, () => {
                 const isWanted = testCase.limit === 'wantListCards';
                 expect(canAddDistinctCard(testCase.existing, { isWanted, isPro: false })).toBe(
                     testCase.allowed,
                 );
+            });
+        });
+
+    contract.cases
+        .filter((testCase) => testCase.limit === 'binderCards' && testCase.action === 'move')
+        .forEach((testCase) => {
+            it(testCase.name, () => {
+                expect(testCase.allowed).toBe(true);
+                // A move does not raise distinct owned count, so the cap is not consulted.
+                expect(canAddDistinctCard(testCase.existing, { isWanted: false, isPro: false })).toBe(false);
+            });
+        });
+
+    contract.cases
+        .filter((testCase) => testCase.limit === 'binders')
+        .forEach((testCase) => {
+            it(testCase.name, () => {
+                expect(
+                    canCreateBinder(testCase.existing, { isPro: Boolean(testCase.isPro) }),
+                ).toBe(testCase.allowed);
             });
         });
 

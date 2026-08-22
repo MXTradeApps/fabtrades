@@ -1,4 +1,5 @@
 import 'package:fabtrades/core/logic/free_limits.dart';
+import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/models/subscription_status.dart';
 import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/providers.dart';
@@ -54,7 +55,25 @@ void main() {
       expect(c.read(binderProvider), hasLength(FreeLimits.binderCards));
     });
 
-    test('still tops up the quantity of a card already listed', () async {
+    test('counts distinct owned printings across Binders against one cap', () async {
+      final c = await makeContainer(isPro: false);
+      final binder = c.read(binderProvider.notifier);
+      final half = FreeLimits.binderCards ~/ 2;
+      for (var i = 0; i < FreeLimits.binderCards; i++) {
+        expect(
+          binder.add(
+            buildCard(id: 'card-$i'),
+            binderId: i < half ? BinderIds.trade : BinderIds.collection,
+          ),
+          isTrue,
+        );
+      }
+      expect(binder.add(buildCard(id: 'one-too-many')), isFalse);
+      expect(
+        binder.add(buildCard(id: 'card-0'), binderId: BinderIds.collection),
+        isTrue,
+      );
+    });
       final c = await makeContainer(isPro: false);
       final binder = c.read(binderProvider.notifier);
       for (var i = 0; i < FreeLimits.binderCards; i++) {

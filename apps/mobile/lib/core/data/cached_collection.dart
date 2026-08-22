@@ -25,6 +25,9 @@ abstract class CachedCollection<T> implements LocalCollection<T> {
   /// they are effectively permanent.
   String get storageKey;
 
+  /// Whether this collection has ever been written (including an empty list).
+  bool get hasStorageKey => _prefs.containsKey(storageKey);
+
   SyncAdapter<T> get adapter;
 
   Map<String, dynamic> encode(T value);

@@ -64,18 +64,35 @@ void main() {
       expect(FreeLimits.wantListCards, limits['wantListCards']);
       expect(FreeLimits.savedTrades, limits['savedTrades']);
       expect(FreeLimits.loanedCards, limits['loanedCards']);
+      expect(FreeLimits.binders, limits['binders']);
     });
 
     for (final testCase in cases.where(
-      (c) => c['limit'] == 'binderCards' || c['limit'] == 'wantListCards',
+      (c) =>
+          (c['limit'] == 'binderCards' || c['limit'] == 'wantListCards') &&
+          c['action'] != 'move',
     )) {
       test(testCase['name'] as String, () async {
         final container = await freeContainer();
         final binder = container.read(binderProvider.notifier);
         final isWanted = testCase['limit'] == 'wantListCards';
+        final split = testCase['splitAcrossBinders'] == true;
 
-        for (var i = 0; i < (testCase['existing'] as int); i++) {
-          binder.add(buildCard(id: 'card-$i'), isWanted: isWanted);
+        if (split) {
+          final existing = testCase['existing'] as int;
+          final tradeCount = existing ~/ 2;
+          for (var i = 0; i < existing; i++) {
+            binder.add(
+              buildCard(id: 'card-$i'),
+              binderId: i < tradeCount
+                  ? 'system:trade'
+                  : 'system:collection',
+            );
+          }
+        } else {
+          for (var i = 0; i < (testCase['existing'] as int); i++) {
+            binder.add(buildCard(id: 'card-$i'), isWanted: isWanted);
+          }
         }
 
         expect(
@@ -125,6 +142,51 @@ void main() {
                 ? (testCase['existing'] as int) + 1
                 : FreeLimits.savedTrades,
           ),
+        );
+      });
+    }
+
+    for (final testCase in cases.where((c) => c['limit'] == 'binders')) {
+      test(testCase['name'] as String, () {
+        var live = testCase['existing'] as int;
+        if (testCase['tombstonedCollection'] == true) {
+          // Three live + a deleted Collection still allows create on free.
+          live = testCase['existing'] as int;
+        }
+        expect(
+          FreeLimits.canCreateBinder(
+            live,
+            isPro: testCase['isPro'] as bool? ?? false,
+          ),
+          testCase['allowed'],
+        );
+      });
+    }
+
+    for (final testCase in cases.where(
+      (c) => c['limit'] == 'binderCards' && c['action'] == 'move',
+    )) {
+      test(testCase['name'] as String, () async {
+        final container = await freeContainer();
+        final binder = container.read(binderProvider.notifier);
+        for (var i = 0; i < (testCase['existing'] as int); i++) {
+          binder.add(buildCard(id: 'card-$i'), binderId: 'system:trade');
+        }
+        // Same Printing into Collection is not a new distinct owned card.
+        expect(
+          binder.add(
+            buildCard(id: 'card-0'),
+            binderId: 'system:collection',
+          ),
+          testCase['allowed'],
+        );
+        expect(
+          container
+              .read(binderProvider)
+              .where((e) => !e.isWanted)
+              .map((e) => e.card.id)
+              .toSet(),
+          hasLength(testCase['existing'] as int),
         );
       });
     }

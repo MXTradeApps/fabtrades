@@ -6,6 +6,7 @@ import 'package:fabtrades/core/data/settings_repository.dart';
 import 'package:fabtrades/core/data/trade_repository.dart';
 import 'package:fabtrades/core/models/app_settings.dart';
 import 'package:fabtrades/core/models/binder_entry.dart';
+import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/models/lend_group.dart';
 import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/sync/sync_journal.dart';
@@ -84,6 +85,7 @@ void main() {
       expect(loaded.single.card.id, 'legacy');
       expect(loaded.single.quantity, 4);
       expect(loaded.single.isWanted, isFalse);
+      expect(loaded.single.binderId, BinderIds.trade);
     });
   });
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../models/binder.dart';
 import '../models/binder_entry.dart';
 import '../models/card_model.dart';
 import 'sync_adapter.dart';
@@ -8,10 +9,10 @@ import 'sync_record.dart';
 
 /// Maps binder and want-list entries onto `public.binder_entries`.
 ///
-/// Identity is the printing plus which list it sits on, mirroring how the binder
-/// merges locally: adding a card you already own tops up the quantity rather than
-/// creating a second entry. That makes two devices adding the same card converge on
-/// one row, which a client-minted id could not do.
+/// Owned identity is printing + Binder + condition so the same Printing can
+/// live in Trade Binder and Collection as two rows, while two devices adding
+/// the same Printing to the same Binder still merge. Want List stays keyed by
+/// printing alone.
 class BinderSyncAdapter implements SyncAdapter<BinderEntry> {
   const BinderSyncAdapter();
 
@@ -22,23 +23,30 @@ class BinderSyncAdapter implements SyncAdapter<BinderEntry> {
   String get table => 'binder_entries';
 
   @override
-  String get conflictTarget => 'user_id,card_id,is_wanted';
+  String get conflictTarget => 'user_id,client_id';
 
-  /// The list flag leads so the split is unambiguous no matter what a card id
-  /// contains.
+  /// Owned: `binder|{binderId}|{cardId}|{condition}`. Want: `want|{cardId}`.
   @override
-  String idOf(BinderEntry value) => _id(value.card.id, value.isWanted);
+  String idOf(BinderEntry value) => entryClientId(
+        cardId: value.card.id,
+        isWanted: value.isWanted,
+        binderId: value.resolvedBinderId,
+        condition: value.condition,
+      );
 
-  static String _id(String cardId, bool isWanted) =>
-      '${isWanted ? 'want' : 'binder'}|$cardId';
+  static String entryClientId({
+    required String cardId,
+    required bool isWanted,
+    String? binderId,
+    String condition = 'NM',
+  }) {
+    if (isWanted) return 'want|$cardId';
+    return 'binder|${binderId ?? BinderIds.trade}|$cardId|$condition';
+  }
 
   @override
   Map<String, Object?> identityFilter(String id) {
-    final separator = id.indexOf('|');
-    return {
-      'is_wanted': id.substring(0, separator) == 'want',
-      'card_id': id.substring(separator + 1),
-    };
+    return {'client_id': id};
   }
 
   @override
@@ -58,10 +66,13 @@ class BinderSyncAdapter implements SyncAdapter<BinderEntry> {
     required String userId,
     required DateTime updatedAt,
   }) {
+    final wanted = value.isWanted;
     return {
       'user_id': userId,
+      'client_id': idOf(value),
       'card_id': value.card.id,
-      'is_wanted': value.isWanted,
+      'is_wanted': wanted,
+      'binder_id': wanted ? null : value.resolvedBinderId,
       'quantity': value.quantity,
       'condition': value.condition,
       'card': value.card.toStub(),
@@ -79,7 +90,16 @@ class BinderSyncAdapter implements SyncAdapter<BinderEntry> {
     final cardId = row['card_id'] as String?;
     if (fields == null || cardId == null) return null;
 
-    final id = _id(cardId, row['is_wanted'] as bool? ?? false);
+    final isWanted = row['is_wanted'] as bool? ?? false;
+    final condition = row['condition'] as String? ?? 'NM';
+    final binderId = isWanted ? null : (row['binder_id'] as String? ?? BinderIds.trade);
+    final id = (row['client_id'] as String?) ??
+        entryClientId(
+          cardId: cardId,
+          isWanted: isWanted,
+          binderId: binderId,
+          condition: condition,
+        );
     if (fields.deleted) {
       return SyncRecord<BinderEntry>.deleted(id: id, updatedAt: fields.updatedAt);
     }
@@ -92,8 +112,9 @@ class BinderSyncAdapter implements SyncAdapter<BinderEntry> {
       value: BinderEntry(
         card: CardModel.fromStub(Map<String, dynamic>.from(stub)),
         quantity: (row['quantity'] as num?)?.toInt() ?? 1,
-        condition: row['condition'] as String? ?? 'NM',
-        isWanted: row['is_wanted'] as bool? ?? false,
+        condition: condition,
+        isWanted: isWanted,
+        binderId: binderId,
         addedAt: DateTime.tryParse(row['added_at'] as String? ?? '') ??
             fields.updatedAt,
       ),

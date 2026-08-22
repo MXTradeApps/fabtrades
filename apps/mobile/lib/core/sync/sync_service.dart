@@ -2,13 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/binder_repository.dart';
+import '../data/binders_repository.dart';
 import '../data/lend_repository.dart';
 import '../data/settings_repository.dart';
 import '../data/trade_repository.dart';
+import '../models/binder.dart';
 import '../models/binder_entry.dart';
 import '../models/lend_group.dart';
 import '../models/trade.dart';
 import 'binder_sync.dart';
+import 'binders_sync.dart';
 import 'collection_sync.dart';
 import 'lend_sync.dart';
 import 'remote_store.dart';
@@ -22,18 +25,24 @@ import 'trade_sync.dart';
 class SyncOutcome {
   const SyncOutcome({
     this.binderChanged = false,
+    this.bindersChanged = false,
     this.lendChanged = false,
     this.tradesChanged = false,
     this.settingsChanged = false,
   });
 
   final bool binderChanged;
+  final bool bindersChanged;
   final bool lendChanged;
   final bool tradesChanged;
   final bool settingsChanged;
 
   bool get anyChanged =>
-      binderChanged || lendChanged || tradesChanged || settingsChanged;
+      binderChanged ||
+      bindersChanged ||
+      lendChanged ||
+      tradesChanged ||
+      settingsChanged;
 }
 
 /// Reconciles every synced collection for the signed-in account.
@@ -45,6 +54,7 @@ class SyncService {
   SyncService({
     required this.journal,
     required this.binder,
+    required this.binders,
     required this.lend,
     required this.trades,
     required this.settings,
@@ -55,6 +65,7 @@ class SyncService {
     required SupabaseClient client,
     required SyncJournal journal,
     required BinderRepository binder,
+    required BindersRepository binders,
     required LendRepository lend,
     required TradeRepository trades,
     required SettingsRepository settings,
@@ -76,6 +87,7 @@ class SyncService {
     return SyncService(
       journal: journal,
       binder: collection(const BinderSyncAdapter(), binder),
+      binders: collection(const BindersSyncAdapter(), binders),
       lend: collection(const LendSyncAdapter(), lend),
       trades: collection(const TradeSyncAdapter(), trades),
       settings: SettingsSync(
@@ -88,6 +100,7 @@ class SyncService {
 
   final SyncJournal journal;
   final CollectionSync<BinderEntry> binder;
+  final CollectionSync<Binder> binders;
   final CollectionSync<LendGroup> lend;
   final CollectionSync<Trade> trades;
   final SettingsSync settings;
@@ -111,13 +124,14 @@ class SyncService {
     }
 
     final outcome = SyncOutcome(
+      bindersChanged: await attempt(() => binders.run(userId: userId)),
       binderChanged: await attempt(() => binder.run(userId: userId)),
       lendChanged: await attempt(() => lend.run(userId: userId)),
       tradesChanged: await attempt(() => trades.run(userId: userId)),
       settingsChanged: await attempt(() => settings.run(userId: userId)),
     );
 
-    if (failures.length == 4) throw failures.first;
+    if (failures.length == 5) throw failures.first;
     return outcome;
   }
 
@@ -140,6 +154,7 @@ class SyncService {
       // `saveSynced`, not `save`: this is not the customer deleting their binder, and
       // recording it as one would push those deletions into the new account.
       await binder.local.saveSynced(const []);
+      await binders.local.saveSynced(const []);
       await lend.local.saveSynced(const []);
       await trades.local.saveSynced(const []);
       // Settings survive. They are a device preference as much as an account one,
