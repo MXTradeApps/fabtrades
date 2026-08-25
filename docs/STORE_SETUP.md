@@ -57,6 +57,10 @@ Product ids cannot be reused after deletion, so get them right the first time.
 
 Then, still in App Store Connect:
 
+- **Paid Apps Agreement**: Account Holder → Business → Paid Apps Agreement must
+  be **Active**, with tax and banking completed. Sandbox purchases fail with
+  StoreKit error 2 ("There was a problem with the App Store") when this is
+  missing or expired.
 - **In-App Purchase key**: Users and Access → Integrations → In-App Purchase. Create
   a key, download the `.p8` (once only), and note the key id and issuer id.
 - **App-Specific Shared Secret**: on the app's page, under General → App Information.
@@ -64,6 +68,19 @@ Then, still in App Store Connect:
 
 Also add at least one **Sandbox tester** under Users and Access → Sandbox. Use an
 email address that is not already an Apple ID.
+
+### Submit the subscriptions with the app version
+
+Both products stay in **Ready to Submit** until they are attached to a version
+and that version is submitted. On the first IAP submission:
+
+1. App Store Connect → the version → **In-App Purchases and Subscriptions**
+2. Add `com.fabtrades.app.pro.monthly` and `com.fabtrades.app.pro.yearly`
+3. Submit the version. Apple reviews the IAPs with the binary.
+
+Sandbox and App Review can fetch product prices before that, but a purchase
+often fails with StoreKit error 2 if the products were never submitted with a
+version, or if the Paid Apps Agreement is not Active.
 
 ### Legal metadata (required for auto-renewable subscriptions)
 

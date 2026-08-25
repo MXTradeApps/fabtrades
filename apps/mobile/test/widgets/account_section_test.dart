@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fabtrades/core/data/auth_repository.dart';
 import 'package:fabtrades/core/models/account.dart';
 import 'package:fabtrades/core/providers.dart';
+import 'package:fabtrades/features/auth/sign_in_sheet.dart';
 import 'package:fabtrades/features/settings/account_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -88,6 +89,34 @@ void main() {
     expect(find.text('Continue with Discord'), findsOneWidget);
     // Not an Apple platform under test, so no Apple button is offered.
     expect(find.text('Continue with Apple'), findsNothing);
+  });
+
+  testWidgets('post-purchase sheet can be dismissed without signing in',
+      (tester) async {
+    final auth = _MockAuthRepository();
+    when(() => auth.availableProviders()).thenAnswer(
+      (_) async => const [AuthProviderKind.google, AuthProviderKind.discord],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(auth),
+          accountProvider.overrideWith((ref) => Stream.value(null)),
+          syncProvider.overrideWith(StubSyncNotifier.new),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SignInSheet(copy: SignInCopy.keepProOnOtherDevices),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Use Pro on other devices'), findsOneWidget);
+    expect(find.text('Not now'), findsOneWidget);
+    expect(find.text('Sync your collection'), findsNothing);
   });
 
   testWidgets('surfaces the failure message when a provider rejects sign-in',

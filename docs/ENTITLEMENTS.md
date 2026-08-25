@@ -92,26 +92,33 @@ because a purchase that never landed has no row for reconciliation to find.
 ### Identity binding is the linchpin
 
 The client calls `Purchases.logIn(supabaseUserId)` immediately after Supabase
-sign-in, so every webhook's `app_user_id` **is** the Supabase UUID and the row can be
-written without a lookup table.
+sign-in, so webhooks for identified customers name an id the server can write a
+row for without a lookup table.
 
-The corollary: **gate the paywall behind sign-in.** An anonymous purchase creates a
-RevenueCat customer with no Supabase identity, and reattaching it afterwards is manual
-support work. Events whose `app_user_id` is not a UUID (RevenueCat's
-`$RCAnonymousID:…`) fall back to `original_app_user_id`, and if that is not one of
-ours either, the event is recorded and ignored.
+**Do not gate the paywall behind sign-in.** App Review 5.1.1(v) requires that
+In-App Purchase work without registration when the product is not account-based.
+Pro unlocks local features (unlimited binder, want list, lending, trade history)
+that work signed out, so the paywall must open for a guest. Mobile grants Pro
+from StoreKit `CustomerInfo` immediately; that path does not need a server row.
 
-The binding happens in two places, deliberately. `purchasesIdentityProvider` keeps it
-current as sessions come and go, and the paywall **awaits** it before presenting —
-because the provider does its work as a side effect of a rebuild, which is not ordered
-against opening a paywall. `Purchases.logIn` is idempotent, so the second call costs
-nothing; a purchase attributed to an anonymous id costs a support conversation. If the
-binding cannot be made, the paywall does not open.
+An anonymous purchase creates a RevenueCat customer with a `$RCAnonymousID:…`.
+Events whose `app_user_id` is not a UUID fall back to `original_app_user_id`,
+and if that is not one of ours either, the event is recorded and ignored — there
+is no row to write yet. `Purchases.logIn` aliases that anonymous customer onto
+the Supabase user when they later sign in (the optional post-purchase prompt,
+or My Account). After aliasing, subsequent events name the UUID and the row
+appears.
 
-Sign-out matters just as much: leaving the previous user's id in place would attribute
-the next account's purchases to them. The provider does nothing at all while the
-session is still being restored, since treating "not yet known" as "signed out" would
-unbind the real identity on every launch.
+The binding happens in two places, deliberately. `purchasesIdentityProvider`
+keeps it current as sessions come and go, and the paywall **best-effort awaits**
+it when the customer is already signed in — because the provider does its work
+as a side effect of a rebuild, which is not ordered against opening a paywall.
+`Purchases.logIn` is idempotent. A bind failure must not block the paywall.
+
+Sign-out matters just as much: leaving the previous user's id in place would
+attribute the next account's purchases to them. The provider does nothing at all
+while the session is still being restored, since treating "not yet known" as
+"signed out" would unbind the real identity on every launch.
 
 ### Sandbox
 

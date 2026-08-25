@@ -62,7 +62,7 @@ Do **not** commit the password to git. Put it only in App Store Connect.
 
 | Field | Value |
 | --- | --- |
-| Sign-in required | Yes (for Pro purchase / sync; core features work signed out) |
+| Sign-in required | No (optional; unlocks cloud sync and Pro on other devices) |
 | Username | `appreview@fabtrades.net` (or the email you created) |
 | Password | *(the password from step 2)* |
 
@@ -73,18 +73,19 @@ FAB Trades can be reviewed without signing in. Core features (card prices,
 trade balancing, binder/want list on-device, camera card scanning) work while
 signed out.
 
-Sign-in is optional and unlocks cloud sync. Purchasing FABTrades Pro requires
-sign-in so the subscription can be attached to an account.
-
-Demo account (email/password):
-- Open My Account (or any Sign in button)
-- Tap “Sign in with email”
-- Username and password are in the Demo Account fields above
+Sign-in is optional. It unlocks cloud sync and lets FABTrades Pro follow the
+customer to other devices. It is not required to purchase or use Pro on this
+device.
 
 To review FABTrades Pro:
-1. Sign in with the demo account
-2. Open My Account → See plans
-3. Use a Sandbox Apple ID for the purchase
+1. Open My Account → See plans (no sign-in prompt)
+2. Subscribe with a Sandbox Apple ID
+3. After purchase, an optional “Use Pro on other devices” sheet may appear —
+   dismiss it with Not now, or sign in if you want to test sync
+
+A demo account is provided only for testing optional sign-in / sync:
+- Open My Account → Sign in → “Sign in with email”
+- Username and password are in the Demo Account fields above
 
 Legal:
 - Terms of Use: https://fabtrades.net/terms
@@ -95,9 +96,13 @@ Camera: used only for on-device card scanning; frames are not uploaded.
 
 ## Resubmit
 
-1. Deploy web (`/terms` + updated privacy).
-2. Ship a mobile build that includes Settings → Legal links, subscription legal
-   links, and email sign-in.
-3. Fill Demo Account + Notes for Review as above.
-4. Confirm App Description contains the Terms URL.
-5. Submit for review.
+1. Confirm the Paid Apps Agreement is **Active** (Business section), with tax
+   and banking filled in.
+2. On this version, attach both subscriptions under **In-App Purchases and
+   Subscriptions** (`com.fabtrades.app.pro.monthly`,
+   `com.fabtrades.app.pro.yearly`) before submitting. They stay Ready to Submit
+   until a version includes them.
+3. Ship a mobile build that opens See plans without a sign-in sheet.
+4. Paste the Notes for Review above. Sign-in required = **No**. Keep the demo
+   account filled in so reviewers can still test optional sync.
+5. Confirm App Description contains the Terms URL.

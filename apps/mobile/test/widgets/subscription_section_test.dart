@@ -86,6 +86,22 @@ void main() {
     expect(find.text('Manage subscription'), findsNothing);
   });
 
+  testWidgets('See plans opens the store without requiring an account',
+      (tester) async {
+    await _pumpAccount(tester, status: SubscriptionStatus.free);
+
+    await tester.tap(find.text('See plans'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Guideline 5.1.1(v): registration cannot sit in front of IAP. The native
+    // paywall is missing under `flutter test`, so the sheet that used to block
+    // purchase is the thing we can still assert is gone.
+    expect(find.text('Sync your collection'), findsNothing);
+    expect(find.text('Continue with Google'), findsNothing);
+    expect(find.text('Continue with Apple'), findsNothing);
+  });
+
   testWidgets('shows renewal date and Customer Center for a subscriber',
       (tester) async {
     final container = await _pumpAccount(

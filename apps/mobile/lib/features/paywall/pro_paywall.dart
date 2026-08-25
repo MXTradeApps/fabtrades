@@ -21,6 +21,11 @@ import '../auth/sign_in_sheet.dart';
 /// Shows the paywall for the current offering and returns true if the customer
 /// has Pro when it closes.
 ///
+/// Sign-in is not required. App Review 5.1.1(v) treats Pro as IAP that is not
+/// account-based: local limits lift from StoreKit even for a guest. An optional
+/// prompt after a successful purchase offers an account so Pro can follow them
+/// to other devices.
+///
 /// [onlyIfNeeded] uses `presentPaywallIfNeeded`, which skips presentation
 /// entirely for customers who already have the entitlement — the right default
 /// for an "unlock this feature" tap. Pass false for an explicit "see plans"
@@ -43,7 +48,12 @@ Future<bool> presentProPaywall(
     return ref.read(isProProvider);
   }
 
-  if (!await _ensureSignedIn(context, ref)) return ref.read(isProProvider);
+  // App Review 5.1.1(v): IAP must work without registration. If they are already
+  // signed in, bind identity so the webhook can name a Supabase user — but never
+  // block the paywall on that, and never prompt for an account first.
+  if (ref.read(isSignedInProvider)) {
+    await _bindPurchasesIdentity(ref);
+  }
 
   ref.read(analyticsProvider).capture('paywall_shown', {'trigger': trigger});
 
@@ -110,13 +120,26 @@ Future<bool> presentProPaywall(
     case PaywallResult.restored:
       _showMessage(context, 'Purchases restored.');
     case PaywallResult.error:
-      _showMessage(context, "Couldn't complete that purchase. Please try again.");
+      _showMessage(
+        context,
+        "The App Store couldn't complete that purchase. Please try again "
+        'in a moment, or restore purchases if you have already paid.',
+      );
     case PaywallResult.cancelled:
     case PaywallResult.notPresented:
       // Nothing to say: the customer either backed out, or already had Pro.
       break;
   }
-  return isPro;
+
+  // Optional, after money has already changed hands. Apple allows explaining
+  // that an account enables Pro on other devices; it cannot be a precondition.
+  if (result == PaywallResult.purchased &&
+      !ref.read(isSignedInProvider) &&
+      context.mounted) {
+    await _offerPostPurchaseSignIn(context, ref);
+  }
+
+  return ref.read(isProProvider);
 }
 
 /// Opens the RevenueCat [Customer Center][cc] — the self-service screen for
@@ -197,31 +220,24 @@ Future<bool> restoreProPurchases(BuildContext context, WidgetRef ref) async {
   return isPro;
 }
 
-/// Makes sure there is an account before money changes hands.
+/// Offers sign-in after a successful anonymous purchase, then aliases the
+/// RevenueCat customer onto the Supabase user if they accept.
 ///
-/// Not a policy choice — it is what makes the entitlement addressable. A purchase
-/// made while signed out is attributed to an anonymous RevenueCat id, so the
-/// webhook has no Supabase user to write a row for, and the customer ends up
-/// having paid for access the server cannot grant them. Reattaching it later is
-/// manual support work.
-///
-/// The prompt is the same dismissable sheet as everywhere else. Backing out just
-/// means no purchase.
-Future<bool> _ensureSignedIn(BuildContext context, WidgetRef ref) async {
-  if (!ref.read(isSignedInProvider)) {
-    if (!await presentSignIn(context, source: 'paywall')) return false;
+/// Dismissing is a valid outcome: Pro already unlocked on this device from
+/// StoreKit / `CustomerInfo`. Signing in is how that purchase follows them.
+Future<void> _offerPostPurchaseSignIn(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final signedIn = await presentSignIn(
+    context,
+    source: 'post_purchase',
+    copy: SignInCopy.keepProOnOtherDevices,
+  );
+  if (!signedIn) return;
 
-    // A redirect-based provider finishes in a browser, so `presentSignIn` can
-    // return true before the session lands.
-    if (!await _waitForAccount(ref)) return false;
-  }
-
-  if (await _bindPurchasesIdentity(ref)) return true;
-
-  if (context.mounted) {
-    _showMessage(context, "Couldn't reach the store. Please try again.");
-  }
-  return false;
+  if (!await _waitForAccount(ref)) return;
+  await _bindPurchasesIdentity(ref);
 }
 
 /// Binds RevenueCat to the signed-in user, and waits for it.
@@ -232,9 +248,8 @@ Future<bool> _ensureSignedIn(BuildContext context, WidgetRef ref) async {
 /// there first, the purchase is attributed to the Supabase user rather than to the
 /// anonymous id the SDK starts with.
 ///
-/// A failure blocks the purchase. Letting it through would take the customer's money
-/// against an identity the webhook cannot resolve, which is the one outcome here that
-/// needs a human to unpick.
+/// Also the recovery path for a purchase made signed out: `logIn` aliases the
+/// anonymous RevenueCat customer onto this account.
 Future<bool> _bindPurchasesIdentity(WidgetRef ref) async {
   final account = ref.read(accountProvider).value;
   if (account == null) return false;
@@ -244,8 +259,10 @@ Future<bool> _bindPurchasesIdentity(WidgetRef ref) async {
   // only reason for no customer info is that the call failed.
   if (info == null) return false;
 
-  // Signing in can grant Pro outright, if this account already had it.
+  // Signing in can grant Pro outright, if this account already had it — or if
+  // this install just bought while signed out and the alias carried it over.
   ref.read(subscriptionProvider.notifier).adopt(info);
+  ref.invalidate(serverEntitlementProvider);
   return true;
 }
 

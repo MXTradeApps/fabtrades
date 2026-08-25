@@ -53,6 +53,10 @@ class PurchasesRepository {
       );
       await Purchases.configure(
         PurchasesConfiguration(apiKey)
+          // StoreKit 2 is what App Review expects for auto-renewable
+          // subscriptions. The In-App Purchase key is already on the
+          // RevenueCat App Store app; without it SK2 receipt validation fails.
+          ..storeKitVersion = StoreKitVersion.storeKit2
           // Surfaces store-side billing problems ("fix your payment method")
           // without FABTrades having to build those prompts itself.
           ..shouldShowInAppMessagesAutomatically = true,
@@ -72,12 +76,10 @@ class PurchasesRepository {
   /// Binds this install to a Supabase user, so every webhook RevenueCat sends
   /// names an id the server can key an entitlement row on.
   ///
-  /// This is the linchpin of the whole design. Without it a purchase arrives
-  /// attributed to an anonymous `$RCAnonymousID:…` that means nothing to
-  /// Supabase, and reattaching it afterwards is manual support work.
-  ///
-  /// RevenueCat aliases the anonymous id to [userId], which is what lets a
-  /// purchase made before signing in survive signing in.
+  /// Purchases are allowed while signed out (App Review 5.1.1). Those land on
+  /// an anonymous `$RCAnonymousID:…`. This call aliases that identity onto
+  /// [userId], which is what lets a purchase made before signing in survive
+  /// signing in — and what lets the webhook write a row.
   ///
   /// Returns the customer info RevenueCat had after the switch, so a caller can
   /// use it without a second round trip. Null if unconfigured or the call failed.

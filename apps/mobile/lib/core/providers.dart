@@ -556,7 +556,8 @@ final subscriptionProvider =
 ///
 /// Exposes the id currently bound, which is only useful for tests and debugging —
 /// the value is a side effect of the binding, not the point of it. The point is
-/// that every webhook names an id the server can write an entitlement row for.
+/// that webhooks can name an id the server can write an entitlement row for, and
+/// that a purchase made while signed out is aliased onto the account at sign-in.
 ///
 /// Nobody reads this for behaviour, so something has to watch it or it never
 /// builds; `SyncHost` does, above the tabs.
