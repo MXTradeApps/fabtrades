@@ -136,6 +136,18 @@ void main() {
       expect(state.timerRunning, isFalse);
     });
 
+    test('toggleTimer starts and pause keeps remaining from the clock', () async {
+      final c = await container();
+      final n = c.read(lifeTrackerProvider.notifier);
+      n.toggleTimer();
+      expect(c.read(lifeTrackerProvider).timerRunning, isTrue);
+      expect(c.read(lifeTrackerProvider).timerRunningSince, isNotNull);
+
+      n.toggleTimer();
+      expect(c.read(lifeTrackerProvider).timerRunning, isFalse);
+      expect(c.read(lifeTrackerProvider).timerRemainingSeconds, 55 * 60);
+    });
+
     test('resetGame restores starting lives, clears history, and starts timer',
         () async {
       final c = await container();

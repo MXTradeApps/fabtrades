@@ -361,7 +361,8 @@ class _AppMenuDrawer extends ConsumerWidget {
             title: const Text('Life Tracker'),
             onTap: () {
               Navigator.of(context).pop();
-              Navigator.of(parentContext).push(
+              // Root navigator so the tracker covers the tab bar.
+              Navigator.of(parentContext, rootNavigator: true).push(
                 MaterialPageRoute(
                   builder: (_) => const LifeTrackerScreen(),
                   settings: const RouteSettings(name: 'Life Tracker'),

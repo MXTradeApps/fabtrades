@@ -48,14 +48,16 @@ are filled when a printing matches the public Flesh and Blood catalog (game 16).
 | `fab_price_history` | one snapshot per card per day for charts |
 | `fab_pipeline_runs` | ingest log (not client-readable) |
 | `fab_cards_with_prices` | view: cards + `set_name` + current prices (easiest to query) |
-| `fab_app_config` | single-row soft-update config (`latest_version`, store URLs, message); public read |
+| `fab_app_config` | single-row soft-update config (`latest_version`, `latest_build`, store URLs, message); public read |
 
-When you ship a new mobile build, bump `fab_app_config.latest_version` (and
-store URLs if needed) so older installs show the in-app update reminder:
+When you ship a new mobile build, bump `fab_app_config.latest_version` and
+`latest_build` (and store URLs if needed) so older installs show the in-app
+update reminder. Same marketing version with a higher build still prompts:
 
 ```sql
 UPDATE fab_app_config
 SET latest_version = '1.0.2',
+    latest_build = '12',
     updated_at = now()
 WHERE id = 1;
 ```

@@ -63,6 +63,8 @@ dependencies:
   showcaseview: 5.1.0
   posthog_flutter: ^5.34.2
   wakelock_plus: ^1.7.0
+  # Round countdown for Life Tracker (count-down mode, start/pause/reset).
+  stop_watch_timer: ^3.2.2
 
 dev_dependencies:
   flutter_test:

@@ -95,20 +95,27 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   @override
   Widget build(BuildContext context) {
     final entries = ref.watch(binderProvider);
+    final binders = ref.watch(bindersProvider);
     final pricing = ref.watch(pricingProvider);
     final openId = ref.watch(openBinderIdProvider);
     final wanted = entries.where((e) => e.isWanted).toList();
     final owned = entries.where((e) => !e.isWanted).toList();
     final onBinderTab = _tab.index == 0;
+    final inBinder = onBinderTab && openId != null;
     final openRows = openId == null
         ? const <BinderEntry>[]
         : ownedInBinder(owned, openId);
     final binderTotal = openRows.fold<double>(
         0, (s, e) => s + (pricing.value(e.card) ?? 0) * e.quantity);
+    final title = _appBarTitle(
+      onBinderTab: onBinderTab,
+      openId: openId,
+      binders: binders,
+    );
 
     return Scaffold(
       appBar: AppBar(
-        leading: onBinderTab && openId != null
+        leading: inBinder
             ? IconButton(
                 key: const Key('binderBackToGrid'),
                 icon: const Icon(Icons.arrow_back),
@@ -119,17 +126,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
                 },
               )
             : null,
-        title: GestureDetector(
-          key: const Key('binderHomeTitle'),
-          behavior: HitTestBehavior.opaque,
-          onTap: onBinderTab && openId != null
-              ? () {
-                  ref.read(binderFiltersProvider.notifier).clear();
-                  ref.read(openBinderIdProvider.notifier).close();
-                }
-              : null,
-          child: Text(onBinderTab ? 'My Binders' : 'Want List'),
-        ),
+        title: Text(title, key: const Key('binderHomeTitle')),
         actions: [
           if (onBinderTab && openId == null)
             TextButton.icon(
@@ -140,24 +137,27 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
             ),
           const AppMenuAction(),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(46),
-          child: ShowcaseTheme.mark(
-            key: OnboardingKeys.binderTabs,
-            title: TourCopy.binderTabsTitle,
-            description: TourCopy.binderTabsBody,
-            child: TabBar(
-              controller: _tab,
-              tabs: [
-                Tab(text: 'Binder (${_count(owned)})'),
-                Tab(text: 'Want List (${_count(wanted)})'),
-              ],
-            ),
-          ),
-        ),
+        bottom: inBinder
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(46),
+                child: ShowcaseTheme.mark(
+                  key: OnboardingKeys.binderTabs,
+                  title: TourCopy.binderTabsTitle,
+                  description: TourCopy.binderTabsBody,
+                  child: TabBar(
+                    controller: _tab,
+                    tabs: [
+                      Tab(text: 'Binder (${_count(owned)})'),
+                      Tab(text: 'Want List (${_count(wanted)})'),
+                    ],
+                  ),
+                ),
+              ),
       ),
       body: TabBarView(
         controller: _tab,
+        physics: inBinder ? const NeverScrollableScrollPhysics() : null,
         children: [
           openId == null
               ? BinderGrid(
@@ -215,6 +215,19 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   }
 
   int _count(List<BinderEntry> e) => e.fold<int>(0, (s, x) => s + x.quantity);
+
+  static String _appBarTitle({
+    required bool onBinderTab,
+    required String? openId,
+    required List<Binder> binders,
+  }) {
+    if (!onBinderTab) return 'Want List';
+    if (openId == null) return 'My Binders';
+    for (final binder in binders) {
+      if (binder.clientId == openId && binder.isLive) return binder.name;
+    }
+    return 'Binder';
+  }
 
   Future<void> _createBinder(BuildContext context) async {
     final isPro = ref.read(isProProvider);

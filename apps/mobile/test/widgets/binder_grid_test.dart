@@ -136,15 +136,21 @@ void main() {
     expect(find.text('Alpha'), findsOneWidget);
     expect(find.byKey(const Key('binderGrid')), findsNothing);
     expect(find.byKey(const Key('binderValueChip')), findsOneWidget);
+    expect(find.text('Trade Binder'), findsOneWidget);
+    expect(find.text('My Binders'), findsNothing);
+    expect(find.widgetWithText(Tab, 'Want List (0)'), findsNothing);
+    expect(find.widgetWithText(Tab, 'Binder (1)'), findsNothing);
 
     await tester.tap(find.byKey(const Key('binderBackToGrid')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('binderGrid')), findsOneWidget);
     expect(find.text('Alpha'), findsNothing);
+    expect(find.text('My Binders'), findsOneWidget);
+    expect(find.widgetWithText(Tab, 'Want List (0)'), findsOneWidget);
   });
 
-  testWidgets('My Binders title returns to the grid from a drill-in',
+  testWidgets('open Binder title is the Binder name; rename updates it',
       (tester) async {
     final container = await pumpGrid(tester);
     container.read(binderProvider.notifier).add(
@@ -157,10 +163,25 @@ void main() {
     await tester.tap(find.byKey(const Key('binderTile-system:trade')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('binderGrid')), findsNothing);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('binderHomeTitle'))).data,
+      'Trade Binder',
+    );
+    expect(find.byType(TabBar), findsNothing);
 
-    await tester.tap(find.byKey(const Key('binderHomeTitle')));
+    container
+        .read(bindersProvider.notifier)
+        .rename(BinderIds.trade, 'Table Stock');
+    await tester.pump();
+    expect(
+      tester.widget<Text>(find.byKey(const Key('binderHomeTitle'))).data,
+      'Table Stock',
+    );
+
+    await tester.tap(find.byKey(const Key('binderBackToGrid')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('binderGrid')), findsOneWidget);
+    expect(find.text('My Binders'), findsOneWidget);
   });
 
   testWidgets('existing owned cards appear in Trade Binder; signed-out still grids',

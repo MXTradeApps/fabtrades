@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme.dart';
 import 'hero_picker.dart';
 import 'life_tracker_models.dart';
 import 'life_tracker_provider.dart';
@@ -72,19 +73,21 @@ class _TrackerSettingsSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             _PlayerSettingsBlock(
-              title: 'You',
-              player: state.you,
-              onPickHero: () => _pickHero(context, ref, opponent: false),
-              onStartingLife: (life) =>
-                  notifier.setStartingLife(opponent: false, life: life),
-            ),
-            const SizedBox(height: 16),
-            _PlayerSettingsBlock(
               title: 'Opponent',
+              titleColor: AppTheme.negative,
               player: state.opponent,
               onPickHero: () => _pickHero(context, ref, opponent: true),
               onStartingLife: (life) =>
                   notifier.setStartingLife(opponent: true, life: life),
+            ),
+            const SizedBox(height: 16),
+            _PlayerSettingsBlock(
+              title: 'You',
+              titleColor: AppTheme.positive,
+              player: state.you,
+              onPickHero: () => _pickHero(context, ref, opponent: false),
+              onStartingLife: (life) =>
+                  notifier.setStartingLife(opponent: false, life: life),
             ),
             const SizedBox(height: 8),
             Text(
@@ -171,12 +174,14 @@ class _TrackerSettingsSheet extends ConsumerWidget {
 class _PlayerSettingsBlock extends StatefulWidget {
   const _PlayerSettingsBlock({
     required this.title,
+    required this.titleColor,
     required this.player,
     required this.onPickHero,
     required this.onStartingLife,
   });
 
   final String title;
+  final Color titleColor;
   final PlayerState player;
   final VoidCallback onPickHero;
   final ValueChanged<int> onStartingLife;
@@ -227,13 +232,17 @@ class _PlayerSettingsBlockState extends State<_PlayerSettingsBlock> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(widget.title, style: theme.textTheme.titleSmall),
+            Text(
+              widget.title,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: widget.titleColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(hero ?? 'Choose hero…'),
-              subtitle: Text(
-                hero == null ? 'Optional' : 'Starting life from hero',
-              ),
+              subtitle: hero == null ? const Text('Optional') : null,
               trailing: const Icon(Icons.chevron_right),
               onTap: widget.onPickHero,
             ),

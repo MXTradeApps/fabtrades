@@ -67,7 +67,7 @@ final appUpdateRepositoryProvider = Provider<AppUpdateRepository>(
   ),
 );
 
-/// Soft update prompt when the installed build is behind `fab_app_config`.
+/// Soft update prompt when the installed version/build is behind `fab_app_config`.
 /// Resolves to null when up to date, dismissed, or the check fails
 /// (including tests where Supabase / PackageInfo are unavailable).
 final appUpdatePromptProvider = FutureProvider<AppUpdatePrompt?>((ref) async {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:stop_watch_timer/stop_watch_timer.dart';
 
 import '../../core/providers.dart';
 import 'life_tracker_models.dart';
@@ -12,11 +13,10 @@ final lifeTrackerRepositoryProvider = Provider<LifeTrackerRepository>(
 
 class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
   static const settleDelay = Duration(milliseconds: 2500);
-  static const tickInterval = Duration(seconds: 1);
 
   Timer? _youSettle;
   Timer? _opponentSettle;
-  Timer? _countdown;
+  StopWatchTimer? _clock;
 
   LifeTrackerRepository get _repo => ref.read(lifeTrackerRepositoryProvider);
 
@@ -25,19 +25,19 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
     ref.onDispose(() {
       _youSettle?.cancel();
       _opponentSettle?.cancel();
-      _countdown?.cancel();
+      _disposeClock();
     });
 
     final loaded = ref.watch(lifeTrackerRepositoryProvider).load();
     final restored = _restoreTimer(loaded ?? LifeTrackerState.fresh());
-    if (restored.timerRunning) {
-      // Schedule after build so state is assigned first.
-      Future.microtask(_ensureCountdown);
-    }
+    _bindClock(
+      remainingSeconds: restored.timerRemainingSeconds,
+      running: restored.timerRunning,
+    );
     return restored;
   }
 
-  /// Apply wall-clock elapsed time when restoring a running timer.
+  /// Seed the library after a process kill: subtract time the app was dead.
   static LifeTrackerState _restoreTimer(LifeTrackerState s) {
     if (!s.timerRunning || s.timerRunningSince == null) {
       return s.copyWith(timerRunning: false, timerRunningSince: null);
@@ -57,6 +57,52 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
       timerRunning: true,
       timerRunningSince: DateTime.now(),
     );
+  }
+
+  void _disposeClock() {
+    final clock = _clock;
+    _clock = null;
+    if (clock == null) return;
+    clock.onStopTimer();
+    unawaited(clock.dispose());
+  }
+
+  /// Recreate the countdown at [remainingSeconds] and optionally start it.
+  void _bindClock({required int remainingSeconds, required bool running}) {
+    _disposeClock();
+    final clock = StopWatchTimer(
+      mode: StopWatchMode.countDown,
+      presetMillisecond: StopWatchTimer.getMilliSecFromSecond(remainingSeconds),
+      refreshTime: 200,
+      onChangeRawSecond: _onClockSecond,
+      onEnded: _onClockEnded,
+    );
+    _clock = clock;
+    if (running && remainingSeconds > 0) {
+      clock.onStartTimer();
+    }
+  }
+
+  void _onClockSecond(int seconds) {
+    if (_clock == null) return;
+    if (seconds == state.timerRemainingSeconds) return;
+    state = state.copyWith(timerRemainingSeconds: seconds);
+  }
+
+  void _onClockEnded() {
+    if (_clock == null) return;
+    state = state.copyWith(
+      timerRemainingSeconds: 0,
+      timerRunning: false,
+      timerRunningSince: null,
+    );
+    _persist();
+  }
+
+  int _clockRemainingSeconds() {
+    final ms = _clock?.rawTime.value;
+    if (ms == null) return state.timerRemainingSeconds;
+    return StopWatchTimer.getRawSecond(ms);
   }
 
   Future<void> _persist() => _repo.save(state);
@@ -144,12 +190,9 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
       return;
     }
     if (state.timerRunning) {
-      _countdown?.cancel();
-      _countdown = null;
-      // Snapshot remaining based on wall clock.
-      final remaining = _liveRemaining();
+      _clock?.onStopTimer();
       state = state.copyWith(
-        timerRemainingSeconds: remaining,
+        timerRemainingSeconds: _clockRemainingSeconds(),
         timerRunning: false,
         timerRunningSince: null,
       );
@@ -158,45 +201,9 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
         timerRunning: true,
         timerRunningSince: DateTime.now(),
       );
-      _ensureCountdown();
+      _clock?.onStartTimer();
     }
     _persist();
-  }
-
-  int _liveRemaining() {
-    if (!state.timerRunning || state.timerRunningSince == null) {
-      return state.timerRemainingSeconds;
-    }
-    final elapsed =
-        DateTime.now().difference(state.timerRunningSince!).inSeconds;
-    return (state.timerRemainingSeconds - elapsed).clamp(0, 1 << 30);
-  }
-
-  void _ensureCountdown() {
-    _countdown?.cancel();
-    if (!state.timerRunning) return;
-    _countdown = Timer.periodic(tickInterval, (_) => _onTick());
-  }
-
-  void _onTick() {
-    if (!state.timerRunning) return;
-    final remaining = _liveRemaining();
-    if (remaining <= 0) {
-      _countdown?.cancel();
-      _countdown = null;
-      state = state.copyWith(
-        timerRemainingSeconds: 0,
-        timerRunning: false,
-        timerRunningSince: null,
-      );
-      _persist();
-      return;
-    }
-    // Refresh display by rewriting remaining + runningSince so widgets rebuild.
-    state = state.copyWith(
-      timerRemainingSeconds: remaining,
-      timerRunningSince: DateTime.now(),
-    );
   }
 
   void setFormat(LifeFormat format) {
@@ -222,8 +229,6 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
       }
     }
 
-    _countdown?.cancel();
-    _countdown = null;
     state = state.copyWith(
       format: format,
       you: you,
@@ -232,6 +237,7 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
       timerRunning: false,
       timerRunningSince: null,
     );
+    _bindClock(remainingSeconds: format.roundSeconds, running: false);
     _persist();
   }
 
@@ -281,19 +287,18 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
   void resetGame() {
     _youSettle?.cancel();
     _opponentSettle?.cancel();
-    _countdown?.cancel();
-    _countdown = null;
 
+    final remaining = state.format.roundSeconds;
     state = LifeTrackerState(
       format: state.format,
       you: PlayerState.fresh(state.you.config),
       opponent: PlayerState.fresh(state.opponent.config),
       history: const [],
-      timerRemainingSeconds: state.format.roundSeconds,
+      timerRemainingSeconds: remaining,
       timerRunning: true,
       timerRunningSince: DateTime.now(),
     );
-    _ensureCountdown();
+    _bindClock(remainingSeconds: remaining, running: true);
     _persist();
   }
 }

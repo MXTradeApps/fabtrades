@@ -5,7 +5,8 @@ import '../../core/analytics/analytics.dart';
 import '../../core/providers.dart';
 
 /// Runs once after the first frame and shows a soft update dialog when the
-/// installed build is behind `fab_app_config.latest_version`.
+/// installed release is behind `fab_app_config.latest_version` /
+/// `latest_build`.
 class UpdatePromptHost extends ConsumerStatefulWidget {
   const UpdatePromptHost({super.key, required this.child});
 
@@ -37,7 +38,9 @@ class _UpdatePromptHostState extends ConsumerState<UpdatePromptHost> {
 
     analytics.capture('update_prompt_shown', {
       'latest_version': prompt.latestVersion,
+      'latest_build': prompt.latestBuild ?? '',
       'current_version': prompt.installedVersion,
+      'current_build': prompt.installedBuild,
     });
 
     await showDialog<void>(
@@ -49,7 +52,7 @@ class _UpdatePromptHostState extends ConsumerState<UpdatePromptHost> {
           TextButton(
             onPressed: () async {
               analytics.capture('update_prompt_dismissed');
-              await repo.dismiss(prompt.latestVersion);
+              await repo.dismiss(prompt.dismissToken);
               if (dialogContext.mounted) Navigator.of(dialogContext).pop();
             },
             child: const Text('Later'),

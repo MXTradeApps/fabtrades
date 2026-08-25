@@ -27,25 +27,36 @@ class AppUpdateRepository {
 
   Future<PackageInfo> packageInfo() => PackageInfo.fromPlatform();
 
-  /// Soft reminder when installed version < latest and the user has not
-  /// dismissed this latest version. Failures return null (no nag on errors).
+  /// Soft reminder when installed version/build is behind latest and the user
+  /// has not dismissed this latest release. Failures return null (no nag on
+  /// errors).
   Future<AppUpdatePrompt?> checkForUpdatePrompt() async {
     try {
       final config = await fetchConfig();
       if (config == null) return null;
 
       final info = await packageInfo();
-      final installed = info.version;
-      if (!isVersionBehind(installed, config.latestVersion)) return null;
+      if (!isReleaseBehind(
+        installedVersion: info.version,
+        installedBuild: info.buildNumber,
+        latestVersion: config.resolvedVersion,
+        latestBuild: config.resolvedBuild,
+      )) {
+        return null;
+      }
 
-      final dismissed = _prefs.getString(_dismissedKey);
-      if (dismissed == config.latestVersion) return null;
-
-      return AppUpdatePrompt(
-        installedVersion: installed,
+      final prompt = AppUpdatePrompt(
+        installedVersion: info.version,
+        installedBuild: info.buildNumber,
+        latestVersion: config.resolvedVersion,
+        latestBuild: config.resolvedBuild,
         config: config,
         storeUrl: _storeUrlForPlatform(config),
       );
+      final dismissed = _prefs.getString(_dismissedKey);
+      if (dismissed == prompt.dismissToken) return null;
+
+      return prompt;
     } catch (_) {
       return null;
     }
@@ -76,19 +87,30 @@ class AppUpdateRepository {
 class AppUpdatePrompt {
   const AppUpdatePrompt({
     required this.installedVersion,
+    required this.installedBuild,
+    required this.latestVersion,
+    this.latestBuild,
     required this.config,
     required this.storeUrl,
   });
 
   final String installedVersion;
+  final String installedBuild;
+  final String latestVersion;
+  final String? latestBuild;
   final AppUpdateConfig config;
   final String? storeUrl;
 
-  String get latestVersion => config.latestVersion;
+  String get latestLabel => formatReleaseLabel(latestVersion, latestBuild);
+
+  String get installedLabel =>
+      formatReleaseLabel(installedVersion, installedBuild);
+
+  String get dismissToken => latestLabel;
 
   String get message =>
       (config.message != null && config.message!.isNotEmpty)
           ? config.message!
-          : 'A newer version of FAB Trades ($latestVersion) is available. '
-              'You are on $installedVersion.';
+          : 'A newer version of FAB Trades ($latestLabel) is available. '
+              'You are on $installedLabel.';
 }

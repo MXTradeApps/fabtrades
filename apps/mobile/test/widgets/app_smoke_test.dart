@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -80,5 +81,18 @@ void main() {
     await tester.tap(find.text('Trade'));
     await tester.pumpAndSettle();
     expect(find.text('Vex - Apathetic'), findsOneWidget);
+  });
+
+  testWidgets('Life Tracker covers the tab bar', (tester) async {
+    await launch(tester);
+
+    await tester.tap(find.byTooltip('Menu').hitTestable().first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Life Tracker'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationBar).hitTestable(), findsNothing);
+    expect(find.byTooltip('Close'), findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
   });
 }
