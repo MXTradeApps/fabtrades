@@ -54,14 +54,6 @@ class BindersSyncAdapter implements SyncAdapter<Binder> {
   }
 
   @override
-  String? describePushError(Object error) {
-    if (isLiveNameUniqueViolation(error)) {
-      return 'A Binder with that name already exists';
-    }
-    return null;
-  }
-
-  @override
   SyncRecord<Binder>? fromRow(Map<String, dynamic> row) {
     final fields = readRowSyncFields(row);
     final id = row['client_id'] as String?;

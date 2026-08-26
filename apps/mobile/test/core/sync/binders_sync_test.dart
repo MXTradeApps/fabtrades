@@ -26,9 +26,5 @@ void main() {
       isLiveNameUniqueViolation(_PgError(message: 'network timeout')),
       isFalse,
     );
-    expect(
-      const BindersSyncAdapter().describePushError(_PgError(code: '23505')),
-      'A Binder with that name already exists',
-    );
   });
 }

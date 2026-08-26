@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'binders_sync.dart';
 import 'remote_store.dart';
 import 'sync_adapter.dart';
 import 'sync_journal.dart';
@@ -129,9 +130,9 @@ class CollectionSync<T> {
     try {
       await remote.upsertAll(upserts);
     } catch (e) {
-      final described = adapter.describePushError(e);
-      if (described != null) {
-        throw StateError(described);
+      if (adapter.domain == SyncDomain.binders &&
+          isLiveNameUniqueViolation(e)) {
+        throw StateError('A Binder with that name already exists');
       }
       rethrow;
     }

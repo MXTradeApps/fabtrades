@@ -62,11 +62,6 @@ abstract class SyncAdapter<T> {
   /// Parses a row, or returns null if it is unintelligible. A single malformed row
   /// should cost that one record, not the whole sync.
   SyncRecord<T>? fromRow(Map<String, dynamic> row);
-
-  /// Human-readable reason when a push must fail instead of being rewritten.
-  /// Null keeps the generic sync error. Binders use this so a live-name
-  /// unique-violation is surfaced rather than silently renamed.
-  String? describePushError(Object error) => null;
 }
 
 /// Reads `updated_at` / `deleted_at` the way every synced table stores them.
