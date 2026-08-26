@@ -4,17 +4,17 @@
 
 | Surface | Control | When shown | Action |
 | --- | --- | --- | --- |
-| Mobile Binder tab (index 0) | Binder grid | Binder destination, Binder half selected | Default home. Tiles: name, count, value, cover |
-| Mobile Binder tab | Tile | Live Binder | Opens that Binder’s existing list UI |
+| Mobile Binder tab (index 0) | Binder grid | Binder destination, Binder half selected, no Binder open | Default home. Tiles: name, count, value, cover |
+| Mobile Binder tab | Tile | Live Binder | Opens that Binder’s existing list UI (`openBinderIdProvider`) |
 | Mobile Binder list | Back | Drill-in | Returns to grid, same Want List tab index |
 | Mobile Binder tab (index 1) | Want List | Unchanged sibling tab | Existing Want List; not a Binder tile |
 | Mobile Binder list | Move | Row in an open owned Binder | Destination = another live Binder; qty 1…n |
 | Mobile Binder grid | Create | Always visible | Under cap: new Binder. At 4 free: Pro upgrade, no row |
-| Web `/binder` | Binder grid | Owner Binder page | Same tile contract as mobile |
-| Web `/binder` drill-in | Existing list chrome | One Binder selected | Add/qty/value overlay scoped to that Binder |
+| Web `/binder` | Binder grid | Owner Binder page, no `?b=` | Same tile contract as mobile |
+| Web `/binder?b=<clientId>` | Existing list chrome | One Binder selected | Add/qty/value overlay scoped to that Binder; back clears `b` |
 | Web `/wants` | Want List | Unchanged route | Not a Binder; no move-into-Want-List |
 
-Add-to-Binder (search, scan, card detail): if a Binder is open, that Binder; if the player is on the grid (or no Binder open), Trade Binder. Want List adds still set `isWanted`.
+Add-to-Binder (search, scan, card detail): if a Binder is open, that Binder; if the player is on the grid (or no Binder open), Trade Binder. Want List adds still set `isWanted`. Mobile: `openBinderIdProvider` in `apps/mobile/lib/core/providers.dart` / `card_actions.dart`. Web: `apps/web/src/utils/openBinder.js` (`targetOwnedBinderId`).
 
 ## Out of scope (must not)
 

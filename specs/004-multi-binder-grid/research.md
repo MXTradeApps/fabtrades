@@ -2,7 +2,7 @@
 
 ## Decision: `binders` table + `binder_id` on owned entries
 
-**Rationale**: Today `binder_entries` is one pile (`UNIQUE (user_id, card_id, is_wanted)`). A copy cannot live in two Binders, names cannot persist, and Trade Binder cannot be a stable role. A first-class Binder record (name, role, tombstone) plus `binder_id` on owned rows is the smallest model that matches FR-002, FR-011, FR-019, and FR-022.
+**Rationale**: Pre-feature `binder_entries` was one pile (`UNIQUE (user_id, card_id, is_wanted)`). A copy could not live in two Binders, names could not persist, and Trade Binder could not be a stable role. A first-class Binder record (name, role, tombstone) plus `binder_id` on owned rows is the smallest model that matches FR-002, FR-011, FR-019, and FR-022.
 
 Want List stays `is_wanted = true` with `binder_id` null. It is not a Binder.
 
@@ -23,17 +23,24 @@ Want List stays `is_wanted = true` with `binder_id` null. It is not a Binder.
 
 `role = trade` is the identity Confirm Trade, Trade Filler, scan-from-grid, and public share use — **not** the display name (FR-011, FR-015).
 
+Mobile first-run (no `binders` storage key) seeds Trade Binder + Collection in memory and persists on first write. After a write, Trade Binder is restored if missing; Collection is **not** resurrected. SQL backfill seeds both defaults for users who already have `binder_entries` or `binder_shares`. Web seeds on first authenticated Binder load; it does not invent signed-out local Binder storage.
+
 **Alternatives considered**: Name-equals-“Trade Binder” as identity — breaks on rename. Per-user UUID assigned only on the server — signed-out mobile cannot create Collection until sign-in.
 
-## Decision: Owned identity is `(binder_id, card_id, condition)`
+## Decision: Owned identity is `(binder_id, card_id, condition)` stored as `client_id`
 
 **Rationale**: Two devices adding the same Printing to the **same** Binder must still merge quantity. The same Printing in Trade Binder and Collection must be two rows. Spec FR-008: merge when printing **and** condition match; do not merge across conditions. Drop `UNIQUE (user_id, card_id, is_wanted)`.
 
 Want List keeps a partial unique `(user_id, card_id) WHERE is_wanted`. Owned live unique: `(user_id, card_id, binder_id, condition)`.
 
-Sync `idOf` owned: `binder|{binderId}|{cardId}|{condition}`. Want: `want|{cardId}`.
+Sync upsert keys on `(user_id, client_id)` including tombstones. Entry `client_id`:
 
-**Alternatives considered**: Keep the old unique and forbid the same Printing in two Binders — makes move a delete+blocked-add. One row per Printing per Binder that overwrites condition — violates FR-008.
+| List | Identity |
+| --- | --- |
+| Owned | `binder|{binderId}|{cardId}|{condition}` |
+| Want List | `want|{cardId}` |
+
+**Alternatives considered**: Keep the old unique and forbid the same Printing in two Binders — makes move a delete+blocked-add. One row per Printing per Binder that overwrites condition — violates FR-008. Conflict only on the live partial unique — tombstones cannot be upserted.
 
 ## Decision: Shared `binderCards` cap; new `binders: 4` with paywall behaviour
 
@@ -45,20 +52,18 @@ Creating a 5th Binder is an explicit “I want more piles” action — present 
 
 **Alternatives considered**: Cap per Binder — free loophole. Cap Trade Binder only — Collection becomes unlimited inventory. Hide Create at 4 — weaker than a Pro upgrade.
 
-## Decision: Constitution + CONTEXT vocabulary update in the same change
+## Decision: Constitution + CONTEXT vocabulary already landed (1.1.0)
 
-**Rationale**: Product Constraint 4 and `docs/CONTEXT.md` currently say Binder is the only owned pile and to avoid “Collection.” This feature makes Collection a **default Binder name** for owned-not-for-trade stock. That is an intentional product expansion, not a silent rename of the Binder tab.
-
-Amendment (MINOR — expand guidance, do not drop the Binder type):
+**Rationale**: Product Constraint 4 used to treat Binder as the only owned pile and to avoid “Collection.” This feature makes Collection a **default Binder name** for owned-not-for-trade stock. Constitution **1.1.0** (2026-08-22) and `docs/CONTEXT.md` already encode:
 
 - The product noun remains **Binder**.
 - **Trade Binder** is tradeable stock (Confirm Trade, Trade Filler, share).
 - **Collection** is allowed as the default keep-pile Binder name.
 - Do not rename the Binder destination to “Collection.” Want List is still not a Binder.
 
-Without this, shipping FR-002 violates the constitution.
+No further constitution amendment is required for this plan. Shipping FR-002 without that language would have been a gate fail; it is already present.
 
-**Alternatives considered**: Call the keep pile “Keep Binder” to dodge the word Collection — contradicts the spec. Ship without amending — gate fail.
+**Alternatives considered**: Call the keep pile “Keep Binder” to dodge the word Collection — contradicts the spec. Ship without amending — gate fail (already avoided).
 
 ## Decision: Dual-client fixtures for move, cover, and limits — not a shared runtime
 
@@ -75,21 +80,21 @@ Without this, shipping FR-002 violates the constitution.
 
 ## Decision: Confirm Trade and Trade Filler touch Trade Binder only
 
-**Rationale**: FR-015. Today reconcile matches `isWanted: false` (first owned row). After this change that would steal from Collection if it appears first. Scope decrement/add to `role = trade`. Want List decrement unchanged.
+**Rationale**: FR-015. Today reconcile matching `isWanted: false` (first owned row) would steal from Collection if it appears first. Scope decrement/add to `role = trade`. Want List decrement unchanged.
 
-Scan/pick while a Binder is open adds to that Binder. From the grid, tradeable adds go to Trade Binder (FR-016).
+Scan/pick while a Binder is open adds to that Binder. From the grid, tradeable adds go to Trade Binder (FR-016). Mobile: `openBinderIdProvider`. Web: `utils/openBinder.js` + `/binder?b=`.
 
 **Alternatives considered**: Remove given copies from whichever Binder has them — silent Collection edits. Auto-move Collection → Trade Binder on confirm — out of scope.
 
 ## Decision: Public share stays Trade Binder
 
-**Rationale**: Spec out of scope for sharing Collection. `get_public_binder` today is `is_wanted = false`. After migration that would leak Collection. Filter rows whose Binder `role = trade`.
+**Rationale**: Spec out of scope for sharing Collection. `private.get_public_binder_by_token` used to return all `is_wanted = false` rows. After migration that would leak Collection. Filter rows whose Binder `role = trade`.
 
 **Alternatives considered**: Share all owned Binders — out of scope. Share whichever Binder is open — new product surface.
 
 ## Decision: Native grid + drill-in; no new wait-on-network screen
 
-**Rationale**: Local reads. Mobile Binder tab: grid is the Binder half of the existing Binder | Want List tabs; opening a tile pushes (or replaces in-tab) the existing list UI with a back affordance. Web `/binder`: grid first; drill-in is the current list chrome (sort, add, value overlay) for one Binder. `/wants` unchanged. Signed-out web Binder stays today’s sign-in page — do not invent an on-device web Binder (same as 003).
+**Rationale**: Local reads. Mobile Binder tab: grid is the Binder half of the existing Binder | Want List tabs; opening a tile shows the existing list UI with a back affordance. Web `/binder`: grid first; drill-in is `?b=<clientId>` with the current list chrome (sort, add, value overlay) for one Binder. `/wants` unchanged. Signed-out web Binder stays today’s sign-in page — do not invent an on-device web Binder (same as 003).
 
 Cover image is catalog art already on the Printing (`image_url`). Highest-value Printing uses the same per-copy value as that surface’s Binder total (mobile `Pricing.value`, web TCG Market — honest with 003). Tile value is that Binder’s existing total helper, not a third formula.
 
@@ -106,6 +111,8 @@ Name uniqueness: client check + unique index on `lower(btrim(name))` for live Bi
 ## Open facts (resolved)
 
 - Empty Binder names: refuse create/rename.
-- Grid order: Trade Binder, then live Collection, then others by `createdAt` ascending (SC-010).
+- Grid order: Trade Binder, then live Collection (`system:collection`), then others by `createdAt` ascending, then `clientId` (SC-010).
 - 5th Binder: Pro upgrade UI, not a snackbar-only dead end.
 - Distinct-card cap: existing refuse + Upgrade snackbar (mobile) / equivalent (web); not a mandatory paywall modal.
+- Schema artifact: `supabase/migrations/20260822194254_multi_binders.sql`.
+- No remaining NEEDS CLARIFICATION in Technical Context.
