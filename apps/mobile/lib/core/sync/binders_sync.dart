@@ -54,6 +54,14 @@ class BindersSyncAdapter implements SyncAdapter<Binder> {
   }
 
   @override
+  String? describePushError(Object error) {
+    if (isLiveNameUniqueViolation(error)) {
+      return 'A Binder with that name already exists';
+    }
+    return null;
+  }
+
+  @override
   SyncRecord<Binder>? fromRow(Map<String, dynamic> row) {
     final fields = readRowSyncFields(row);
     final id = row['client_id'] as String?;
@@ -76,4 +84,37 @@ class BindersSyncAdapter implements SyncAdapter<Binder> {
       updatedAt: fields.updatedAt,
     );
   }
+}
+
+/// Unique-violation on a live Binder name is a surfaced error, not a silent
+/// rename. PostgREST reports Postgres `23505` and the live-name index.
+bool isLiveNameUniqueViolation(Object error) {
+  final code = _errorField(error, 'code');
+  if (code == '23505') return true;
+  final text =
+      '${_errorField(error, 'message')} ${_errorField(error, 'details')} ${error.toString()}'
+          .toLowerCase();
+  return text.contains('binders_user_live_name') ||
+      (text.contains('duplicate key') && text.contains('name'));
+}
+
+String _errorField(Object error, String name) {
+  try {
+    final value = (error as dynamic)[name];
+    if (value is String) return value;
+  } catch (_) {}
+  try {
+    switch (name) {
+      case 'code':
+        final code = (error as dynamic).code;
+        return code is String ? code : '';
+      case 'message':
+        final message = (error as dynamic).message;
+        return message is String ? message : '';
+      case 'details':
+        final details = (error as dynamic).details;
+        return details is String ? details : '';
+    }
+  } catch (_) {}
+  return '';
 }

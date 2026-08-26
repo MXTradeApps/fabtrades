@@ -76,6 +76,25 @@ describe('reconcileBinderAfterTrade', () => {
         expect(next[0].isWanted).toBe(true);
     });
 
+    test('does not edit Collection when reconciling Trade Binder', () => {
+        const next = reconcileBinderAfterTrade({
+            entries: [
+                { ...binder('keep', 4), binderId: 'system:collection' },
+            ],
+            haveItems: [{ cardId: 'keep', quantity: 1 }],
+            wantItems: [{ cardId: 'got', quantity: 1, card: { _uniqueId: 'got', name: 'Got' } }],
+            removeGivenFromBinder: true,
+            addReceivedToBinder: true,
+            now,
+        });
+        expect(next.find((e) => e.binderId === 'system:collection').quantity).toBe(4);
+        expect(next.find((e) => e.cardId === 'got')).toMatchObject({
+            binderId: 'system:trade',
+            quantity: 1,
+            isWanted: false,
+        });
+    });
+
     test('skips binder mutations when both checkboxes are off but still clears wants', () => {
         const start = [binder('g', 5), binder('r', 1, { wanted: true })];
         const next = reconcileBinderAfterTrade({

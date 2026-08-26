@@ -13,6 +13,24 @@ export function entryClientId({ cardId, isWanted, binderId, condition = 'NM' }) 
     return `binder|${binderId || TRADE_BINDER_ID}|${cardId}|${condition || 'NM'}`;
 }
 
+/**
+ * Unique-violation on a live Binder name is a surfaced error, not a silent rename.
+ * Postgres `23505` / the live-name unique index.
+ */
+export function isLiveNameUniqueViolation(error) {
+    if (!error) return false;
+    if (error.code === '23505') return true;
+    const text = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+    return /binders_user_live_name/i.test(text);
+}
+
+function uniqueNameError(error) {
+    if (isLiveNameUniqueViolation(error)) {
+        return { message: 'duplicate', reason: 'duplicate' };
+    }
+    return error;
+}
+
 export function gridOrderBinders(binders) {
     const live = (binders || []).filter((b) => !b.deletedAt);
     const trade = live.find((b) => b.role === 'trade');
@@ -731,7 +749,7 @@ export async function createBinder({ name, isPro = false, liveCount }) {
         return { data: mapBinder(data), error: null };
     } catch (error) {
         console.error('Error creating binder:', error);
-        return { data: null, error };
+        return { data: null, error: uniqueNameError(error) };
     }
 }
 
@@ -763,7 +781,7 @@ export async function renameBinder({ clientId, name }) {
         return { data: mapBinder(data), error: null };
     } catch (error) {
         console.error('Error renaming binder:', error);
-        return { data: null, error };
+        return { data: null, error: uniqueNameError(error) };
     }
 }
 

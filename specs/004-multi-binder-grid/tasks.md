@@ -37,11 +37,11 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 **Purpose**: Golden cases so JS and Dart cannot invent different Binder, cover, move, name, or free-limit rules
 
-- [ ] T001 [P] Extend `packages/contracts/free_limits.json` from [contracts/free-limits.md](./contracts/free-limits.md): add `limits.binders: 4` and `behaviour.binders: "paywall"`; keep `binderCards: 50` / `refuse`; add cases for 50 distinct owned Printings split across Trade Binder + Collection still refusing a 51st, a valid move among those 50 allowed, 3 live Binders create allowed, 4 live Binders create forbidden for free / allowed for Pro, tombstoned Collection not counting toward 4
-- [ ] T002 [P] Create `packages/contracts/binder_move.json` from [contracts/binder-move.md](./contracts/binder-move.md) using catalog-shaped rows (printing id, binder id, condition, quantity, prices): partial qty, merge on printing+condition, refuse qty below 1 / qty above source / same Binder / missing source / tombstoned destination, Want List never a destination, distinct owned count unchanged
-- [ ] T003 [P] Create `packages/contracts/binder_cover.json` from [contracts/binders.md](./contracts/binders.md) using catalog-shaped rows: empty → no cover; highest `qty × sourceValue` (`pricingValue` vs `tcgMarketOnly`); ties name A–Z then printing id then condition; all-unpriced still picks a cover by name (must not look empty)
-- [ ] T004 [P] Create `packages/contracts/binder_names.json` from [contracts/binders.md](./contracts/binders.md): trim + case-fold uniqueness among live Binders; empty-after-trim invalid; own-name rename ok; deleted name reusable; Trade Binder rename keeps `role=trade`
-- [ ] T005 Add `free_limits.json` (`binders` + shared `binderCards`), `binder_move.json`, `binder_cover.json`, and `binder_names.json` to the files table in `packages/contracts/README.md` (web `apps/web/src/utils/freeLimits.js` / `binderMove.js` / `binderCover.js` / `binderNames.js`; mobile `apps/mobile/lib/core/logic/free_limits.dart` / `binder_move.dart` / `binder_cover.dart` / `binder_names.dart`)
+- [X] T001 [P] Extend `packages/contracts/free_limits.json` from [contracts/free-limits.md](./contracts/free-limits.md): add `limits.binders: 4` and `behaviour.binders: "paywall"`; keep `binderCards: 50` / `refuse`; add cases for 50 distinct owned Printings split across Trade Binder + Collection still refusing a 51st, a valid move among those 50 allowed, 3 live Binders create allowed, 4 live Binders create forbidden for free / allowed for Pro, tombstoned Collection not counting toward 4
+- [X] T002 [P] Create `packages/contracts/binder_move.json` from [contracts/binder-move.md](./contracts/binder-move.md) using catalog-shaped rows (printing id, binder id, condition, quantity, prices): partial qty, merge on printing+condition, refuse qty below 1 / qty above source / same Binder / missing source / tombstoned destination, Want List never a destination, distinct owned count unchanged
+- [X] T003 [P] Create `packages/contracts/binder_cover.json` from [contracts/binders.md](./contracts/binders.md) using catalog-shaped rows: empty → no cover; highest `qty × sourceValue` (`pricingValue` vs `tcgMarketOnly`); ties name A–Z then printing id then condition; all-unpriced still picks a cover by name (must not look empty)
+- [X] T004 [P] Create `packages/contracts/binder_names.json` from [contracts/binders.md](./contracts/binders.md): trim + case-fold uniqueness among live Binders; empty-after-trim invalid; own-name rename ok; deleted name reusable; Trade Binder rename keeps `role=trade`
+- [X] T005 Add `free_limits.json` (`binders` + shared `binderCards`), `binder_move.json`, `binder_cover.json`, and `binder_names.json` to the files table in `packages/contracts/README.md` (web `apps/web/src/utils/freeLimits.js` / `binderMove.js` / `binderCover.js` / `binderNames.js`; mobile `apps/mobile/lib/core/logic/free_limits.dart` / `binder_move.dart` / `binder_cover.dart` / `binder_names.dart`)
 
 ---
 
@@ -51,28 +51,28 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 [P] Document the `binders` domain and owned entry identity `binder|{binderId}|{cardId}|{condition}` vs `want|{cardId}` in `docs/CLOUD_SYNC.md` (last-write-wins per record; unique live names; unique-violation is a surfaced error, not a silent rename)
-- [ ] T007 Add `supabase/migrations/20260822194254_multi_binders.sql`: `public.binders` (`user_id`, `client_id`, `name`, `role` trade|standard, timestamps, `deleted_at`; `UNIQUE (user_id, client_id)`; partial unique live names `UNIQUE (user_id, lower(btrim(name))) WHERE deleted_at IS NULL`; partial unique one trade Binder; RLS own rows; index `(user_id, updated_at DESC)`); `binder_entries.binder_id TEXT`; `binder_entries.client_id TEXT NOT NULL`; drop `UNIQUE (user_id, card_id, is_wanted)`; `UNIQUE (user_id, client_id)` for upsert including tombstones; partial unique owned `(user_id, card_id, binder_id, condition) WHERE is_wanted = false AND deleted_at IS NULL`; partial unique want `(user_id, card_id) WHERE is_wanted = true AND deleted_at IS NULL`; check `(is_wanted AND binder_id IS NULL) OR (NOT is_wanted AND binder_id IS NOT NULL)`; backfill `system:trade` + `system:collection` and set owned `binder_id = system:trade`; fill `client_id` from identity; rewrite `private.get_public_binder_by_token` to return owned live rows whose Binder `role = trade` only
-- [ ] T008 [P] Create Binder record (`clientId`, `name`, `role` trade|standard, `createdAt`, `updatedAt`, `deletedAt`; defaults `system:trade` / `system:collection`) in `apps/mobile/lib/core/models/binder.dart`
-- [ ] T009 [P] Add `binderId` on owned rows (null when `isWanted`; default `system:trade` on owned JSON missing `binder_id`) in `apps/mobile/lib/core/models/binder_entry.dart` and round-trip it in `apps/mobile/test/core/models/binder_entry_test.dart`
-- [ ] T010 Create `apps/mobile/lib/core/data/binders_repository.dart` (`CachedCollection<Binder>`, storage key `binders`): seed Trade Binder + Collection when missing; never tombstone `role=trade`; after first persist, never resurrect Collection; always restore Trade Binder if absent or tombstoned
-- [ ] T011 On load, assign owned entries missing `binderId` to `system:trade` (Want List stays null) in `apps/mobile/lib/core/data/binder_repository.dart` so pre-feature `collection_entries` migrate losslessly
-- [ ] T012 [P] Implement binders-table adapter (`client_id` identity, tombstones, conflict `user_id,client_id`; unique-violation on a live name is a surfaced error, not a silent rename) in `apps/mobile/lib/core/sync/binders_sync.dart`
-- [ ] T013 Change owned `idOf` to `binder|{binderId}|{cardId}|{condition}` and want to `want|{cardId}` (conflict target matches new uniques) in `apps/mobile/lib/core/sync/binder_sync.dart`; add `SyncDomain.binders` in `apps/mobile/lib/core/sync/sync_journal.dart`; wire the binders collection and `bindersChanged` in `apps/mobile/lib/core/sync/sync_service.dart`
-- [ ] T014 Add `bindersProvider` / `BindersNotifier` (load/seed, live list, grid order: `role=trade`, live Collection `system:collection`, then `createdAt` ascending, then `clientId`) and `openBinderIdProvider` in `apps/mobile/lib/core/providers.dart`; keep `BinderNotifier` loading entries
-- [ ] T015 [P] Fetch/upsert/seed `binders` and scope `binder_entries` by `binder_id` (Want List `binder_id` null) in `apps/web/src/services/binder.js` without inventing signed-out web Binder storage; surface unique-violation on a live name rather than silently renaming
-- [ ] T016 [P] Write failing contract tests for the extended `free_limits.json` (shared `binderCards` across Binders, `binders: 4` paywall) via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/free_limits_contract_test.dart` (and shared-cap cases in `apps/mobile/test/core/providers/free_limits_test.dart`)
-- [ ] T017 [P] Write failing contract tests that import `packages/contracts/free_limits.json` in `apps/web/tests/contracts/freeLimits.contract.test.js`
-- [ ] T018 Implement `FreeLimits.binders = 4`, distinct owned `binderCards` counted across all live Binders (Want List separate), `canCreateBinder`, and keep `binderCards` behaviour `refuse` in `apps/mobile/lib/core/logic/free_limits.dart` until T016 passes — Pro removes both Binder caps; clients MUST NOT write entitlements
-- [ ] T019 [P] Implement the same `FreeLimits.binders`, shared `binderCards`, and `canCreateBinder` in `apps/web/src/utils/freeLimits.js` until T017 passes
-- [ ] T020 [P] Write failing contract tests that load `binder_cover.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_cover_contract_test.dart` using catalog-shaped rows
-- [ ] T021 [P] Write failing contract tests that import `packages/contracts/binder_cover.json` in `apps/web/tests/contracts/binderCover.contract.test.js`
-- [ ] T022 Implement cover pick (empty none; max contribution; all-unpriced name-stable) in `apps/mobile/lib/core/logic/binder_cover.dart` until T020 passes — same `pricingValue` / `tcgMarketOnly` split as `apps/mobile/lib/core/logic/binder_value_snapshot.dart`
-- [ ] T023 [P] Implement the same cover pick in `apps/web/src/utils/binderCover.js` until T021 passes (web default `tcgMarketOnly`)
-- [ ] T024 [P] Scope `reconcileBinderAfterTrade` to entries whose Binder `role = trade` (given leave Trade Binder; received enter Trade Binder; other Binders untouched; Want List decrement unchanged) in `apps/mobile/lib/core/logic/confirm_trade.dart` until `apps/mobile/test/core/logic/confirm_trade_test.dart` passes
-- [ ] T025 [P] Scope `reconcileBinderAfterTrade` the same way in `apps/web/src/utils/confirmTrade.js` until `apps/web/tests/utils/confirmTrade.test.js` and `apps/web/tests/services/confirmTrade.test.js` pass
-- [ ] T026 [P] Boost Trade Filler from Trade Binder only (`role = trade`, not Collection) in `apps/mobile/lib/core/logic/trade_filler.dart` until `apps/mobile/test/core/logic/trade_filler_test.dart` passes
-- [ ] T027 [P] Assert `getPublicBinder` / RPC fixtures in `apps/web/tests/services/binder.test.js` return Trade Binder rows only (`role = trade`), not Collection
+- [X] T006 [P] Document the `binders` domain and owned entry identity `binder|{binderId}|{cardId}|{condition}` vs `want|{cardId}` in `docs/CLOUD_SYNC.md` (last-write-wins per record; unique live names; unique-violation is a surfaced error, not a silent rename)
+- [X] T007 Add `supabase/migrations/20260822194254_multi_binders.sql`: `public.binders` (`user_id`, `client_id`, `name`, `role` trade|standard, timestamps, `deleted_at`; `UNIQUE (user_id, client_id)`; partial unique live names `UNIQUE (user_id, lower(btrim(name))) WHERE deleted_at IS NULL`; partial unique one trade Binder; RLS own rows; index `(user_id, updated_at DESC)`); `binder_entries.binder_id TEXT`; `binder_entries.client_id TEXT NOT NULL`; drop `UNIQUE (user_id, card_id, is_wanted)`; `UNIQUE (user_id, client_id)` for upsert including tombstones; partial unique owned `(user_id, card_id, binder_id, condition) WHERE is_wanted = false AND deleted_at IS NULL`; partial unique want `(user_id, card_id) WHERE is_wanted = true AND deleted_at IS NULL`; check `(is_wanted AND binder_id IS NULL) OR (NOT is_wanted AND binder_id IS NOT NULL)`; backfill `system:trade` + `system:collection` and set owned `binder_id = system:trade`; fill `client_id` from identity; rewrite `private.get_public_binder_by_token` to return owned live rows whose Binder `role = trade` only
+- [X] T008 [P] Create Binder record (`clientId`, `name`, `role` trade|standard, `createdAt`, `updatedAt`, `deletedAt`; defaults `system:trade` / `system:collection`) in `apps/mobile/lib/core/models/binder.dart`
+- [X] T009 [P] Add `binderId` on owned rows (null when `isWanted`; default `system:trade` on owned JSON missing `binder_id`) in `apps/mobile/lib/core/models/binder_entry.dart` and round-trip it in `apps/mobile/test/core/models/binder_entry_test.dart`
+- [X] T010 Create `apps/mobile/lib/core/data/binders_repository.dart` (`CachedCollection<Binder>`, storage key `binders`): seed Trade Binder + Collection when missing; never tombstone `role=trade`; after first persist, never resurrect Collection; always restore Trade Binder if absent or tombstoned
+- [X] T011 On load, assign owned entries missing `binderId` to `system:trade` (Want List stays null) in `apps/mobile/lib/core/data/binder_repository.dart` so pre-feature `collection_entries` migrate losslessly
+- [X] T012 [P] Implement binders-table adapter (`client_id` identity, tombstones, conflict `user_id,client_id`; unique-violation on a live name is a surfaced error, not a silent rename) in `apps/mobile/lib/core/sync/binders_sync.dart`
+- [X] T013 Change owned `idOf` to `binder|{binderId}|{cardId}|{condition}` and want to `want|{cardId}` (conflict target matches new uniques) in `apps/mobile/lib/core/sync/binder_sync.dart`; add `SyncDomain.binders` in `apps/mobile/lib/core/sync/sync_journal.dart`; wire the binders collection and `bindersChanged` in `apps/mobile/lib/core/sync/sync_service.dart`
+- [X] T014 Add `bindersProvider` / `BindersNotifier` (load/seed, live list, grid order: `role=trade`, live Collection `system:collection`, then `createdAt` ascending, then `clientId`) and `openBinderIdProvider` in `apps/mobile/lib/core/providers.dart`; keep `BinderNotifier` loading entries
+- [X] T015 [P] Fetch/upsert/seed `binders` and scope `binder_entries` by `binder_id` (Want List `binder_id` null) in `apps/web/src/services/binder.js` without inventing signed-out web Binder storage; surface unique-violation on a live name rather than silently renaming
+- [X] T016 [P] Write failing contract tests for the extended `free_limits.json` (shared `binderCards` across Binders, `binders: 4` paywall) via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/free_limits_contract_test.dart` (and shared-cap cases in `apps/mobile/test/core/providers/free_limits_test.dart`)
+- [X] T017 [P] Write failing contract tests that import `packages/contracts/free_limits.json` in `apps/web/tests/contracts/freeLimits.contract.test.js`
+- [X] T018 Implement `FreeLimits.binders = 4`, distinct owned `binderCards` counted across all live Binders (Want List separate), `canCreateBinder`, and keep `binderCards` behaviour `refuse` in `apps/mobile/lib/core/logic/free_limits.dart` until T016 passes — Pro removes both Binder caps; clients MUST NOT write entitlements
+- [X] T019 [P] Implement the same `FreeLimits.binders`, shared `binderCards`, and `canCreateBinder` in `apps/web/src/utils/freeLimits.js` until T017 passes
+- [X] T020 [P] Write failing contract tests that load `binder_cover.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_cover_contract_test.dart` using catalog-shaped rows
+- [X] T021 [P] Write failing contract tests that import `packages/contracts/binder_cover.json` in `apps/web/tests/contracts/binderCover.contract.test.js`
+- [X] T022 Implement cover pick (empty none; max contribution; all-unpriced name-stable) in `apps/mobile/lib/core/logic/binder_cover.dart` until T020 passes — same `pricingValue` / `tcgMarketOnly` split as `apps/mobile/lib/core/logic/binder_value_snapshot.dart`
+- [X] T023 [P] Implement the same cover pick in `apps/web/src/utils/binderCover.js` until T021 passes (web default `tcgMarketOnly`)
+- [X] T024 [P] Scope `reconcileBinderAfterTrade` to entries whose Binder `role = trade` (given leave Trade Binder; received enter Trade Binder; other Binders untouched; Want List decrement unchanged) in `apps/mobile/lib/core/logic/confirm_trade.dart` until `apps/mobile/test/core/logic/confirm_trade_test.dart` passes
+- [X] T025 [P] Scope `reconcileBinderAfterTrade` the same way in `apps/web/src/utils/confirmTrade.js` until `apps/web/tests/utils/confirmTrade.test.js` and `apps/web/tests/services/confirmTrade.test.js` pass
+- [X] T026 [P] Boost Trade Filler from Trade Binder only (`role = trade`, not Collection) in `apps/mobile/lib/core/logic/trade_filler.dart` until `apps/mobile/test/core/logic/trade_filler_test.dart` passes
+- [X] T027 [P] Assert `getPublicBinder` / RPC fixtures in `apps/web/tests/services/binder.test.js` return Trade Binder rows only (`role = trade`), not Collection
 
 **Checkpoint**: Foundation ready — `flutter test` and `npm test` pass new/extended fixtures; schema and seed exist; Confirm Trade / share / filler cannot steal Collection; no grid UI yet
 
@@ -88,21 +88,21 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T028 [P] [US1] Widget tests in `apps/mobile/test/widgets/binder_grid_test.dart`: two default tiles; name / copy count / value match the list; empty tile has 0, true-zero value, no cover; unpriced non-empty shows `—` not `$0.00`/`€0.00` and still a cover; tile opens that Binder’s list; back returns to the grid; existing owned cards appear in Trade Binder; signed-out (no account) still shows the grid
-- [ ] T029 [P] [US1] Page/component tests in `apps/web/tests/components/BinderGrid.test.jsx`: signed-in `/binder` shows the same two tiles and drill-in/back; `isWanted` / `/wants` is not this grid; do not render a local grid when signed out
+- [X] T028 [P] [US1] Widget tests in `apps/mobile/test/widgets/binder_grid_test.dart`: two default tiles; name / copy count / value match the list; empty tile has 0, true-zero value, no cover; unpriced non-empty shows `—` not `$0.00`/`€0.00` and still a cover; tile opens that Binder’s list; back returns to the grid; existing owned cards appear in Trade Binder; signed-out (no account) still shows the grid
+- [X] T029 [P] [US1] Page/component tests in `apps/web/tests/components/BinderGrid.test.jsx`: signed-in `/binder` shows the same two tiles and drill-in/back; `isWanted` / `/wants` is not this grid; do not render a local grid when signed out
 
 ### Implementation for User Story 1
 
-- [ ] T030 [P] [US1] Implement the Binder grid (tiles: name, copy count, tile value from that Binder’s existing total helper, cover from `binder_cover.dart` / catalog `image_url`; grid order from [contracts/binders.md](./contracts/binders.md); local data only, no blocking network round-trip) in `apps/mobile/lib/features/binder/binder_grid.dart`
-- [ ] T031 [P] [US1] Implement the same tile contract in `apps/web/src/components/binder/BinderGrid.jsx` (web value = TCG Market total for that Binder’s rows)
-- [ ] T032 [US1] Extract the existing Binder list chrome (sort, qty, value overlay for the *open* Binder) into `apps/mobile/lib/features/binder/binder_list.dart` scoped to one `binderId` (do not retarget `apps/mobile/lib/features/binder/binder_value_sheet.dart` to the whole grid)
-- [ ] T033 [US1] Make the Binder tab home the grid; tile sets `openBinderIdProvider` and shows `binder_list.dart`; back closes the open Binder and returns to the grid (Want List tab index unchanged); no account gate in `apps/mobile/lib/features/binder/binder_screen.dart`
-- [ ] T034 [US1] Make `/binder` (`isWanted === false`) grid-first with drill-in `?b=<clientId>` to the current list chrome and back (clear `b`) to the grid in `apps/web/src/pages/BinderCollection.jsx` (do not change signed-out `/binder` into an on-device Binder; do not turn `/wants` into a Binder grid)
-- [ ] T035 [P] [US1] Implement add-to-Binder target (open Binder if drilled in, else Trade Binder) in `apps/web/src/utils/openBinder.js` (`setOpenBinderId` / `targetOwnedBinderId`)
-- [ ] T036 [US1] Pass `binderId` into add: open Binder if one is drilled in, else Trade Binder (`system:trade`) from `apps/mobile/lib/app/card_actions.dart`, `apps/mobile/lib/features/card_detail/card_detail_screen.dart`, `apps/mobile/lib/features/scan/scan_screen.dart`, and `apps/mobile/lib/features/paywall/pro_limits.dart` (`addToBinderOrUpsell`); Want List adds still set `isWanted`
-- [ ] T037 [US1] Same add-target rule (open Binder vs Trade Binder from the grid) via `targetOwnedBinderId` in `apps/web/src/components/cardDetail/CardDetailModal.jsx` and `apps/web/src/pages/BinderCollection.jsx`
-- [ ] T038 [US1] Scope `BinderNotifier.add` / qty / identity to `(printing, binderId, condition)` and count free `binderCards` across all owned Binders in `apps/mobile/lib/core/providers.dart`
-- [ ] T039 [US1] Scope `upsertEntry` the same way (owned unique includes `binder_id` + condition; distinct owned count across Binders) in `apps/web/src/services/binder.js`
+- [X] T030 [P] [US1] Implement the Binder grid (tiles: name, copy count, tile value from that Binder’s existing total helper, cover from `binder_cover.dart` / catalog `image_url`; grid order from [contracts/binders.md](./contracts/binders.md); local data only, no blocking network round-trip) in `apps/mobile/lib/features/binder/binder_grid.dart`
+- [X] T031 [P] [US1] Implement the same tile contract in `apps/web/src/components/binder/BinderGrid.jsx` (web value = TCG Market total for that Binder’s rows)
+- [X] T032 [US1] Extract the existing Binder list chrome (sort, qty, value overlay for the *open* Binder) into `apps/mobile/lib/features/binder/binder_list.dart` scoped to one `binderId` (do not retarget `apps/mobile/lib/features/binder/binder_value_sheet.dart` to the whole grid)
+- [X] T033 [US1] Make the Binder tab home the grid; tile sets `openBinderIdProvider` and shows `binder_list.dart`; back closes the open Binder and returns to the grid (Want List tab index unchanged); no account gate in `apps/mobile/lib/features/binder/binder_screen.dart`
+- [X] T034 [US1] Make `/binder` (`isWanted === false`) grid-first with drill-in `?b=<clientId>` to the current list chrome and back (clear `b`) to the grid in `apps/web/src/pages/BinderCollection.jsx` (do not change signed-out `/binder` into an on-device Binder; do not turn `/wants` into a Binder grid)
+- [X] T035 [P] [US1] Implement add-to-Binder target (open Binder if drilled in, else Trade Binder) in `apps/web/src/utils/openBinder.js` (`setOpenBinderId` / `targetOwnedBinderId`)
+- [X] T036 [US1] Pass `binderId` into add: open Binder if one is drilled in, else Trade Binder (`system:trade`) from `apps/mobile/lib/app/card_actions.dart`, `apps/mobile/lib/features/card_detail/card_detail_screen.dart`, `apps/mobile/lib/features/scan/scan_screen.dart`, and `apps/mobile/lib/features/paywall/pro_limits.dart` (`addToBinderOrUpsell`); Want List adds still set `isWanted`
+- [X] T037 [US1] Same add-target rule (open Binder vs Trade Binder from the grid) via `targetOwnedBinderId` in `apps/web/src/components/cardDetail/CardDetailModal.jsx` and `apps/web/src/pages/BinderCollection.jsx`
+- [X] T038 [US1] Scope `BinderNotifier.add` / qty / identity to `(printing, binderId, condition)` and count free `binderCards` across all owned Binders in `apps/mobile/lib/core/providers.dart`
+- [X] T039 [US1] Scope `upsertEntry` the same way (owned unique includes `binder_id` + condition; distinct owned count across Binders) in `apps/web/src/services/binder.js`
 
 **Checkpoint**: User Story 1 is fully functional and testable independently (grid + two defaults + drill-in + migration). Want List still uses today’s entry; create/move not required yet
 
@@ -116,14 +116,14 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T040 [P] [US2] Extend `apps/mobile/test/widgets/binder_grid_test.dart`: Binder | Want List tabs still present; Want List is not a grid tile; Want List rows do not affect Trade Binder / Collection count or value; returning from Want List shows the grid (or the Want List tab), not a blank Binder
-- [ ] T041 [P] [US2] Extend `apps/web/tests/components/BinderGrid.test.jsx`: `/wants` is unchanged list chrome; `/binder` grid has no Want List tile; Header still links Want List in one step
+- [X] T040 [P] [US2] Extend `apps/mobile/test/widgets/binder_grid_test.dart`: Binder | Want List tabs still present; Want List is not a grid tile; Want List rows do not affect Trade Binder / Collection count or value; returning from Want List shows the grid (or the Want List tab), not a blank Binder
+- [X] T041 [P] [US2] Extend `apps/web/tests/components/BinderGrid.test.jsx`: `/wants` is unchanged list chrome; `/binder` grid has no Want List tile; Header still links Want List in one step
 
 ### Implementation for User Story 2
 
-- [ ] T042 [US2] Keep the Want List tab as index 1 (sibling, not a tile) and keep `apps/mobile/lib/features/want_list/want_list_screen.dart` wired from `apps/mobile/lib/features/binder/binder_screen.dart`
-- [ ] T043 [P] [US2] Keep `/wants` and the Want List nav item in `apps/web/src/App.jsx` and `apps/web/src/components/elements/Header.jsx` (Binder dest = `/binder` grid; Want List remains a sibling route)
-- [ ] T044 [US2] Leave the `isWanted === true` path as the existing Want List (no Binder tiles, no move-into-Want-List) in `apps/web/src/pages/BinderCollection.jsx`
+- [X] T042 [US2] Keep the Want List tab as index 1 (sibling, not a tile) and keep `apps/mobile/lib/features/want_list/want_list_screen.dart` wired from `apps/mobile/lib/features/binder/binder_screen.dart`
+- [X] T043 [P] [US2] Keep `/wants` and the Want List nav item in `apps/web/src/App.jsx` and `apps/web/src/components/elements/Header.jsx` (Binder dest = `/binder` grid; Want List remains a sibling route)
+- [X] T044 [US2] Leave the `isWanted === true` path as the existing Want List (no Binder tiles, no move-into-Want-List) in `apps/web/src/pages/BinderCollection.jsx`
 
 **Checkpoint**: User Stories 1 and 2 both work; Want List is reachable in one step and is not a Binder
 
@@ -137,19 +137,19 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T045 [P] [US3] Write failing contract tests that load `binder_move.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_move_contract_test.dart` using catalog-shaped rows
-- [ ] T046 [P] [US3] Write failing contract tests that import `packages/contracts/binder_move.json` in `apps/web/tests/contracts/binderMove.contract.test.js`
-- [ ] T047 [P] [US3] Widget tests in `apps/mobile/test/widgets/binder_list_test.dart`: move 2 of 3 Trade Binder → Collection; merge on same printing+condition; Want List absent from destinations; tiles update count/value/cover
-- [ ] T048 [P] [US3] Page/component tests with the same move assertions in `apps/web/tests/components/BinderGrid.test.jsx`
+- [X] T045 [P] [US3] Write failing contract tests that load `binder_move.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_move_contract_test.dart` using catalog-shaped rows
+- [X] T046 [P] [US3] Write failing contract tests that import `packages/contracts/binder_move.json` in `apps/web/tests/contracts/binderMove.contract.test.js`
+- [X] T047 [P] [US3] Widget tests in `apps/mobile/test/widgets/binder_list_test.dart`: move 2 of 3 Trade Binder → Collection; merge on same printing+condition; Want List absent from destinations; tiles update count/value/cover
+- [X] T048 [P] [US3] Page/component tests with the same move assertions in `apps/web/tests/components/BinderGrid.test.jsx`
 
 ### Implementation for User Story 3
 
-- [ ] T049 [US3] Implement `moveBinderCopies` (partial qty, merge printing+condition, refuse invalid qty / same Binder / non-live dest / Want List; never refuse for `binderCards`) in `apps/mobile/lib/core/logic/binder_move.dart` until T045 passes
-- [ ] T050 [P] [US3] Implement the same helper in `apps/web/src/utils/binderMove.js` until T046 passes
-- [ ] T051 [US3] Apply moves through `BinderNotifier` (source qty / delete at 0; dest upsert; two records last-write-wins) in `apps/mobile/lib/core/providers.dart`
-- [ ] T052 [P] [US3] Apply moves (update/delete source + upsert dest; conflict on new owned unique) in `apps/web/src/services/binder.js`
-- [ ] T053 [US3] Add Move on an open owned Binder row (destination = other live Binders; qty 1…n) in `apps/mobile/lib/features/binder/binder_list.dart`
-- [ ] T054 [US3] Add the same Move control in `apps/web/src/pages/BinderCollection.jsx` (hidden on `/wants`)
+- [X] T049 [US3] Implement `moveBinderCopies` (partial qty, merge printing+condition, refuse invalid qty / same Binder / non-live dest / Want List; never refuse for `binderCards`) in `apps/mobile/lib/core/logic/binder_move.dart` until T045 passes
+- [X] T050 [P] [US3] Implement the same helper in `apps/web/src/utils/binderMove.js` until T046 passes
+- [X] T051 [US3] Apply moves through `BinderNotifier` (source qty / delete at 0; dest upsert; two records last-write-wins) in `apps/mobile/lib/core/providers.dart`
+- [X] T052 [P] [US3] Apply moves (update/delete source + upsert dest; conflict on new owned unique) in `apps/web/src/services/binder.js`
+- [X] T053 [US3] Add Move on an open owned Binder row (destination = other live Binders; qty 1…n) in `apps/mobile/lib/features/binder/binder_list.dart`
+- [X] T054 [US3] Add the same Move control in `apps/web/src/pages/BinderCollection.jsx` (hidden on `/wants`)
 
 **Checkpoint**: User Stories 1–3 work; Collection exists as a keep pile because stock can change Binders
 
@@ -163,21 +163,21 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T055 [P] [US4] Write failing contract tests that load `binder_names.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_names_contract_test.dart`
-- [ ] T056 [P] [US4] Write failing contract tests that import `packages/contracts/binder_names.json` in `apps/web/tests/contracts/binderNames.contract.test.js`
-- [ ] T057 [P] [US4] Widget tests in `apps/mobile/test/widgets/binder_grid_test.dart`: unique create; rename collision refused; Trade Binder delete hidden or refused (empty or not); non-empty Collection delete refused; empty delete leaves the grid; 5th create on free calls `presentProPaywall` and does not add a Binder
-- [ ] T058 [P] [US4] Page/component tests with the same create/rename/delete/Pro assertions in `apps/web/tests/components/BinderGrid.test.jsx`
+- [X] T055 [P] [US4] Write failing contract tests that load `binder_names.json` via `apps/mobile/test/contracts/contract_fixtures.dart` in `apps/mobile/test/contracts/binder_names_contract_test.dart`
+- [X] T056 [P] [US4] Write failing contract tests that import `packages/contracts/binder_names.json` in `apps/web/tests/contracts/binderNames.contract.test.js`
+- [X] T057 [P] [US4] Widget tests in `apps/mobile/test/widgets/binder_grid_test.dart`: unique create; rename collision refused; Trade Binder delete hidden or refused (empty or not); non-empty Collection delete refused; empty delete leaves the grid; 5th create on free calls `presentProPaywall` and does not add a Binder
+- [X] T058 [P] [US4] Page/component tests with the same create/rename/delete/Pro assertions in `apps/web/tests/components/BinderGrid.test.jsx`
 
 ### Implementation for User Story 4
 
-- [ ] T059 [US4] Implement name normalize/uniqueness (trim + case-fold; own-name ok; empty invalid) in `apps/mobile/lib/core/logic/binder_names.dart` until T055 passes
-- [ ] T060 [P] [US4] Implement the same rules in `apps/web/src/utils/binderNames.js` until T056 passes
-- [ ] T061 [US4] Implement create / rename / delete on `BindersNotifier` in `apps/mobile/lib/core/providers.dart`: `canCreateBinder` for free; refuse `role=trade` delete; refuse delete when any live owned entry has `quantity ≥ 1`; tombstone otherwise; unique live names
-- [ ] T062 [P] [US4] Implement create / rename / delete Binders (same refusals; `behaviour.binders = "paywall"` creates no 5th row) in `apps/web/src/services/binder.js`
-- [ ] T063 [US4] Add create / rename / delete chrome on the grid; hide or no-op delete on Trade Binder; surface duplicate-name and non-empty-delete errors in `apps/mobile/lib/features/binder/binder_grid.dart` and `apps/mobile/lib/features/binder/binder_screen.dart`
-- [ ] T064 [US4] Add the same chrome in `apps/web/src/components/binder/BinderGrid.jsx` and `apps/web/src/pages/BinderCollection.jsx`
-- [ ] T065 [US4] On a free 5th create, call `presentProPaywall` (`trigger: 'binders_limit'`, do not write entitlements) from `apps/mobile/lib/features/binder/binder_screen.dart` using `apps/mobile/lib/features/paywall/pro_paywall.dart`; after Pro, retry create
-- [ ] T066 [US4] On a free 5th create, show the existing web Pro CTA (subscribe-in-app copy; no 5th row; do not write `entitlements`) in `apps/web/src/pages/BinderCollection.jsx`
+- [X] T059 [US4] Implement name normalize/uniqueness (trim + case-fold; own-name ok; empty invalid) in `apps/mobile/lib/core/logic/binder_names.dart` until T055 passes
+- [X] T060 [P] [US4] Implement the same rules in `apps/web/src/utils/binderNames.js` until T056 passes
+- [X] T061 [US4] Implement create / rename / delete on `BindersNotifier` in `apps/mobile/lib/core/providers.dart`: `canCreateBinder` for free; refuse `role=trade` delete; refuse delete when any live owned entry has `quantity ≥ 1`; tombstone otherwise; unique live names
+- [X] T062 [P] [US4] Implement create / rename / delete Binders (same refusals; `behaviour.binders = "paywall"` creates no 5th row) in `apps/web/src/services/binder.js`
+- [X] T063 [US4] Add create / rename / delete chrome on the grid; hide or no-op delete on Trade Binder; surface duplicate-name and non-empty-delete errors in `apps/mobile/lib/features/binder/binder_grid.dart` and `apps/mobile/lib/features/binder/binder_screen.dart`
+- [X] T064 [US4] Add the same chrome in `apps/web/src/components/binder/BinderGrid.jsx` and `apps/web/src/pages/BinderCollection.jsx`
+- [X] T065 [US4] On a free 5th create, call `presentProPaywall` (`trigger: 'binders_limit'`, do not write entitlements) from `apps/mobile/lib/features/binder/binder_screen.dart` using `apps/mobile/lib/features/paywall/pro_paywall.dart`; after Pro, retry create
+- [X] T066 [US4] On a free 5th create, show the existing web Pro CTA (subscribe-in-app copy; no 5th row; do not write `entitlements`) in `apps/web/src/pages/BinderCollection.jsx`
 
 **Checkpoint**: All four stories independently functional; Trade Binder cannot be deleted; names unique and syncable; 5th Binder is Pro
 
@@ -187,11 +187,11 @@ Touches **I** (grid + two defaults + move + limits; no folders / share-all-Binde
 
 **Purpose**: Vocabulary, share surface, onboarding, and quickstart validation
 
-- [ ] T067 [P] Update Binder tour copy so the grid and Trade Binder vs Collection are mentioned, and Want List is not taught as a Binder, in `apps/mobile/lib/features/onboarding/tour_copy.dart` (`binderTabsBody` / related strings)
-- [ ] T068 Confirm labels use Binder / Trade Binder / Collection (name) / Printing / Want List (not “inventory”, not Want List as a Binder) in `apps/mobile/lib/features/binder/binder_grid.dart`, `apps/mobile/lib/features/binder/binder_list.dart`, `apps/web/src/components/binder/BinderGrid.jsx`, and `apps/web/src/pages/BinderCollection.jsx`
-- [ ] T069 [P] Keep public `/b/:token` as Trade Binder only (no Collection leak) in `apps/web/src/pages/SharedBinder.jsx` and `apps/web/src/services/binder.js` (`getPublicBinder`)
-- [ ] T070 Keep distinct-card overflow on the existing refuse + Upgrade snackbar path (not a mandatory paywall modal) in `apps/mobile/lib/features/paywall/pro_limits.dart` and the `/binder` card-cap Alert in `apps/web/src/pages/BinderCollection.jsx`; `paywall` is only for `binders`
-- [ ] T071 Run `cd apps/mobile && flutter test` and `cd apps/web && npm test`, then walk [quickstart.md](./quickstart.md) (grid + defaults + migration, Want List sibling, move 3→2+1, unique names, Trade Binder delete refusal, 5th Binder Pro upgrade, Confirm Trade / share / filler Trade Binder only, signed-out mobile, constitution 1.1.0 + `docs/CONTEXT.md` vocabulary remain in force, pipeline ingest unchanged)
+- [X] T067 [P] Update Binder tour copy so the grid and Trade Binder vs Collection are mentioned, and Want List is not taught as a Binder, in `apps/mobile/lib/features/onboarding/tour_copy.dart` (`binderTabsBody` / related strings)
+- [X] T068 Confirm labels use Binder / Trade Binder / Collection (name) / Printing / Want List (not “inventory”, not Want List as a Binder) in `apps/mobile/lib/features/binder/binder_grid.dart`, `apps/mobile/lib/features/binder/binder_list.dart`, `apps/web/src/components/binder/BinderGrid.jsx`, and `apps/web/src/pages/BinderCollection.jsx`
+- [X] T069 [P] Keep public `/b/:token` as Trade Binder only (no Collection leak) in `apps/web/src/pages/SharedBinder.jsx` and `apps/web/src/services/binder.js` (`getPublicBinder`)
+- [X] T070 Keep distinct-card overflow on the existing refuse + Upgrade snackbar path (not a mandatory paywall modal) in `apps/mobile/lib/features/paywall/pro_limits.dart` and the `/binder` card-cap Alert in `apps/web/src/pages/BinderCollection.jsx`; `paywall` is only for `binders`
+- [X] T071 Run `cd apps/mobile && flutter test` and `cd apps/web && npm test`, then walk [quickstart.md](./quickstart.md) (grid + defaults + migration, Want List sibling, move 3→2+1, unique names, Trade Binder delete refusal, 5th Binder Pro upgrade, Confirm Trade / share / filler Trade Binder only, signed-out mobile, constitution 1.1.0 + `docs/CONTEXT.md` vocabulary remain in force, pipeline ingest unchanged)
 
 ---
 

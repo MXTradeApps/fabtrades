@@ -126,7 +126,15 @@ class CollectionSync<T> {
       }
     }
 
-    await remote.upsertAll(upserts);
+    try {
+      await remote.upsertAll(upserts);
+    } catch (e) {
+      final described = adapter.describePushError(e);
+      if (described != null) {
+        throw StateError(described);
+      }
+      rethrow;
+    }
 
     for (final record in tombstones) {
       await remote.markDeleted(

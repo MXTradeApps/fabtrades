@@ -21,23 +21,38 @@ class BindersRepository extends CachedCollection<Binder> {
 
   /// First run (no storage key) seeds Trade Binder + Collection in memory so
   /// every load on this instance returns the same pair. After a write, Trade
-  /// Binder is kept if missing; Collection is not resurrected.
+  /// Binder is restored if missing or tombstoned; Collection is not resurrected.
   @override
   List<Binder> load() {
     if (!hasStorageKey) {
       return _firstRunSeed ??= Binder.seedDefaults();
     }
     _firstRunSeed = null;
-    return super.load();
+    return Binder.ensureTrade(super.load());
   }
 
-  /// Persist first-run defaults so they journal and sync.
+  /// Never persist a tombstoned Trade Binder.
+  @override
+  Future<void> save(List<Binder> values) =>
+      super.save(Binder.ensureTrade(values));
+
+  /// Persist first-run defaults so they journal and sync. Also persist a Trade
+  /// Binder restore so it is not only in memory.
   List<Binder> loadAndPersistSeed() {
-    final loaded = load();
     if (!hasStorageKey) {
-      save(loaded);
+      final seeded = Binder.seedDefaults();
+      save(seeded);
+      return seeded;
     }
-    return loaded;
+    final stored = super.load();
+    final restored = Binder.ensureTrade(stored);
+    if (!_hasLiveTrade(stored)) {
+      save(restored);
+    }
+    return restored;
   }
+
+  bool _hasLiveTrade(List<Binder> binders) =>
+      binders.any((b) => b.role == BinderRole.trade && b.isLive);
 }
 
