@@ -10,7 +10,7 @@
  * { type: 'ul', items: [...] } for a bulleted list.
  */
 
-export const TERMS_EFFECTIVE_DATE = 'July 31, 2026';
+export const TERMS_EFFECTIVE_DATE = 'August 28, 2026';
 
 export const TERMS_CONTACT_EMAIL = 'mxbloombusiness@gmail.com';
 
@@ -65,12 +65,13 @@ export const termsSections = [
             {
                 type: 'p',
                 text:
-                    'You can use most features of the Services without an account. ' +
-                    'Signing in is optional and enables cloud sync and purchasing ' +
-                    'FABTrades Pro. You are responsible for activity under your account ' +
-                    'and for keeping your sign-in credentials secure. You must provide ' +
-                    'accurate information and be at least 13 years old (or the minimum ' +
-                    'age required in your jurisdiction).'
+                    'You can use most features of the Services without an account, ' +
+                    'including purchasing FABTrades Pro. Signing in is optional and ' +
+                    'enables cloud sync and carrying Pro to your other devices. You are ' +
+                    'responsible for activity under your account and for keeping your ' +
+                    'sign-in credentials secure. You must provide accurate information ' +
+                    'and be at least 13 years old (or the minimum age required in your ' +
+                    'jurisdiction).'
             }
         ]
     },
@@ -81,7 +82,9 @@ export const termsSections = [
                 type: 'p',
                 text:
                     'FABTrades Pro is an optional auto-renewable subscription that unlocks ' +
-                    'paid features in the App. Subscriptions are offered as:'
+                    'paid features in the App. You can subscribe without creating a FAB ' +
+                    'Trades account; signing in afterward is optional if you want Pro on ' +
+                    'other devices. Subscriptions are offered as:'
             },
             {
                 type: 'ul',

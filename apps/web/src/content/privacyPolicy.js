@@ -10,7 +10,7 @@
  * { type: 'ul', items: [...] } for a bulleted list.
  */
 
-export const PRIVACY_EFFECTIVE_DATE = 'July 31, 2026';
+export const PRIVACY_EFFECTIVE_DATE = 'August 28, 2026';
 
 export const PRIVACY_CONTACT_EMAIL = 'mxbloombusiness@gmail.com';
 
@@ -57,9 +57,9 @@ export const privacySections = [
                 items: [
                     'Camera (card scanning). The App uses your device camera to identify physical cards you point it at. Camera frames are processed entirely on your device in real time — images are never stored, uploaded, or shared. Nothing leaves your device from the scanner. You can deny or revoke camera permission at any time; a manual search fallback is always available.',
                     'Usage and analytics data. We use PostHog, a first-party product analytics service, to understand how the App is used. This includes screens viewed and feature interactions (such as scanning a card, searching, or using the Binder, Want List, or Lend features) and events in the subscription funnel (such as viewing or completing the FABTrades Pro paywall). We do not use this data for advertising, and the App does not use Apple\u2019s App Tracking Transparency (ATT) framework because we do not track you across other companies\u2019 apps or websites.',
-                    'Account information (optional). If you choose to sign in with Apple, Google, Discord, or email, we receive your user ID, username or display name, email address, and avatar (when provided) through Supabase Auth. Signing in is optional for core features; it is required only if you purchase FABTrades Pro so we can attach the subscription to your account.',
+                    'Account information (optional). If you choose to sign in with Apple, Google, Discord, or email, we receive your user ID, username or display name, email address, and avatar (when provided) through Supabase Auth. Signing in is optional. You can use core features and purchase FABTrades Pro without an account. Signing in lets us sync your lists across devices and attach a Pro purchase to your account so it follows you to other devices.',
                     'Synced app data (optional). When you are signed in, your collection, want list, lend/borrow lists, trade drafts, trade history, and settings may be synced to our database so they are available on your other devices. When you are signed out, that data remains stored only on your device.',
-                    'Purchase and subscription data. If you buy FABTrades Pro, Apple or Google processes the payment. We receive subscription status (active, expired, cancelled, sandbox vs production, and related entitlement metadata) through RevenueCat so we can unlock Pro features on your account.',
+                    'Purchase and subscription data. If you buy FABTrades Pro, Apple or Google processes the payment. We receive subscription status (active, expired, cancelled, sandbox vs production, and related entitlement metadata) through RevenueCat so we can unlock Pro features on this device. If you are signed in, we also attach that status to your account so Pro works on your other devices.',
                     'Network requests. The App downloads the card catalog and current prices from our database provider (Supabase). Like any internet request, this transmits your IP address to the server, which is processed transiently to deliver the response. We do not use it to identify you.'
                 ]
             },
