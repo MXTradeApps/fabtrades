@@ -57,6 +57,10 @@ with what the product should do — in which case change it and update both.
 | `binder_move.json` | `apps/web/src/utils/binderMove.js` | `apps/mobile/lib/core/logic/binder_move.dart` |
 | `binder_cover.json` | `apps/web/src/utils/binderCover.js` | `apps/mobile/lib/core/logic/binder_cover.dart` |
 | `binder_names.json` | `apps/web/src/utils/binderNames.js` | `apps/mobile/lib/core/logic/binder_names.dart` |
+| `recent_movers.json` | `apps/web/src/utils/recentMovers.js` | `apps/mobile/lib/core/logic/recent_movers.dart` |
+| `printing_recent_changes.json` | `apps/web/src/utils/recentMovers.js` | `apps/mobile/lib/core/logic/recent_movers.dart` |
+
+Collection Stats reuses `binder_value_snapshot.json` and `recent_movers.json`. Do not add a Collection-Stats ranking golden.
 
 `free_limits.json` is the one fixture where drift would destroy data rather than
 just look inconsistent. Both clients enforce the free trade window by tombstoning

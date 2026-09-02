@@ -5,6 +5,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:fabtrades/app/app.dart';
 import 'package:fabtrades/core/data/card_repository.dart';
+import 'package:fabtrades/core/data/set_published_on.dart';
 import 'package:fabtrades/core/models/app_settings.dart';
 import 'package:fabtrades/core/models/card_model.dart';
 import 'package:fabtrades/core/models/trade.dart';
@@ -39,7 +40,15 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final mockRepo = MockCardRepository();
+    registerFallbackValue(<String>[]);
     when(() => mockRepo.fetchAll()).thenAnswer((_) async => catalog);
+    when(() => mockRepo.fetchSetPublishedOn())
+        .thenAnswer((_) async => SetPublishedOnMap.empty);
+    when(() => mockRepo.recentMovers(any())).thenAnswer((_) async => []);
+    when(() => mockRepo.recentMovers(any(), cardIds: any(named: 'cardIds')))
+        .thenAnswer((_) async => []);
+    when(() => mockRepo.printingRecentChanges(any(), any()))
+        .thenAnswer((_) async => []);
 
     final container = ProviderContainer(
       overrides: [
@@ -59,11 +68,11 @@ void main() {
     return container;
   }
 
-  testWidgets('app boots on the Browse tab with bottom navigation',
+  testWidgets('app boots on the Home tab with bottom navigation',
       (tester) async {
     await launch(tester);
 
-    expect(find.text('Browse'), findsWidgets);
+    expect(find.text('Home'), findsWidgets);
     expect(find.text('Trade'), findsWidgets);
     expect(find.text('Binder'), findsWidgets);
     expect(find.text('Lend'), findsWidgets);
@@ -81,7 +90,7 @@ void main() {
     // Lend screen renders without throwing.
     expect(find.byType(Scaffold), findsWidgets);
 
-    await tester.tap(find.text('Browse'));
+    await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
     expect(find.byType(Scaffold), findsWidgets);
   });

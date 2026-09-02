@@ -14,7 +14,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useLocation } from 'react-router-dom';
 import { useCardDetail } from '../../contexts/CardDetailContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { useEntitlement } from '../../contexts/EntitlementContext.jsx';
 import { useCardData } from '../../hooks/useCardData.jsx';
 import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 import { CardImageModal, CardThumbnail } from '../ui/CardImagePreview.jsx';
@@ -22,11 +21,8 @@ import SignInDialog from '../auth/SignInDialog.jsx';
 import CardDetailPrices from './CardDetailPrices.jsx';
 import { printingsForCard } from '../../utils/printingsForCard.js';
 import { upsertEntry, getBinderEntries } from '../../services/binder.js';
-import { canAddDistinctCard, cardsFor } from '../../utils/freeLimits.js';
 import { targetOwnedBinderId } from '../../utils/openBinder.js';
 import { formatCardType } from '../../utils/searchUtils.js';
-
-const WANT_LIMIT_MESSAGE = `Want lists hold ${cardsFor({ isWanted: true })} cards on the free plan. Subscribe in the FABTrades app to add more.`;
 
 function versionLabel(card) {
     const finish = formatCardType(card.subTypeName) || card.subTypeName || 'Normal';
@@ -45,7 +41,6 @@ export function CardDetailModal({
 }) {
     const { pathname } = useLocation();
     const { user } = useAuth();
-    const { isPro } = useEntitlement();
     const { cards, pricesUpdatedAt } = useCardData();
     const { isDark } = useThemeMode();
 
@@ -122,11 +117,6 @@ export function CardDetailModal({
         }
         const wants = lists.wants || [];
         const existing = wants.find((e) => e.cardId === shown._uniqueId);
-        if (!existing && !canAddDistinctCard(wants.length, { isWanted: true, isPro })) {
-            setWantBusy(false);
-            setToast({ open: true, message: WANT_LIMIT_MESSAGE, severity: 'warning' });
-            return;
-        }
         const { error } = await upsertEntry({
             cardId: shown._uniqueId,
             isWanted: true,
@@ -146,8 +136,6 @@ export function CardDetailModal({
         }
         showSuccess(`Added ${shown.name} to Want List`);
     };
-
-    const BINDER_LIMIT_MESSAGE = `Binders hold ${cardsFor({ isWanted: false })} cards on the free plan. Subscribe in the FABTrades app to add more.`;
 
     const handleAddToBinder = async () => {
         if (!shown?._uniqueId) return;
@@ -171,12 +159,6 @@ export function CardDetailModal({
         const existing = owned.find((e) =>
             e.cardId === shown._uniqueId && (e.binderId || 'system:trade') === binderId,
         );
-        const distinct = new Set(owned.map((e) => e.cardId)).size;
-        if (!existing && !canAddDistinctCard(distinct, { isWanted: false, isPro })) {
-            setWantBusy(false);
-            setToast({ open: true, message: BINDER_LIMIT_MESSAGE, severity: 'warning' });
-            return;
-        }
         const { error } = await upsertEntry({
             cardId: shown._uniqueId,
             isWanted: false,

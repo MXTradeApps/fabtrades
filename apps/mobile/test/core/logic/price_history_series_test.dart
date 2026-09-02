@@ -184,6 +184,22 @@ void main() {
     expect(s.changeLabel(cm), isNull);
   });
 
+  test('newest-first snapshots still plot oldest to newest', () {
+    final s = series([
+      buildPricePoint(capturedOn: DateTime(2026, 8, 16), tcgLow: 3.0),
+      buildPricePoint(capturedOn: DateTime(2026, 8, 10), tcgLow: 2.0),
+      buildPricePoint(capturedOn: DateTime(2026, 8, 1), tcgLow: 1.0),
+    ]);
+    expect(s.points.map((p) => p.low), [1.0, 2.0, 3.0]);
+    expect(s.points.map((p) => p.date), [
+      DateTime(2026, 8, 1),
+      DateTime(2026, 8, 10),
+      DateTime(2026, 8, 16),
+    ]);
+    expect(s.delta, 2.0);
+    expect(s.changeLabel(tcg), 'Low up \$2.00');
+  });
+
   test('<2 usable Lows is not chartable', () {
     expect(series([]).chartable, isFalse);
     expect(

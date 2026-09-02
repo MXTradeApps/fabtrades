@@ -52,9 +52,7 @@ import {
     applyBinderMove,
     TRADE_BINDER_ID,
 } from '../services/binder.js';
-import { canAddDistinctCard, canCreateBinder, cardsFor, distinctOwnedCount } from '../utils/freeLimits.js';
 import { formatCurrency } from '../utils/helpers.js';
-import BinderValueDialog from '../components/binder/BinderValueDialog.jsx';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
 
@@ -207,7 +205,7 @@ function BinderCardArt({ imageUrl, fallbackUrl, alt, onClick, qty, mutedColor })
 const BinderCollection = ({ isWanted = false }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { isPro, loading: entitlementLoading } = useEntitlement();
+    const { isPro } = useEntitlement();
     const { isDark } = useThemeMode();
     const { openDetail } = useCardDetail();
     const { cards, cardGroups, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
@@ -231,16 +229,13 @@ const BinderCollection = ({ isWanted = false }) => {
     const [sort, setSort] = useState('nameAsc');
     const [signInOpen, setSignInOpen] = useState(false);
     const [busyCardId, setBusyCardId] = useState(null);
-    const [limitMessage, setLimitMessage] = useState('');
     const [toast, setToast] = useState('');
     const [shareOpen, setShareOpen] = useState(false);
     const [share, setShare] = useState(null);
     const [shareBusy, setShareBusy] = useState(false);
-    const [valueOpen, setValueOpen] = useState(false);
 
     const listLabel = isWanted ? 'Want List' : 'Binder';
     const pageTitle = isWanted ? 'Want List' : 'My Binders';
-    const limit = cardsFor({ isWanted });
 
     const bgGradient = isDark
         ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
@@ -288,7 +283,6 @@ const BinderCollection = ({ isWanted = false }) => {
 
     useEffect(() => {
         setOpenBinderId(isWanted ? null : openBinderId);
-        return () => setOpenBinderId(null);
     }, [isWanted, openBinderId]);
 
     const catalogById = useMemo(() => {
@@ -395,13 +389,6 @@ const BinderCollection = ({ isWanted = false }) => {
         [entries, resolveCard],
     );
 
-    const atFreeLimit =
-        !entitlementLoading &&
-        !isPro &&
-        !canAddDistinctCard(
-            isWanted ? entries.length : distinctOwnedCount(allOwned),
-            { isWanted, isPro: false },
-        );
     const showingGrid = !isWanted && !openBinderId;
     const openBinder = binders.find((b) => b.clientId === openBinderId);
 
@@ -412,14 +399,6 @@ const BinderCollection = ({ isWanted = false }) => {
         const cardId = catalogCard._uniqueId;
         const binderId = isWanted ? undefined : (openBinderId || TRADE_BINDER_ID);
         const existing = entries.find((e) => e.cardId === cardId);
-        const distinct = isWanted ? entries.length : distinctOwnedCount(allOwned);
-
-        if (!existing && !canAddDistinctCard(distinct, { isWanted, isPro })) {
-            setLimitMessage(
-                `${isWanted ? 'Want lists' : 'Binders'} hold ${limit} cards on the free plan. Subscribe in the FABTrades app to add more.`,
-            );
-            return;
-        }
 
         setBusyCardId(cardId);
         const nextQty = existing ? existing.quantity + 1 : 1;
@@ -555,27 +534,17 @@ const BinderCollection = ({ isWanted = false }) => {
     };
 
     const handleCreateBinder = async () => {
-        const { data: latest } = await getBinders();
-        const liveCount = (latest?.binders || binders).length;
-        if (!canCreateBinder(liveCount, { isPro })) {
-            setLimitMessage(
-                'Binders hold 4 on the free plan. Subscribe in the FABTrades app to add more.',
-            );
-            return;
-        }
         const name = promptName('New Binder');
         if (name == null) return;
-        const { data, error: createError } = await createBinder({ name, isPro, liveCount: binders.length });
+        const { data, error: createError } = await createBinder({
+            name,
+            isPro,
+            liveCount: binders.length,
+        });
         if (createError) {
-            if (createError.reason === 'paywall') {
-                setLimitMessage(
-                    'Binders hold 4 on the free plan. Subscribe in the FABTrades app to add more.',
-                );
-            } else {
-                setToast(createError.reason === 'duplicate'
-                    ? 'A Binder with that name already exists'
-                    : (createError.message || 'Could not create Binder'));
-            }
+            setToast(createError.reason === 'duplicate'
+                ? 'A Binder with that name already exists'
+                : (createError.message || 'Could not create Binder'));
             return;
         }
         setBinders((prev) => [...prev, data]);
@@ -831,21 +800,6 @@ const BinderCollection = ({ isWanted = false }) => {
                                     {openBinder.name}
                                 </Typography>
                             )}
-                            {isPro && (
-                                <Chip
-                                    size="small"
-                                    label="PRO"
-                                    sx={{
-                                        height: 20,
-                                        fontSize: '0.65rem',
-                                        fontWeight: 700,
-                                        letterSpacing: 0.5,
-                                        color: isDark ? '#1a0f0a' : '#ffffff',
-                                        backgroundColor: accentColor,
-                                        '& .MuiChip-label': { px: 0.75 },
-                                    }}
-                                />
-                            )}
                             <Chip
                                 size="small"
                                 label={`${entries.length}`}
@@ -861,31 +815,30 @@ const BinderCollection = ({ isWanted = false }) => {
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                             {!isWanted && !showingGrid && entries.length > 0 ? (
-                                <Typography
-                                    component="button"
-                                    type="button"
-                                    data-testid="binder-value-total"
-                                    onClick={() => setValueOpen(true)}
+                                <Button
+                                    data-testid="collection-stats"
+                                    onClick={() => {
+                                        setOpenBinderId(openBinderId);
+                                        navigate('/binder/stats');
+                                    }}
                                     sx={{
                                         color: mutedColor,
-                                        fontWeight: 600,
+                                        fontWeight: 700,
                                         fontSize: '0.8rem',
-                                        border: 'none',
-                                        background: 'transparent',
-                                        cursor: 'pointer',
-                                        p: 0,
-                                        fontFamily: 'inherit',
+                                        minHeight: 28,
+                                        px: 1,
+                                        textTransform: 'none',
                                     }}
                                 >
-                                    {formatCurrency(totalValue.toFixed(2))}
-                                </Typography>
-                            ) : (
+                                    Collection Stats
+                                </Button>
+                            ) : isWanted ? (
                                 <Typography
                                     sx={{ color: mutedColor, fontWeight: 600, fontSize: '0.8rem' }}
                                 >
                                     {formatCurrency(totalValue.toFixed(2))}
                                 </Typography>
-                            )}
+                            ) : null}
                             {!isWanted && openBinderId === TRADE_BINDER_ID && (
                                 <Button
                                     variant="outlined"
@@ -967,21 +920,6 @@ const BinderCollection = ({ isWanted = false }) => {
 
                     {!showingGrid && (
                     <>
-                    {!entitlementLoading && !isPro && entries.length / limit >= 0.7 && (
-                        <Alert severity="info" icon={false} sx={{ mb: 1, py: 0.25, fontSize: '0.8rem' }}>
-                            Free plan — {listLabel.toLowerCase()} holds {limit} cards
-                            ({entries.length}/{limit}). Subscribe in the FABTrades app for unlimited.
-                        </Alert>
-                    )}
-
-                    {atFreeLimit && (
-                        <Alert severity="warning" sx={{ mb: 1, py: 0.25, fontSize: '0.8rem' }}>
-                            {isWanted ? 'Want lists' : 'Binders'} hold {limit} cards on the free plan.
-                            You can still change quantity on cards you already have. Subscribe in the
-                            FABTrades app to add more.
-                        </Alert>
-                    )}
-
                     <Box
                         sx={{
                             mb: 1.25,
@@ -997,11 +935,7 @@ const BinderCollection = ({ isWanted = false }) => {
                             <SearchInput
                                 label=""
                                 size="small"
-                                placeholder={
-                                    atFreeLimit
-                                        ? 'Search your Binder…'
-                                        : 'Search to add cards…'
-                                }
+                                placeholder="Search to add cards…"
                                 items={cardOptions}
                                 value={searchQuery}
                                 onChange={(_e, value) => setSearchQuery(value || '')}
@@ -1452,22 +1386,6 @@ const BinderCollection = ({ isWanted = false }) => {
             </Dialog>
 
             <Snackbar
-                open={Boolean(limitMessage)}
-                autoHideDuration={6000}
-                onClose={() => setLimitMessage('')}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                <Alert
-                    onClose={() => setLimitMessage('')}
-                    severity="info"
-                    variant="filled"
-                    sx={{ width: '100%' }}
-                >
-                    {limitMessage}
-                </Alert>
-            </Snackbar>
-
-            <Snackbar
                 open={Boolean(toast)}
                 autoHideDuration={3000}
                 onClose={() => setToast('')}
@@ -1482,17 +1400,6 @@ const BinderCollection = ({ isWanted = false }) => {
                     {toast}
                 </Alert>
             </Snackbar>
-
-            {!isWanted && (
-                <BinderValueDialog
-                    open={valueOpen}
-                    onClose={() => setValueOpen(false)}
-                    headline={formatCurrency(totalValue.toFixed(2))}
-                    entries={entries}
-                    catalogById={catalogById}
-                    isDark={isDark}
-                />
-            )}
         </Box>
     );
 };

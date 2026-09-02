@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { canAddDistinctCard, canCreateBinder } from '../utils/freeLimits';
 import { validateBinderName } from '../utils/binderNames';
 import { moveBinderCopies as planMove } from '../utils/binderMove';
+import { unlockAllFeatures } from '../utils/featureAccess.js';
 import { fetchEntitlement } from './entitlements';
 
 export const BINDER_CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
@@ -462,8 +463,8 @@ export async function checkCanAddBinderCard({
             return { allowed: false, error: authError, isPro: false };
         }
 
-        if (alreadyListed) {
-            return { allowed: true, error: null, isPro: false };
+        if (alreadyListed || unlockAllFeatures) {
+            return { allowed: true, error: null, isPro: unlockAllFeatures };
         }
 
         const { entitlement } = await fetchEntitlement(user.id);
@@ -705,7 +706,7 @@ export async function createBinder({ name, isPro = false, liveCount }) {
         if (!unique.ok) {
             return { data: null, error: { message: unique.reason, reason: unique.reason } };
         }
-        if (!canCreateBinder(live.length, { isPro })) {
+        if (!unlockAllFeatures && !canCreateBinder(live.length, { isPro })) {
             return { data: null, error: { message: 'paywall', reason: 'paywall' } };
         }
 

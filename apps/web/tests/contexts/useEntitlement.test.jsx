@@ -57,9 +57,10 @@ describe('useEntitlement', () => {
     const { result } = render();
 
     expect(result.current.loading).toBe(true);
-    expect(result.current.isPro).toBe(false);
+    expect(result.current.isPro).toBe(true);
 
-    await waitFor(() => expect(result.current.isPro).toBe(true));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.isPro).toBe(true);
   });
 
   test('waits for auth before reading anything', () => {
@@ -79,7 +80,7 @@ describe('useEntitlement', () => {
     const { result } = render();
 
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.isPro).toBe(false);
+    expect(result.current.isPro).toBe(true);
     // Nothing to look up: entitlements are keyed by user.
     expect(fetchEntitlement).not.toHaveBeenCalled();
   });
@@ -101,7 +102,7 @@ describe('useEntitlement', () => {
     signedIn();
     const { result } = render();
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.isPro).toBe(false);
+    expect(result.current.isPro).toBe(true);
 
     // Web cannot sell Pro, so this is how a purchase completed on a phone shows up
     // in a tab that was already open.
@@ -121,6 +122,6 @@ describe('useEntitlement', () => {
     const { result } = render();
 
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.isPro).toBe(false);
+    expect(result.current.isPro).toBe(true);
   });
 });

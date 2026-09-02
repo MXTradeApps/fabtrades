@@ -11,6 +11,7 @@ import {
     CollectionsBookmark,
     History,
     BookmarkBorder,
+    TrendingUp,
     Style,
     PrivacyTipOutlined,
     DescriptionOutlined,
@@ -23,9 +24,10 @@ import LoginButton from '../auth/LoginButton.jsx';
 
 const NAV_ITEMS = [
     { label: 'Trade Calculator', to: '/', icon: SwapHoriz, match: (path) => path === '/' },
-    { label: 'My Binders', to: '/binder', icon: CollectionsBookmark, match: (path) => path === '/binder' },
+    { label: 'My Binders', to: '/binder', icon: CollectionsBookmark, match: (path) => path.startsWith('/binder') },
     { label: 'Trade History', to: '/history', icon: History, match: (path) => path === '/history' },
     { label: 'Want List', to: '/wants', icon: BookmarkBorder, match: (path) => path === '/wants' },
+    { label: 'Trends', to: '/trends', icon: TrendingUp, match: (path) => path === '/trends' },
     { label: 'Browse Sets', to: '/sets', icon: Style, match: (path) => path.startsWith('/sets') },
 ];
 

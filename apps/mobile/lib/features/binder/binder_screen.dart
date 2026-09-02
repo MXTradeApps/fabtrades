@@ -24,7 +24,7 @@ import '../search/card_picker.dart';
 import '../want_list/want_list_screen.dart';
 import 'binder_grid.dart';
 import 'binder_list.dart';
-import 'binder_value_sheet.dart';
+import 'collection_stats_screen.dart';
 
 class BinderScreen extends ConsumerStatefulWidget {
   const BinderScreen({super.key});
@@ -105,8 +105,6 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
     final openRows = openId == null
         ? const <BinderEntry>[]
         : ownedInBinder(owned, openId);
-    final binderTotal = openRows.fold<double>(
-        0, (s, e) => s + (pricing.value(e.card) ?? 0) * e.quantity);
     final title = _appBarTitle(
       onBinderTab: onBinderTab,
       openId: openId,
@@ -175,40 +173,53 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: SizedBox(
-          width: MediaQuery.sizeOf(context).width - 32,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (onBinderTab && openId != null && openRows.isNotEmpty)
-                ShowcaseTheme.mark(
-                  key: OnboardingKeys.binderTotal,
-                  title: TourCopy.binderTotalTitle,
-                  description: TourCopy.binderTotalBody,
-                  child: _BinderValueChip(
-                    total: pricing.formatValue(binderTotal),
-                    onTap: () => showBinderValueSheet(context),
+      floatingActionButton: SizedBox(
+        key: const Key('binderActionRow'),
+        width: MediaQuery.sizeOf(context).width - 32,
+        height: 56,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (onBinderTab && openId != null && openRows.isNotEmpty) ...[
+              Flexible(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  heightFactor: 1,
+                  widthFactor: 1,
+                  child: ShowcaseTheme.mark(
+                    key: OnboardingKeys.binderTotal,
+                    title: TourCopy.binderTotalTitle,
+                    description: TourCopy.binderTotalBody,
+                    child: _CollectionStatsButton(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          settings:
+                              const RouteSettings(name: 'Collection Stats'),
+                          builder: (_) => const CollectionStatsScreen(),
+                        ),
+                      ),
+                    ),
                   ),
-                )
-              else
-                const SizedBox.shrink(),
-              ShowcaseTheme.mark(
-                key: OnboardingKeys.binderFab,
-                title: TourCopy.binderFabTitle,
-                description: TourCopy.binderFabBody,
-                child: FloatingActionButton.extended(
-                  heroTag: 'binderFab',
-                  onPressed: () => onBinderTab
-                      ? _showBinderAddOptions(context)
-                      : _addBySearch(isWanted: true),
-                  icon: const Icon(Icons.add),
-                  label: Text(onBinderTab ? 'Add card' : 'Add want'),
                 ),
               ),
-            ],
-          ),
+              const SizedBox(width: 12),
+            ] else
+              const SizedBox.shrink(),
+            ShowcaseTheme.mark(
+              key: OnboardingKeys.binderFab,
+              title: TourCopy.binderFabTitle,
+              description: TourCopy.binderFabBody,
+              child: FloatingActionButton.extended(
+                heroTag: 'binderFab',
+                onPressed: () => onBinderTab
+                    ? _showBinderAddOptions(context)
+                    : _addBySearch(isWanted: true),
+                icon: const Icon(Icons.add),
+                label: Text(onBinderTab ? 'Add card' : 'Add want'),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -372,38 +383,38 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   }
 }
 
-class _BinderValueChip extends StatelessWidget {
-  const _BinderValueChip({required this.total, required this.onTap});
-  final String total;
+class _CollectionStatsButton extends StatelessWidget {
+  const _CollectionStatsButton({required this.onTap});
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    const color = AppTheme.positive;
     return Material(
       elevation: 6,
       shadowColor: Colors.black54,
       color: scheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        key: const Key('binderValueChip'),
+        key: const Key('collectionStatsButton'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Semantics(
           button: true,
-          label: 'Binder value',
+          label: 'Collection Stats',
           child: SizedBox(
             height: 56,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Center(
                 child: Text(
-                  total,
+                  'Collection Stats',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: color,
+                    color: AppTheme.positive,
                   ),
                 ),
               ),

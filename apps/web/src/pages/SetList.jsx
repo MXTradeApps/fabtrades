@@ -21,10 +21,12 @@ import {
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
+import CatalogPrintingResults from '../components/search/CatalogPrintingResults.jsx';
 import { useSets } from '../hooks/useSets.js';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useDocumentHead } from '../utils/seo.js';
+import { matchPrintings } from '../utils/searchUtils.js';
 import { BROWSE_TIER, browseTierLabel, setBrowseTier } from '../utils/setSort.js';
 
 const formatDate = (iso) => {
@@ -142,7 +144,7 @@ const SetTitle = ({ set, textColor, mutedColor, isDark }) => {
 
 const SetList = () => {
     const { sets, loading, error } = useSets();
-    const { pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
+    const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
     const { isDark } = useThemeMode();
     const [query, setQuery] = useState('');
 
@@ -154,14 +156,11 @@ const SetList = () => {
         canonicalPath: '/sets'
     });
 
-    const filteredSets = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return sets;
-        return sets.filter((s) =>
-            s.name.toLowerCase().includes(q) ||
-            (s.abbreviation || '').toLowerCase().includes(q)
-        );
-    }, [sets, query]);
+    const searching = query.trim().length > 0;
+    const printings = useMemo(
+        () => (searching ? matchPrintings(cards, query) : []),
+        [cards, query, searching],
+    );
 
     const bgGradient = isDark
         ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
@@ -200,7 +199,7 @@ const SetList = () => {
 
                 <TextField
                     fullWidth
-                    placeholder="Search sets..."
+                    placeholder="Search all cards…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     sx={{
@@ -231,7 +230,9 @@ const SetList = () => {
                     </Alert>
                 )}
 
-                {loading ? (
+                {searching ? (
+                    <CatalogPrintingResults printings={printings} />
+                ) : loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                         <CircularProgress sx={{ color: isDark ? '#d4a574' : '#8b4513' }} />
                     </Box>
@@ -246,20 +247,20 @@ const SetList = () => {
                         }}
                     >
                         <List disablePadding>
-                            {filteredSets.length === 0 && (
+                            {sets.length === 0 && (
                                 <ListItem>
                                     <Typography variant="body2" sx={{ color: mutedColor, py: 2 }}>
-                                        No sets match your search.
+                                        No sets available.
                                     </Typography>
                                 </ListItem>
                             )}
-                            {filteredSets.map((set, idx) => {
+                            {sets.map((set, idx) => {
                                 const tier = setBrowseTier(set.name);
                                 const prevTier = idx > 0
-                                    ? setBrowseTier(filteredSets[idx - 1].name)
+                                    ? setBrowseTier(sets[idx - 1].name)
                                     : null;
                                 const showSectionHeader = tier !== prevTier;
-                                const isLast = idx === filteredSets.length - 1;
+                                const isLast = idx === sets.length - 1;
 
                                 return (
                                     <Box key={set.groupId}>

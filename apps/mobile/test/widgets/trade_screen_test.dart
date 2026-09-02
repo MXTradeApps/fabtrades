@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/providers.dart';
@@ -17,6 +18,8 @@ void main() {
     expect(find.text('Even'), findsOneWidget);
     expect(find.text('Their 0 cards'), findsOneWidget);
     expect(find.text('My 0 cards'), findsOneWidget);
+    expect(tester.getSize(find.byKey(const Key('tradeDragBar'))).height,
+        lessThan(88));
   });
 
   testWidgets('adding cards updates totals and the delta', (tester) async {
@@ -80,6 +83,8 @@ void main() {
     expect(find.text('Low \$3.00'), findsOneWidget);
     expect(find.text('+\$6.00'), findsOneWidget);
     expect(find.text('Low +\$5.00'), findsOneWidget);
+    expect(tester.getSize(find.byKey(const Key('tradeDragBar'))).height,
+        lessThan(108));
   });
 
   testWidgets('Find Trade Filler is free and opens without a paywall',

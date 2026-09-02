@@ -130,7 +130,7 @@ class _BinderListState extends ConsumerState<BinderList> {
                     padding: const EdgeInsets.only(bottom: 96),
                     itemCount: visible.length,
                     separatorBuilder: (_, _) =>
-                        const Divider(height: 1, indent: 72),
+                        const Divider(height: 1, indent: 58),
                     itemBuilder: (context, i) => _EntryRow(
                       entry: visible[i],
                       pricing: pricing,
@@ -339,7 +339,6 @@ class _EntryRow extends ConsumerWidget {
     final card = entry.card;
     final lineValue = (pricing.value(card) ?? 0) * entry.quantity;
     final catalog = ref.watch(catalogProvider).asData?.value ?? const [];
-    final printings = printingsForCard(catalog, card);
     final dests = Binder.gridOrder(liveBinders)
         .where((b) => b.isLive && b.clientId != binderId)
         .toList();
@@ -360,70 +359,57 @@ class _EntryRow extends ConsumerWidget {
         binderId: binderId,
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         child: Row(
           children: [
             GestureDetector(
+              key: Key('binderArt-${card.id}'),
               onTap: () => _openDetail(context, card),
-              child: CardThumbnail(url: card.imageUrl, foil: card.isFoil),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onTap: () => _openDetail(context, card),
-                    child: Text(card.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(height: 3),
-                  GestureDetector(
-                    onTap: printings.length >= 2
-                        ? () => _pickVersion(context, ref, catalog)
-                        : () => _openDetail(context, card),
-                    child: Row(
-                      children: [
-                        Expanded(child: CardMetaLine(card: card)),
-                        if (printings.length >= 2)
-                          Icon(Icons.unfold_more,
-                              size: 16,
-                              color: theme.colorScheme.onSurfaceVariant),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      if (card.finishBadgeLabel != null) ...[
-                        FinishBadge(card: card),
-                        const SizedBox(width: 5),
-                      ],
-                      _ConditionChip(
-                        condition: entry.condition,
-                        onChanged: (c) => notifier.setCondition(
-                          card.id,
-                          entry.isWanted,
-                          c,
-                          binderId: binderId,
-                        ),
-                      ),
-                      if (dests.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        TextButton(
-                          key: Key('moveBinder-${card.id}'),
-                          onPressed: () => _move(context, ref),
-                          child: const Text('Move'),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
+              child: CardThumbnail(
+                url: card.imageUrl,
+                foil: card.isFoil,
+                width: 36,
+                height: 50,
               ),
             ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: InkWell(
+                key: Key('binderRow-${card.id}'),
+                onTap: () => _pickVersion(context, ref, catalog),
+                child: Semantics(
+                  button: true,
+                  label: 'Change printing',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(card.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      CardMetaLine(card: card),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (dests.isNotEmpty)
+              TextButton(
+                key: Key('moveBinder-${card.id}'),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
+                  textStyle: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                onPressed: () => _move(context, ref),
+                child: const Text('Move'),
+              ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -434,7 +420,7 @@ class _EntryRow extends ConsumerWidget {
                   Text(pricing.lowPriceLabel(card)!,
                       style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant)),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 _MiniStepper(
                   qty: entry.quantity,
                   onInc: () => notifier.setQuantity(
@@ -500,42 +486,6 @@ class _MoveQtyDialogState extends State<_MoveQtyDialog> {
   }
 }
 
-class _ConditionChip extends StatelessWidget {
-  const _ConditionChip({required this.condition, required this.onChanged});
-  final String condition;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return PopupMenuButton<String>(
-      onSelected: onChanged,
-      itemBuilder: (_) => BinderEntry.conditions
-          .map((c) => PopupMenuItem(value: c, child: Text(c)))
-          .toList(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: scheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(condition,
-                style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSecondaryContainer)),
-            Icon(Icons.arrow_drop_down,
-                size: 14, color: scheme.onSecondaryContainer),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _MiniStepper extends StatelessWidget {
   const _MiniStepper(
       {required this.qty, required this.onInc, required this.onDec});
@@ -557,19 +507,19 @@ class _MiniStepper extends StatelessWidget {
           InkWell(
             onTap: onDec,
             child: const Padding(
-                padding: EdgeInsets.all(5), child: Icon(Icons.remove, size: 15)),
+                padding: EdgeInsets.all(4), child: Icon(Icons.remove, size: 14)),
           ),
           SizedBox(
-            width: 20,
+            width: 18,
             child: Text('$qty',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 13)),
+                    fontWeight: FontWeight.w700, fontSize: 12)),
           ),
           InkWell(
             onTap: onInc,
             child: const Padding(
-                padding: EdgeInsets.all(5), child: Icon(Icons.add, size: 15)),
+                padding: EdgeInsets.all(4), child: Icon(Icons.add, size: 14)),
           ),
         ],
       ),

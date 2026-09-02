@@ -24,7 +24,10 @@ import 'trade_history_screen.dart';
 
 /// Smallest fraction of the split area either list can be squeezed to.
 const double _minFraction = 0.15;
-const double _dragBarHeight = 128;
+
+/// Reserved height for drag-fraction math. The bar itself sizes to content.
+const double _dragBarHeightCompact = 72;
+const double _dragBarHeightWithLow = 80;
 
 class TradeScreen extends ConsumerStatefulWidget {
   const TradeScreen({super.key});
@@ -75,7 +78,10 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final avail = (constraints.maxHeight - _dragBarHeight)
+                final dragBarHeight = _tradeShowsLow(trade, pricing)
+                    ? _dragBarHeightWithLow
+                    : _dragBarHeightCompact;
+                final avail = (constraints.maxHeight - dragBarHeight)
                     .clamp(1.0, double.infinity);
                 final frac = _topFraction.clamp(_minFraction, 1 - _minFraction);
                 final topFlex = (frac * 1000).round();
@@ -310,6 +316,17 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
   }
 }
 
+bool _tradeShowsLow(Trade trade, Pricing pricing) {
+  double low(List<TradeItem> items, double cash) =>
+      items.fold<double>(
+            0,
+            (s, i) => s + (pricing.lowValue(i.card) ?? 0) * i.quantity,
+          ) +
+          cash;
+  return low(trade.wantItems, trade.wantCash) > 0 ||
+      low(trade.haveItems, trade.haveCash) > 0;
+}
+
 Future<void> _pick(BuildContext context, WidgetRef ref, TradeSide side) async {
   await CardPickerScreen.showMulti(
     context,
@@ -445,21 +462,21 @@ class _DragBar extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onVerticalDragUpdate: (d) => onDrag(d.delta.dy),
       child: Container(
-        height: _dragBarHeight,
+        key: const Key('tradeDragBar'),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHigh,
           border: Border.symmetric(
             horizontal: BorderSide(color: theme.colorScheme.outlineVariant),
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(16, 5, 16, 6),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 6),
+              width: 36,
+              height: 3,
+              margin: const EdgeInsets.only(bottom: 3),
               decoration: BoxDecoration(
                 color: theme.colorScheme.outline,
                 borderRadius: BorderRadius.circular(2),
@@ -475,7 +492,7 @@ class _DragBar extends StatelessWidget {
               lowValue: showLow ? 'Low $symbol${theirLow.toStringAsFixed(2)}' : null,
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
+              padding: const EdgeInsets.symmetric(vertical: 1),
               child: Row(
                 children: [
                   Icon(Icons.sell_outlined,
@@ -497,29 +514,28 @@ class _DragBar extends StatelessWidget {
                     _FindFillerButton(onTap: onFindFiller),
                     const Spacer(),
                   ],
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(balanced ? Icons.balance : Icons.trending_up,
-                              size: 15, color: deltaColor),
-                          const SizedBox(width: 4),
-                          Text(deltaText,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                  color: deltaColor,
-                                  fontWeight: FontWeight.w800)),
-                        ],
-                      ),
-                      if (showLow)
+                      Icon(balanced ? Icons.balance : Icons.trending_up,
+                          size: 14, color: deltaColor),
+                      const SizedBox(width: 4),
+                      Text(deltaText,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: deltaColor,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15)),
+                      if (showLow) ...[
+                        const SizedBox(width: 6),
                         Text(
                           lowDeltaText,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                             fontSize: 11,
+                            height: 1.15,
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ],
@@ -553,25 +569,23 @@ class _DragBar extends StatelessWidget {
         Icon(icon, size: 15, color: accent),
         const SizedBox(width: 6),
         Text(label,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(fontWeight: FontWeight.w600)),
+            style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600, height: 1.15)),
         const Spacer(),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(value,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w800)),
-            if (lowValue != null)
-              Text(
-                lowValue,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 11,
-                ),
-              ),
-          ],
-        ),
+        Text(value,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(fontWeight: FontWeight.w800, height: 1.15)),
+        if (lowValue != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            lowValue,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 11,
+              height: 1.15,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -593,7 +607,7 @@ class _FindFillerButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

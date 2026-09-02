@@ -7,6 +7,7 @@ import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 import '../../core/analytics/analytics.dart';
 import '../../core/config/revenuecat_config.dart';
+import '../../core/logic/feature_access.dart';
 import '../../core/models/purchase_outcome.dart';
 import '../../core/providers.dart';
 import '../auth/sign_in_sheet.dart';
@@ -19,7 +20,7 @@ import '../auth/sign_in_sheet.dart';
 /// these two functions so behaviour stays consistent wherever Pro is offered.
 
 /// Shows the paywall for the current offering and returns true if the customer
-/// has Pro when it closes.
+/// has Pro when it closes. A no-op while [unlockAllFeatures] is on.
 ///
 /// Sign-in is not required. App Review 5.1.1(v) treats Pro as IAP that is not
 /// account-based: local limits lift from StoreKit even for a guest. An optional
@@ -43,6 +44,8 @@ Future<bool> presentProPaywall(
   bool onlyIfNeeded = true,
   String trigger = 'settings',
 }) async {
+  if (unlockAllFeatures) return true;
+
   if (!ref.read(purchasesAvailableProvider)) {
     _showMessage(context, 'Subscriptions are unavailable in this build.');
     return ref.read(isProProvider);

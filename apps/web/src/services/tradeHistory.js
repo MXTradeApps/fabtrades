@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
-import { fetchEntitlement } from './entitlements';
+import { unlockAllFeatures } from '../utils/featureAccess.js';
 import { tradesOverFreeLimit } from '../utils/freeLimits';
+import { fetchEntitlement } from './entitlements';
 
 /**
  * Ensure Supabase is configured and a user is authenticated.
@@ -23,19 +24,11 @@ async function requireAuthenticatedUser(unauthedMessage) {
 
 /**
  * Roll the oldest trades off a free account's history.
- *
- * The window is enforced after the insert rather than in place of it, because a
- * save is never refused — see `tradesOverFreeLimit`. Mobile does the same thing
- * to the same rows, so the two clients agree on which ten trades survive; if only
- * one of them trimmed, the other would keep re-uploading what it had kept.
- *
- * The entitlement is read from the database rather than taken from the caller.
- * A limit decided by whatever the UI last rendered is not a limit.
- *
- * @param {string} userId - Supabase user id
- * @returns {Promise<number>} Trades tombstoned
+ * No-op while [unlockAllFeatures] is on.
  */
 async function trimToFreeWindow(userId) {
+    if (unlockAllFeatures) return 0;
+
     const { entitlement } = await fetchEntitlement(userId);
     if (entitlement.isPro) return 0;
 
@@ -52,11 +45,8 @@ async function trimToFreeWindow(userId) {
     const overLimit = tradesOverFreeLimit(rows.length);
     if (overLimit === 0) return 0;
 
-    // Newest first, so the tail is the oldest.
     const surplus = rows.slice(-overLimit).map((row) => row.id);
 
-    // Tombstoned, like every other delete here, so an offline mobile device learns
-    // the trade is gone instead of re-uploading it on its next sync.
     const now = new Date().toISOString();
     const { error: trimError } = await supabase
         .from('trades')

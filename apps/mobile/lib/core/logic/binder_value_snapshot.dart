@@ -274,6 +274,21 @@ BinderValueSnapshot buildBinderValueSnapshot(
   );
 }
 
+/// Chosen-source headline total. Null when every copy is unpriced — display
+/// as `—`, never `$0.00` / `€0.00`.
+double? chosenSourceHeadlineAmount(
+  Iterable<BinderEntry> entries, {
+  required PriceSource source,
+  BinderValueHeadline headline = BinderValueHeadline.pricingValue,
+}) {
+  final rows = [
+    for (final entry in entries)
+      if (!entry.isWanted && entry.quantity >= 1)
+        BinderValueRow.fromBinderEntry(entry),
+  ];
+  return _sumField(rows, (r) => r.sourceValue(source, headline)).amount;
+}
+
 BinderValueSnapshot snapshotForBinder(
   Iterable<BinderEntry> entries, {
   required PriceSource source,

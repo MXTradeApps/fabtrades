@@ -94,7 +94,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     LendScreen(),
   ];
 
-  static const _tabScreenNames = ['Browse', 'Trade', 'Binder', 'Lend'];
+  static const _tabScreenNames = ['Home', 'Trade', 'Binder', 'Lend'];
 
   @override
   void initState() {
@@ -164,7 +164,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   void _maybeStartTourForTab(int i) {
-    // Browse has no dedicated tour; Scan teaches itself when opened.
+    // Home has no dedicated tour; Scan teaches itself when opened.
     if (i == 0) return;
     final id = switch (i) {
       1 => OnboardingTourId.trade,
@@ -241,9 +241,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           onDestinationSelected: _selectTab,
           destinations: [
             const NavigationDestination(
-              icon: Icon(Icons.grid_view_outlined),
-              selectedIcon: Icon(Icons.grid_view),
-              label: 'Browse',
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home',
             ),
             NavigationDestination(
               icon: Badge(

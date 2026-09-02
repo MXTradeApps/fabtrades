@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:fabtrades/app/app.dart';
+import 'package:fabtrades/core/data/set_published_on.dart';
 import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/onboarding/onboarding_repository.dart';
@@ -13,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../support/fixtures.dart';
 import '../support/harness.dart';
 
-/// Headless end-to-end smoke of the whole app shell (Browse → Trade → Lend
+/// Headless end-to-end smoke of the whole app shell (Home → Trade → Lend
 /// navigation and the trade badge), mirroring integration_test/app_test.dart
 /// so the same flow is covered by plain `flutter test`.
 void main() {
@@ -32,6 +33,14 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     final mockRepo = MockCardRepository();
     when(() => mockRepo.fetchAll()).thenAnswer((_) async => catalog);
+    when(() => mockRepo.fetchSetPublishedOn())
+        .thenAnswer((_) async => SetPublishedOnMap.empty);
+    when(() => mockRepo.recentMovers(any())).thenAnswer((_) async => const []);
+    when(() => mockRepo.recentMovers(any(), cardIds: any(named: 'cardIds')))
+        .thenAnswer((_) async => const []);
+    when(() => mockRepo.printingRecentChanges(any(), any()))
+        .thenAnswer((_) async => const []);
+    registerFallbackValue(<String>[]);
 
     final container = ProviderContainer(
       overrides: [
@@ -55,10 +64,11 @@ void main() {
 
   testWidgets('boots with the four main tabs', (tester) async {
     await launch(tester);
-    expect(find.text('Browse'), findsWidgets);
+    expect(find.text('Home'), findsWidgets);
     expect(find.text('Trade'), findsWidgets);
     expect(find.text('Binder'), findsWidgets);
     expect(find.text('Lend'), findsWidgets);
+    expect(find.byIcon(Icons.home), findsOneWidget);
   });
 
   testWidgets('navigating to the Trade tab shows its add rows', (tester) async {

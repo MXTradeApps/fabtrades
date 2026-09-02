@@ -1,5 +1,6 @@
 installed:
 - git
+- optimize
 settings:
   auto_execute_hooks: true
 hooks:

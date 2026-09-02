@@ -45,10 +45,11 @@ abstract final class TourCopy {
       'Your Binders are a grid — Trade Binder is what you trade, Collection '
       'is a keep pile. Want List is the other tab, not a Binder.';
 
-  static const binderTotalTitle = 'Binder value';
+  static const binderTotalTitle = 'Collection Stats';
   static const binderTotalBody =
-      'A running total of what\'s in your binder, using the price source from '
-      'Settings. Tap it for TCGplayer and CardMarket Low and Market, plus stock stats.';
+      'Open Collection Stats for this Binder — current total, recent movers '
+      'in this Binder, and marketplace snapshot. The button is the label only, '
+      'not a running total.';
 
   static const binderFabTitle = 'Add cards';
   static const binderFabBody =

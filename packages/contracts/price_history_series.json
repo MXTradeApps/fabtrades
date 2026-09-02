@@ -195,6 +195,26 @@
       }
     },
     {
+      "name": "newest-first snapshots still plot oldest to newest",
+      "source": "tcgplayer",
+      "window": "last30",
+      "snapshots": [
+        { "captured_on": "2026-08-16", "tcg_low": 3.0 },
+        { "captured_on": "2026-08-10", "tcg_low": 2.0 },
+        { "captured_on": "2026-08-01", "tcg_low": 1.0 }
+      ],
+      "expected": {
+        "points": [
+          { "date": "2026-08-01", "low": 1.0 },
+          { "date": "2026-08-10", "low": 2.0 },
+          { "date": "2026-08-16", "low": 3.0 }
+        ],
+        "hasOlder": false,
+        "chartable": true,
+        "delta": 2.0
+      }
+    },
+    {
       "name": "empty snapshots are not chartable",
       "source": "tcgplayer",
       "window": "last30",

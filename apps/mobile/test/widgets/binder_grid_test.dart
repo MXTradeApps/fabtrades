@@ -134,8 +134,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Alpha'), findsOneWidget);
+    expect(find.text('NM'), findsNothing);
+    expect(tester.getSize(find.byType(Dismissible).first).height, lessThan(78));
     expect(find.byKey(const Key('binderGrid')), findsNothing);
-    expect(find.byKey(const Key('binderValueChip')), findsOneWidget);
+    expect(find.byKey(const Key('collectionStatsButton')), findsOneWidget);
     expect(find.text('Trade Binder'), findsOneWidget);
     expect(find.text('My Binders'), findsNothing);
     expect(find.widgetWithText(Tab, 'Want List (0)'), findsNothing);
@@ -290,7 +292,7 @@ void main() {
     );
   });
 
-  testWidgets('create, rename collision, Trade Binder delete, 5th is Pro',
+  testWidgets('create, rename collision, Trade Binder delete, 5th is allowed',
       (tester) async {
     final container = await pumpGrid(tester);
 
@@ -333,16 +335,65 @@ void main() {
     expect(binders.create('Third', isPro: false).ok, isTrue);
     await tester.pump();
     expect(binders.live, hasLength(4));
-    ScaffoldMessenger.of(tester.element(find.byType(Scaffold))).clearSnackBars();
+    expect(binders.create('Fifth', isPro: true).ok, isTrue);
     await tester.pump();
-    await tester.ensureVisible(find.byKey(const Key('createBinder')));
-    await tester.tap(find.byKey(const Key('createBinder')));
+    expect(binders.live, hasLength(5));
+    expect(find.textContaining('Subscriptions are unavailable'), findsNothing);
+  });
+
+  testWidgets('row tap opens printing picker; art tap opens card detail',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final regular = buildCard(
+      id: 'alpha-Normal',
+      name: 'Alpha',
+      setName: 'Origins',
+      tcgMarket: 12.5,
+    );
+    final foil = buildCard(
+      id: 'alpha-Foil',
+      name: 'Alpha',
+      setName: 'Origins',
+      isFoil: true,
+      subTypeName: 'Cold Foil',
+      tcgMarket: 20,
+    );
+    final container = await pumpApp(
+      tester,
+      const BinderScreen(),
+      seed: _onboarded(),
+      catalog: [regular, foil],
+    );
+    await tester.pumpAndSettle();
+    container.read(binderProvider.notifier).add(
+          regular,
+          binderId: BinderIds.trade,
+        );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(binders.live, hasLength(4));
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('NM'), findsNothing);
+    expect(find.byKey(const Key('changePrinting-alpha-Normal')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('binderRow-alpha-Normal')));
+    await tester.pumpAndSettle();
+    expect(find.text('Version'), findsOneWidget);
+
+    Navigator.of(tester.element(find.text('Version'))).pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Version'), findsNothing);
+
+    expect(find.byKey(const Key('binderArt-alpha-Normal')), findsOneWidget);
     expect(
-      find.textContaining('Subscriptions are unavailable'),
-      findsOneWidget,
+      tester
+          .widget<GestureDetector>(find.byKey(const Key('binderArt-alpha-Normal')))
+          .onTap,
+      isNotNull,
     );
   });
 }

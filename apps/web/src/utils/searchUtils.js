@@ -144,6 +144,26 @@ export const filterCardOptions = (options, searchTerm, limit = 10) => {
 };
 
 /**
+ * Catalog-wide Printing search for Trends and Browse Sets. Does not cap at the
+ * trade-autocomplete 10; callers pass a high limit when they want every match.
+ *
+ * @param {Array<object>} cards
+ * @param {string} searchTerm
+ * @param {number} [limit=200]
+ * @returns {Array<object>} snapshot Printings
+ */
+export const matchPrintings = (cards, searchTerm, limit = 200) => {
+    if (!searchTerm || !String(searchTerm).trim()) return [];
+    const options = (cards || []).map((card) => ({
+        label: card.displayName || card.name || '',
+        subTypeName: card.subTypeName,
+        setName: card._setName || '',
+        card,
+    }));
+    return filterCardOptions(options, searchTerm, limit).map((option) => option.card);
+};
+
+/**
  * Highlight matching text in a string - OPTIMIZED
  * Simple substring highlighting without complex position mapping
  * @param {string} text - Original text

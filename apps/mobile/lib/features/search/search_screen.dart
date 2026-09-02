@@ -12,17 +12,19 @@ import '../../core/data/card_repository.dart';
 import '../../core/data/set_logo_cache.dart';
 import '../../core/data/set_logos.dart';
 import '../../core/data/set_published_on.dart';
+import '../../core/logic/recent_movers.dart';
 import '../../core/logic/set_abbreviation.dart';
 import '../../core/logic/set_sort.dart';
+import '../../core/models/app_settings.dart';
 import '../../core/models/card_model.dart';
 import '../../core/providers.dart';
 import '../card_detail/card_detail_screen.dart';
 import '../scan/scan_screen.dart';
+import 'mover_box.dart';
+import 'trends_screen.dart';
 
-/// Top-level Browse tab: a global search bar over every set, then a list of
-/// sets to drill into. Searching short-circuits the set list and shows every
-/// matching printing across the whole catalog (so each finish/version has its
-/// own price row).
+/// Top-level Home tab: a See Trending row, then the set list. Searching
+/// short-circuits both and shows every matching printing across the whole catalog.
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
 
@@ -77,7 +79,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Browse'),
+        title: const Text('Home'),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
@@ -110,7 +112,15 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
               onRefresh: _refresh,
               child: searching
                   ? _GlobalSearchResults(query: _query, sort: _sort)
-                  : const _SetList(),
+                  : CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        const SliverToBoxAdapter(
+                          child: SeeTrendingTile(),
+                        ),
+                        const _SetList(),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -156,11 +166,15 @@ class _SetListState extends ConsumerState<_SetList> {
             SetPublishedOnMap.empty;
     _precacheLogosIfNeeded(logos);
     return catalog.when(
-      loading: () => const Center(child: CircularProgressIndicator.adaptive()),
-      error: (e, _) => _ScrollableCenter(
-        child: _ErrorView(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(catalogProvider),
+      loading: () => const SliverFillRemaining(
+        child: Center(child: CircularProgressIndicator.adaptive()),
+      ),
+      error: (e, _) => SliverFillRemaining(
+        child: _ScrollableCenter(
+          child: _ErrorView(
+            message: e.toString(),
+            onRetry: () => ref.invalidate(catalogProvider),
+          ),
         ),
       ),
       data: (cards) {
@@ -182,10 +196,12 @@ class _SetListState extends ConsumerState<_SetList> {
           publishedOnForGroupId: publishedOn.forGroupId,
         );
         if (sets.isEmpty) {
-          return const _ScrollableCenter(child: _EmptyView());
+          return const SliverFillRemaining(
+            child: _ScrollableCenter(child: _EmptyView()),
+          );
         }
 
-        // Flatten section headers + set rows so one ListView can render both.
+        // Flatten section headers + set rows so one list can render both.
         final entries = <_BrowseEntry>[];
         int? lastTier;
         for (final set in sets) {
@@ -211,39 +227,41 @@ class _SetListState extends ConsumerState<_SetList> {
 
         // Retained frames in SetLogoCache keep logos painted if a row is
         // disposed while a set is open and remounted on pop.
-        return ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
+        return SliverPadding(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: entries.length,
-          itemBuilder: (context, i) {
-            final entry = entries[i];
-            return switch (entry) {
-              _BrowseSectionHeader(:final label) => _SetSectionHeader(
-                  label: label,
-                  isFirst: i == 0,
-                ),
-              _BrowseSetRow(
-                :final setName,
-                :final logoUrl,
-                :final abbreviation,
-                :final alwaysShowName,
-              ) =>
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _SetTile(
-                      key: ValueKey<String>(setName),
-                      setName: setName,
-                      logoUrl: logoUrl,
-                      abbreviation: abbreviation,
-                      alwaysShowName: alwaysShowName,
-                    ),
-                    if (i < entries.length - 1 && entries[i + 1] is _BrowseSetRow)
-                      const Divider(height: 1, indent: 16),
-                  ],
-                ),
-            };
-          },
+          sliver: SliverList.builder(
+            itemCount: entries.length,
+            itemBuilder: (context, i) {
+              final entry = entries[i];
+              return switch (entry) {
+                _BrowseSectionHeader(:final label) => _SetSectionHeader(
+                    label: label,
+                    isFirst: i == 0,
+                  ),
+                _BrowseSetRow(
+                  :final setName,
+                  :final logoUrl,
+                  :final abbreviation,
+                  :final alwaysShowName,
+                ) =>
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _SetTile(
+                        key: ValueKey<String>(setName),
+                        setName: setName,
+                        logoUrl: logoUrl,
+                        abbreviation: abbreviation,
+                        alwaysShowName: alwaysShowName,
+                      ),
+                      if (i < entries.length - 1 &&
+                          entries[i + 1] is _BrowseSetRow)
+                        const Divider(height: 1, indent: 16),
+                    ],
+                  ),
+              };
+            },
+          ),
         );
       },
     );
@@ -345,17 +363,104 @@ class _SetTileState extends ConsumerState<_SetTile>
   }
 }
 
-/// Flat printing results for a global (all-sets) query typed in the Browse
-/// search bar. Each finish/version is its own row so prices are visible
-/// without opening card detail.
-class _GlobalSearchResults extends ConsumerWidget {
+/// Trend boxes for a global (all-sets) query typed on Home. Ranked movers
+/// and the set list are covered while this is showing. In-set search stays a
+/// [_PrintingList].
+class _GlobalSearchResults extends ConsumerStatefulWidget {
   const _GlobalSearchResults({required this.query, required this.sort});
   final String query;
   final CardSort sort;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_GlobalSearchResults> createState() =>
+      _GlobalSearchResultsState();
+}
+
+class _GlobalSearchResultsState extends ConsumerState<_GlobalSearchResults> {
+  Timer? _overlayDebounce;
+  int _overlayGen = 0;
+  var _overlays = const <RecentLowChange>[];
+  Object? _overlayError;
+  String? _scheduledKey;
+
+  @override
+  void dispose() {
+    _overlayDebounce?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _GlobalSearchResults oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.query != widget.query || oldWidget.sort != widget.sort) {
+      _overlayDebounce?.cancel();
+      _overlayGen++;
+      _overlays = const [];
+      _overlayError = null;
+      _scheduledKey = null;
+    }
+  }
+
+  void _ensureOverlayFetch(List<CardModel> cards, String source) {
+    final ids = cards.map((c) => c.id).toList();
+    final key = '$source|${ids.join(',')}';
+    if (key == _scheduledKey) return;
+    _scheduledKey = key;
+    _overlayDebounce?.cancel();
+    if (ids.isEmpty) {
+      _overlayGen++;
+      return;
+    }
+    final gen = ++_overlayGen;
+    _overlayDebounce = Timer(const Duration(milliseconds: 300), () {
+      _fetchOverlays(ids, gen);
+    });
+  }
+
+  Future<void> _fetchOverlays(List<String> ids, int gen) async {
+    final source = ref.read(settingsProvider).source.name;
+    try {
+      final rows = await ref
+          .read(cardRepositoryProvider)
+          .printingRecentChanges(source, ids);
+      if (!mounted || gen != _overlayGen) return;
+      setState(() {
+        _overlays = rows;
+        _overlayError = null;
+      });
+    } catch (error) {
+      if (!mounted || gen != _overlayGen) return;
+      setState(() {
+        _overlays = const [];
+        _overlayError = error;
+      });
+    }
+  }
+
+  void _retryOverlays(List<CardModel> cards) {
+    final ids = cards.map((c) => c.id).toList();
+    if (ids.isEmpty) return;
+    final gen = ++_overlayGen;
+    setState(() => _overlayError = null);
+    _fetchOverlays(ids, gen);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<AppSettings>(settingsProvider, (prev, next) {
+      if (prev?.source != next.source) {
+        _overlayDebounce?.cancel();
+        _overlayGen++;
+        _overlays = const [];
+        _overlayError = null;
+        _scheduledKey = null;
+      }
+    });
+
     final catalog = ref.watch(catalogProvider);
+    final pricing = ref.watch(pricingProvider);
+    final source = ref.watch(settingsProvider).source.name;
+
     return catalog.when(
       loading: () => const Center(child: CircularProgressIndicator.adaptive()),
       error: (e, _) => _ScrollableCenter(
@@ -365,12 +470,57 @@ class _GlobalSearchResults extends ConsumerWidget {
         ),
       ),
       data: (all) {
-        final filtered =
-            filterCards(all, CardFilters(query: query, sort: sort));
+        final filtered = filterCards(
+          all,
+          CardFilters(query: widget.query, sort: widget.sort),
+        );
+        _ensureOverlayFetch(filtered, source);
         if (filtered.isEmpty) {
           return const _ScrollableCenter(child: _EmptyView());
         }
-        return _PrintingList(cards: filtered, source: 'search');
+        final overlayById = {
+          for (final row in _overlays) row.cardId: row,
+        };
+        return ListView.builder(
+          key: const Key('search-trend-boxes'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 16),
+          itemCount: filtered.length + (_overlayError != null ? 1 : 0),
+          itemBuilder: (context, i) {
+            if (_overlayError != null && i == 0) {
+              return Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('Couldn’t load recent changes.'),
+                  ),
+                  TextButton(
+                    onPressed: () => _retryOverlays(filtered),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              );
+            }
+            final card = filtered[_overlayError != null ? i - 1 : i];
+            final overlay = overlayById[card.id];
+            return MoverBox(
+              name: card.name,
+              setName: card.setName ?? '',
+              finish: card.subTypeName ?? '',
+              currentLow: pricing.lowValue(card),
+              percentChange: overlay?.percentChange,
+              amountChange: overlay?.amountChange,
+              pricing: pricing,
+              onSelect: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  settings: const RouteSettings(name: 'Card Detail'),
+                  builder: (_) =>
+                      CardDetailScreen(card: card, source: 'search'),
+                ),
+              ),
+            );
+          },
+        );
       },
     );
   }

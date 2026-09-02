@@ -283,19 +283,16 @@ describe('checkCanAddBinderCard', () => {
         expect(fetchEntitlement).not.toHaveBeenCalled();
     });
 
-    test('refuses a new binder card at the free cap', async () => {
+    test('allows a new binder card past the former free cap', async () => {
         asUser('user-1');
-        fetchEntitlement.mockResolvedValue({
-            entitlement: { isPro: false },
-        });
         const { allowed, isPro } = await checkCanAddBinderCard({
             isWanted: false,
             existingDistinctCount: 50,
             alreadyListed: false,
         });
-        expect(allowed).toBe(false);
-        expect(isPro).toBe(false);
-        expect(fetchEntitlement).toHaveBeenCalledWith('user-1');
+        expect(allowed).toBe(true);
+        expect(isPro).toBe(true);
+        expect(fetchEntitlement).not.toHaveBeenCalled();
     });
 
     test('allows Pro past the free cap', async () => {

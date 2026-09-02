@@ -150,3 +150,12 @@ export function buildBinderValueSnapshot(
         topPrintings: ranked.slice(0, 5),
     };
 }
+
+/** Chosen-source headline total for Collection Stats. Null when every copy is unpriced. */
+export function chosenSourceHeadlineAmount(
+    entries,
+    { source = 'tcgplayer', headline = 'pricingValue' } = {},
+) {
+    const rows = (entries || []).filter((row) => (row.quantity || 0) >= 1);
+    return sumField(rows, (r) => sourceValue(r, source, headline)).amount;
+}

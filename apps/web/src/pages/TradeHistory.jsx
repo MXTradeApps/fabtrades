@@ -28,12 +28,10 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useEntitlement } from '../contexts/EntitlementContext.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { getUserTrades, deleteTrade } from '../services/tradeHistory';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useCardDetail } from '../contexts/CardDetailContext.jsx';
-import { FreeLimits } from '../utils/freeLimits.js';
 import { normalizeTradeList, tradeDisplayName } from '../utils/tradeItems.js';
 import { CardThumbnail } from '../components/ui/CardImagePreview.jsx';
 import Header from '../components/elements/Header.jsx';
@@ -51,7 +49,6 @@ function formatTradeMoney(amount, currencySymbol = '$') {
 const TradeHistory = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { isPro, loading: entitlementLoading } = useEntitlement();
     const { pricesUpdatedAt: lastUpdatedTimestamp, cardIdLookup } = useCardData();
     const { isDark } = useThemeMode();
     const [trades, setTrades] = useState([]);
@@ -235,18 +232,6 @@ const TradeHistory = () => {
                             <Typography variant="h6" sx={{ fontWeight: 700, color: accentColor }}>
                                 Trade History
                             </Typography>
-                            {isPro && (
-                                <Chip
-                                    size="small"
-                                    label="PRO"
-                                    sx={{
-                                        fontWeight: 700,
-                                        letterSpacing: 0.5,
-                                        color: isDark ? '#1a0f0a' : '#ffffff',
-                                        backgroundColor: accentColor,
-                                    }}
-                                />
-                            )}
                         </Box>
                         <Button
                             variant="outlined"
@@ -265,18 +250,6 @@ const TradeHistory = () => {
                             Back to Trading
                         </Button>
                     </Box>
-
-                    {/* Where the free window stands. Only once it is actually in
-                        sight — same 70% pressure rule as mobile's FreeUsage.
-                        Web cannot sell Pro (purchases live in the apps), so this
-                        says where to buy rather than offering a checkout. */}
-                    {!entitlementLoading && !isPro &&
-                        trades.length / FreeLimits.savedTrades >= 0.7 && (
-                        <Alert severity="info" icon={false} sx={{ mb: 3 }}>
-                            Free plan — your {FreeLimits.savedTrades} most recent trades are kept.
-                            Subscribe in the FABTrades app to keep every trade.
-                        </Alert>
-                    )}
 
                     {/* Search Bar */}
                     <TextField

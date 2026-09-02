@@ -18,6 +18,22 @@
       },
       "registered_skills": [],
       "installed_at": "2026-08-14T16:18:06.257949+00:00"
+    },
+    "optimize": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:011bc93e18ca788185271fc493d658d66c2544b99c131fcd293b136442af30f1",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "cursor-agent": [
+          "speckit.optimize.run",
+          "speckit.optimize.tokens",
+          "speckit.optimize.learn"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-08-28T22:14:10.065203+00:00"
     }
   }
 }

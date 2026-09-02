@@ -10,7 +10,6 @@ import '../../core/logic/pricing.dart';
 import '../../core/models/app_settings.dart';
 import '../../core/models/card_model.dart';
 import '../../core/providers.dart';
-import '../paywall/pro_paywall.dart';
 
 /// Low-only history for one Printing, shown under the Prices box.
 class PriceHistorySection extends ConsumerStatefulWidget {
@@ -164,21 +163,6 @@ class _HistoryBody extends ConsumerWidget {
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
-        if (series.showProCta) ...[
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              key: PriceHistorySection.proCtaKey,
-              onPressed: () => presentProPaywall(
-                context,
-                ref,
-                trigger: 'price_history',
-              ),
-              child: const Text('See full history with Pro'),
-            ),
-          ),
-        ],
         if (series.showSpanControl) ...[
           const SizedBox(height: 8),
           SegmentedButton<PriceHistoryWindow>(

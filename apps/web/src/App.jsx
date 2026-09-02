@@ -2,8 +2,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home.jsx';
 import TradeHistory from './pages/TradeHistory.jsx';
 import BinderCollection from './pages/BinderCollection.jsx';
+import CollectionStats from './pages/CollectionStats.jsx';
 import SharedBinder from './pages/SharedBinder.jsx';
 import SetList from './pages/SetList.jsx';
+import Trends from './pages/Trends.jsx';
 import SetDetail from './pages/SetDetail.jsx';
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx';
 import TermsOfUse from './pages/TermsOfUse.jsx';
@@ -24,9 +26,11 @@ function App() {
                             <Route path="/" element={<Home />} />
                             <Route path="/history" element={<TradeHistory />} />
                             <Route path="/binder" element={<BinderCollection isWanted={false} />} />
+                            <Route path="/binder/stats" element={<CollectionStats />} />
                             <Route path="/wants" element={<BinderCollection isWanted={true} />} />
                             <Route path="/b/:token" element={<SharedBinder />} />
                             <Route path="/sets" element={<SetList />} />
+                            <Route path="/trends" element={<Trends />} />
                             <Route path="/sets/:groupId" element={<SetDetail />} />
                             <Route path="/privacy" element={<PrivacyPolicy />} />
                             <Route path="/terms" element={<TermsOfUse />} />

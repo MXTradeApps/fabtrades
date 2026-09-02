@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { 
     Box, 
     Modal, 
@@ -10,29 +10,56 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 
 /**
- * Small thumbnail component for card lists
+ * Small thumbnail component for card lists.
+ * Cached Chrome loads often fire before React attaches onLoad; assign src after
+ * listeners and never hide a decoded bitmap behind opacity 0.
  */
 export const CardThumbnail = ({ imageUrl, fallbackUrl, alt, size = 40, onClick }) => {
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState(false);
     const [currentSrc, setCurrentSrc] = useState(imageUrl);
+    const imgRef = useRef(null);
     const { isDark } = useThemeMode();
 
-    // Reset state when imageUrl changes
-    useEffect(() => {
+    useLayoutEffect(() => {
         setLoaded(false);
         setError(false);
         setCurrentSrc(imageUrl);
     }, [imageUrl]);
 
-    // When the primary image fails, try the fallback before giving up.
-    const handleError = () => {
-        if (fallbackUrl && currentSrc !== fallbackUrl) {
-            setCurrentSrc(fallbackUrl);
-        } else {
-            setError(true);
+    useLayoutEffect(() => {
+        const img = imgRef.current;
+        if (!img || !currentSrc || error) return undefined;
+
+        let cancelled = false;
+        const markLoaded = () => {
+            if (!cancelled) setLoaded(true);
+        };
+        const onImgError = () => {
+            if (cancelled) return;
+            if (fallbackUrl && currentSrc !== fallbackUrl) {
+                setCurrentSrc(fallbackUrl);
+            } else {
+                setError(true);
+            }
+        };
+
+        img.addEventListener('load', markLoaded);
+        img.addEventListener('error', onImgError);
+        img.src = currentSrc;
+
+        if (img.complete && img.naturalWidth > 0) {
+            markLoaded();
+        } else if (typeof img.decode === 'function') {
+            img.decode().then(markLoaded).catch(() => {});
         }
-    };
+
+        return () => {
+            cancelled = true;
+            img.removeEventListener('load', markLoaded);
+            img.removeEventListener('error', onImgError);
+        };
+    }, [currentSrc, error, fallbackUrl]);
 
     if (!currentSrc || error) {
         return (
@@ -105,16 +132,13 @@ export const CardThumbnail = ({ imageUrl, fallbackUrl, alt, size = 40, onClick }
                 </Box>
             )}
             <img
-                src={currentSrc}
+                ref={imgRef}
                 alt={alt}
-                onLoad={() => setLoaded(true)}
-                onError={handleError}
                 style={{
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover',
-                    opacity: loaded ? 1 : 0,
-                    transition: 'opacity 0.2s ease'
+                    display: 'block',
                 }}
             />
         </Box>

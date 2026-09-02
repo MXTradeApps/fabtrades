@@ -13,7 +13,6 @@ import {
   updateTrade,
   deleteTrade,
 } from '../../src/services/tradeHistory.js';
-import { FreeLimits } from '../../src/utils/freeLimits.js';
 
 // Builds a chainable query object where every method returns the chain and
 // awaiting the chain resolves to `result` (mirrors the supabase-js builder).
@@ -156,50 +155,31 @@ describe('saveTradeToHistory', () => {
   });
 
   describe('free-tier trade window', () => {
-    test('rolls the oldest trades off once the window is full', async () => {
+    test('does not roll trades off while features are unlocked', async () => {
       asUser('user-5');
-      // One over the cap after the insert, so exactly one has to go.
       const chains = mockTables({
-        trades: [
-          { data: { id: 'newest' }, error: null },
-          existingTrades(FreeLimits.savedTrades + 1),
-          { error: null },
-        ],
+        trades: [{ data: { id: 'newest' }, error: null }],
         entitlements: asFree(),
       });
 
       const { error, trimmed } = await saveTradeToHistory('My Trade', [], [], totals);
 
       expect(error).toBeNull();
-      expect(trimmed).toBe(1);
-      // Tombstoned, not deleted — a hard delete would be invisible to a mobile
-      // device that was offline, which would then re-upload the trade.
-      const sweep = chains.trades[2];
-      expect(sweep.delete).not.toHaveBeenCalled();
-      expect(sweep.update).toHaveBeenCalledWith(
-        expect.objectContaining({ deleted_at: expect.any(String), updated_at: expect.any(String) }),
-      );
-      // The oldest row, which is last when ordered newest-first.
-      expect(sweep.in).toHaveBeenCalledWith('id', [`old-${FreeLimits.savedTrades}`]);
+      expect(trimmed).toBe(0);
+      expect(chains.trades).toHaveLength(1);
     });
 
-    test('trims a history that arrived overfull back to the window', async () => {
+    test('does not trim an overfull history while features are unlocked', async () => {
       asUser();
       const chains = mockTables({
-        trades: [
-          { data: { id: 'newest' }, error: null },
-          existingTrades(FreeLimits.savedTrades + 5),
-          { error: null },
-        ],
+        trades: [{ data: { id: 'newest' }, error: null }],
         entitlements: asFree(),
       });
 
-      // How a lapsed subscriber's history looks: more rows than the free window,
-      // none of which this save created.
       const { trimmed } = await saveTradeToHistory('My Trade', [], [], totals);
 
-      expect(trimmed).toBe(5);
-      expect(chains.trades[2].in.mock.calls[0][1]).toHaveLength(5);
+      expect(trimmed).toBe(0);
+      expect(chains.trades).toHaveLength(1);
     });
 
     test('leaves a Pro account alone', async () => {

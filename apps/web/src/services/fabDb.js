@@ -21,16 +21,19 @@ import { requireSupabaseConfig } from '../config/env.js';
 
 const PAGE_SIZE = 1000; // PostgREST caps a single response at 1000 rows.
 
-const restFetch = async (pathAndQuery, headers = {}) => {
+const restFetch = async (pathAndQuery, headers = {}, { method = 'GET', body } = {}) => {
     // Resolved per request rather than at import, so a misconfigured deploy reports
     // the missing variable instead of failing to load the module.
     const { url, key } = requireSupabaseConfig();
     const response = await fetch(`${url}/rest/v1/${pathAndQuery}`, {
+        method,
         headers: {
             apikey: key,
             Authorization: `Bearer ${key}`,
+            ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
             ...headers
-        }
+        },
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {})
     });
     if (!response.ok) {
         throw new Error(`FAB database request failed (${response.status}): ${pathAndQuery}`);
@@ -153,6 +156,42 @@ export const fetchPricesUpdatedAt = async () => {
         'fab_card_prices?select=updated_at&order=updated_at.desc&limit=1'
     );
     return rows[0]?.updated_at || null;
+};
+
+/**
+ * Ranked recent Low movers for a marketplace. Omit [cardIds] for catalog-wide;
+ * pass owned Printing ids to rank only those. Does not default a bad source.
+ *
+ * @param {'tcgplayer'|'cardmarket'} source
+ * @param {string[]} [cardIds]
+ */
+export const recentMovers = async (source, cardIds) => {
+    const body = { p_source: source };
+    if (cardIds !== undefined) {
+        body.p_card_ids = cardIds;
+    }
+    const response = await restFetch('rpc/fab_recent_movers', {}, { method: 'POST', body });
+    return response.json();
+};
+
+/**
+ * Displayable recent Low change for requested Printing ids. Always sends
+ * [cardIds] (empty array is zero rows). Rejects a null ids list so the
+ * client cannot catalog-scan. Does not default a bad source.
+ *
+ * @param {'tcgplayer'|'cardmarket'} source
+ * @param {string[]} cardIds
+ */
+export const printingRecentChanges = async (source, cardIds) => {
+    if (cardIds == null) {
+        throw new Error('printingRecentChanges: p_card_ids must not be null');
+    }
+    const response = await restFetch(
+        'rpc/fab_printing_recent_changes',
+        {},
+        { method: 'POST', body: { p_source: source, p_card_ids: cardIds } },
+    );
+    return response.json();
 };
 
 /**

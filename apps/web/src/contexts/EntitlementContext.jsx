@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { FREE_ENTITLEMENT, fetchEntitlement } from '../services/entitlements';
+import { unlockAllFeatures } from '../utils/featureAccess.js';
 
 const EntitlementContext = createContext({});
 
@@ -53,7 +54,12 @@ export const EntitlementProvider = ({ children }) => {
     }, [authLoading, load]);
 
     const value = useMemo(
-        () => ({ ...entitlement, loading: loading || authLoading, refresh: load }),
+        () => ({
+            ...entitlement,
+            isPro: unlockAllFeatures || entitlement.isPro,
+            loading: loading || authLoading,
+            refresh: load,
+        }),
         [entitlement, loading, authLoading, load],
     );
 

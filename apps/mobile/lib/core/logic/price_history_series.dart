@@ -28,6 +28,7 @@ class PriceHistorySeries {
 
   final PriceHistoryWindow window;
   final DateTime windowStart;
+  /// Visible Lows, oldest → newest (left → right on the chart).
   final List<LowObservation> points;
   final bool hasOlder;
   final bool isPro;
@@ -75,6 +76,10 @@ class PriceHistorySeries {
       if (low == null) continue;
       out.add(LowObservation(date: dateOnly(snap.capturedOn), low: low));
     }
+    // Oldest → newest so the chart's left edge is the first day, not today.
+    // The read path can arrive newest-first (Dart PostgREST `.order` defaults
+    // to descending).
+    out.sort((a, b) => a.date.compareTo(b.date));
     return out;
   }
 

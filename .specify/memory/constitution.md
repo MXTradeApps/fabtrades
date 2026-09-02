@@ -1,18 +1,12 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 1.1.0 (MINOR)
-- Modified principles: none
-- Modified constraints:
-  - Product Constraint 4 — Collection is allowed as the default keep-pile
-    Binder *name*. The product noun remains Binder. Trade Binder is
-    tradeable stock. Do not rename the Binder destination to Collection.
-    Want List is still not a Binder.
-- Added sections: none
-- Removed sections: none
+- Version change: 1.1.0 → 1.1.1 (PATCH)
+- Modified principles: I–V wording only (rationales, cross-refs, IV mocks)
+- Modified constraints: C3 wording only (vocabulary / catalog / palette)
+- Added/removed sections: none
 - Follow-up TODOs: none
-- Sources:
-  - specs/004-multi-binder-grid/spec.md, plan.md, research.md
-  - docs/CONTEXT.md
+- Sources: /speckit.optimize.run 2026-09-02
+- Version history: 1.0.0 (2026-08-14); 1.1.0 (2026-08-22); 1.1.1 (2026-09-02)
 -->
 
 # FAB Trades Constitution
@@ -21,12 +15,6 @@ FAB Trades is a trade companion for Flesh and Blood players: stack two piles,
 see a trustworthy diff, and close the trade. Web (React) and mobile (Flutter)
 are peer clients on one Supabase catalog. This constitution governs how we
 change that system. It supersedes habit, template defaults, and stale docs.
-
-Craftsmanship here follows the Matsen Group clean-code reviewer (Uncle Bob
-with fail-fast, naming, and honest tests) and the pipeline-expert stance
-(explicit config, modular ingest, reproducible CI) — adapted to a Node
-price pipeline, not Snakemake. Perfection is not a principle. Shipping a
-correct, readable change that helps a player at the table is.
 
 ## Core Principles
 
@@ -45,8 +33,7 @@ that ship.
   Those are tools. The gate is: does the trade math, the catalog, the sync,
   or the entitlement still tell the truth?
 
-Rationale: the product exists for a live table. Delay that does not protect
-correctness is delay a player feels. Perfect is the enemy of good.
+Rationale: delay that does not protect correctness is delay a player feels.
 
 ### II. Code That Reveals Intent
 
@@ -62,29 +49,27 @@ Names MUST match actual behavior. Functions and types MUST do one job.
   heavy dependency with a documented performance reason.
 - MUST NOT mix unrelated concerns in one type (catalog row vs binder entry
   vs entitlement vs UI state).
-- SHOULD eliminate duplication after it has proven itself (roughly a third
-  copy, or two copies that have already drifted). MUST NOT invent a shared
-  layer for a single use.
+- SHOULD eliminate duplication after a third copy, or when two copies have
+  already drifted. MUST NOT invent a shared layer for a single use.
 - MUST document the hard systems in one place with examples: cloud sync,
   entitlements, environments, scan, trade filler. Code comments explain
   *why this line*, not *what the next line does*.
 
-Rationale: web and mobile already duplicate business rules. Unclear names
-and mixed types make that duplication lie. Clean code here is how we keep
-two implementations honest without a shared runtime.
+Rationale: unclear names and mixed types make the two clients' duplicated
+rules lie.
 
 ### III. Fail Fast, Never Silent
 
 Bad data, missing config, and impossible states MUST stop the process with
 a clear error. Silent fallback is a defect.
 
-- MUST refuse to start a client that was not told its Supabase project at
-  build time. MUST NOT default a test build to production.
-- MUST fail ingest when required pipeline parameters are missing
-  (`SUPABASE_URL`, service role, and the like). MUST NOT `get(key, default)`
-  a required value.
+- MUST NOT default a test build to production. A client that was not told
+  its Supabase project MUST NOT start (Product Constraint 8).
+- MUST fail ingest when required keys listed in the pipeline README are
+  missing (`SUPABASE_URL`, service role). MUST NOT `get(key, default)` a
+  required value.
 - MUST validate at the boundary: printing ids, foil subtypes, environments,
-  entitlement writes. Prefer enums, literals, and constants over strings
+  entitlement writes — with enums, literals, or constants, not strings
   that are only checked at runtime.
 - MUST surface errors the operator can act on. Swallowing an exception to
   "keep going" is forbidden unless the catch documents *which* failure is
@@ -93,14 +78,14 @@ a clear error. Silent fallback is a defect.
   auth rather than paper over them.
 
 Rationale: a wrong price or a sandbox purchase writing production Pro is
-worse than a crash. Fail-fast is how this repo already treats environments
-and entitlements; the rest of the code MUST match.
+worse than a crash.
 
 ### IV. Honest Tests, Shared Contracts
 
-Tests MUST exercise real behavior. Mocks are a last resort. Where JavaScript
-and Dart implement the same rule, `packages/contracts` is the source of
-truth — a comment that says "keep in sync" is not a test.
+Tests MUST exercise real behavior. MUST NOT mock a dependency when a
+fixture or in-repo fake exists. Where JavaScript and Dart implement the
+same rule, `packages/contracts` is the source of truth — a comment that
+says "keep in sync" is not a test.
 
 - MUST add or update a golden fixture in `packages/contracts` when a rule
   exists in both clients (trade math, set sort, abbreviations, free-tier
@@ -118,9 +103,8 @@ truth — a comment that says "keep in sync" is not a test.
 - MUST treat `free_limits.json` as data-loss prevention: drift there can
   tombstone a customer's trades. That fixture is non-negotiable.
 
-Rationale: the two clients cannot share code. Contracts are the only build
-that fails when they disagree. Mock-heavy suites create a green board that
-still ships a wrong diff.
+Rationale: contracts are the only build that fails when the two clients
+disagree.
 
 ### V. Reproducible Ingest, Explicit Config
 
@@ -142,12 +126,11 @@ NOT scrape, guess, or commit price data.
 - MUST document inputs, outputs, and table mappings in the pipeline README
   (TCGCSV → `fab_sets` / `fab_cards` / `fab_card_prices` /
   `fab_price_history` / `fab_cards_with_prices`).
-- MUST NOT invent or estimate a price the catalog cannot source. Unpriced
-  is null. Null is shown as unpriced, never as zero.
+- MUST NOT invent or estimate a price the catalog cannot source (Product
+  Constraint 5). Unpriced is null; null is shown as unpriced, never as
+  zero.
 
-Rationale: this is the Snakemake-expert bar — modular workflow, explicit
-config, small CI, documented I/O — applied to the Node ingest we actually
-run. If the catalog is wrong, every client is wrong.
+Rationale: if the catalog is wrong, every client is wrong.
 
 ## Product Constraints
 
@@ -162,9 +145,9 @@ scope until the constitution is amended.
    Accounts add cloud sync and history; they MUST NOT be required to use
    the balancer.
 3. **One brand, two peer surfaces.** Web and mobile share one design
-   language and one catalog. A decision on one surface MUST be native to
-   the brand on the other. iOS and Android are one Flutter codebase, not
-   two ports.
+   language and one catalog. A decision on one surface MUST use the same
+   vocabulary, catalog, and `brand_palette.json` as the other. iOS and
+   Android are one Flutter codebase, not two ports.
 4. **Speak the trader's language.** `docs/CONTEXT.md` is authoritative.
    The product noun is **Binder**. **Trade Binder** is tradeable stock
    (Confirm Trade, Trade Filler, public share). **Collection** is allowed
@@ -207,9 +190,9 @@ scope until the constitution is amended.
 ### Dual-client DRY
 
 Because the runtimes cannot share code, DRY across web and mobile means
-shared *fixtures and vocabulary*, not a premature shared library. Mobile-only
-behavior (scan, Binder reconciliation, trade filler, lends) MUST NOT be
-forced onto web "for symmetry."
+shared *fixtures and vocabulary*, not a premature shared library (Principle
+IV). Mobile-only behavior (scan, Binder reconciliation, trade filler,
+lends) MUST NOT be forced onto web "for symmetry."
 
 ### Review
 
@@ -218,9 +201,10 @@ critical issues, then improvements. Prioritize changes that protect
 correctness or maintainability. Style nits that do not survive principle I
 are optional.
 
-Flag with high priority: silent error handling, stringly-typed domain
-values, mock-only tests, contract drift, client writes to entitlements,
-runtime environment switching, and domain-term misuse.
+Flag with high priority: silent error handling (III), stringly-typed
+domain values (III), mock-only tests (IV), contract drift (IV), client
+writes to entitlements (C7), runtime environment switching (C8), and
+domain-term misuse (C4).
 
 ### Documentation
 
@@ -268,4 +252,4 @@ Compliance:
   Product Constraints — never the other way around. We ship the simple
   correct thing, not the pretty wrong thing.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-14 | **Last Amended**: 2026-08-22
+**Version**: 1.1.1 | **Ratified**: 2026-08-14 | **Last Amended**: 2026-09-02

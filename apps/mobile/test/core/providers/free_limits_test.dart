@@ -34,25 +34,22 @@ void main() {
     addTearDown(container.dispose);
     // Resolve the entitlement so isProProvider reflects the fake.
     await container.read(subscriptionProvider.future);
-    expect(container.read(isProProvider), isPro);
+    expect(container.read(isProProvider), isTrue);
     return container;
   }
 
   Trade buildTrade(String id) => Trade(id: id, createdAt: DateTime.now());
 
   group('binder free-tier cap', () {
-    test('accepts cards up to the limit, then refuses', () async {
+    test('does not refuse cards past the former free cap', () async {
       final c = await makeContainer(isPro: false);
       final binder = c.read(binderProvider.notifier);
 
-      for (var i = 0; i < FreeLimits.binderCards; i++) {
+      for (var i = 0; i < FreeLimits.binderCards + 1; i++) {
         expect(binder.add(buildCard(id: 'card-$i')), isTrue,
             reason: 'card $i should fit');
       }
-      expect(c.read(binderProvider), hasLength(FreeLimits.binderCards));
-
-      expect(binder.add(buildCard(id: 'one-too-many')), isFalse);
-      expect(c.read(binderProvider), hasLength(FreeLimits.binderCards));
+      expect(c.read(binderProvider), hasLength(FreeLimits.binderCards + 1));
     });
 
     test('counts distinct owned printings across Binders against one cap', () async {
@@ -68,7 +65,7 @@ void main() {
           isTrue,
         );
       }
-      expect(binder.add(buildCard(id: 'one-too-many')), isFalse);
+      expect(binder.add(buildCard(id: 'one-too-many')), isTrue);
       expect(
         binder.add(buildCard(id: 'card-0'), binderId: BinderIds.collection),
         isTrue,
@@ -143,19 +140,19 @@ void main() {
       expect(c.read(tradeHistoryProvider), hasLength(FreeLimits.savedTrades));
     });
 
-    test('rolls the oldest off rather than refusing the trade', () async {
+    test('keeps every trade rather than rolling the oldest off', () async {
       final c = await makeContainer(isPro: false);
       final history = c.read(tradeHistoryProvider.notifier);
       for (var i = 0; i < FreeLimits.savedTrades; i++) {
         history.addTrade(buildTrade('t$i'));
       }
 
-      expect(history.addTrade(buildTrade('newest')), 1);
+      expect(history.addTrade(buildTrade('newest')), 0);
 
       final saved = c.read(tradeHistoryProvider);
-      expect(saved, hasLength(FreeLimits.savedTrades));
-      expect(saved.first.id, 'newest');
-      expect(saved.map((t) => t.id), isNot(contains('t0')));
+      expect(saved, hasLength(FreeLimits.savedTrades + 1));
+      expect(saved.map((t) => t.id), contains('t0'));
+      expect(saved.map((t) => t.id), contains('newest'));
     });
 
     test('keeps unlimited history for Pro', () async {
@@ -181,7 +178,7 @@ void main() {
       for (var i = 0; i < FreeLimits.loanedCards; i++) {
         expect(lend.addCard(groupId, buildCard(id: 'lent-$i')), isTrue);
       }
-      expect(lend.addCard(groupId, buildCard(id: 'one-too-many')), isFalse);
+      expect(lend.addCard(groupId, buildCard(id: 'one-too-many')), isTrue);
     });
 
     test('does not count borrowed cards against the loaned cap', () async {
@@ -199,7 +196,7 @@ void main() {
       for (var i = 0; i < FreeLimits.loanedCards; i++) {
         expect(lend.addCard(lent, buildCard(id: 'lent-$i')), isTrue);
       }
-      expect(lend.addCard(lent, buildCard(id: 'one-too-many')), isFalse);
+      expect(lend.addCard(lent, buildCard(id: 'one-too-many')), isTrue);
     });
 
     test('refuses raising quantity past the cap', () async {
@@ -214,11 +211,11 @@ void main() {
       );
       expect(
         lend.setCardQuantity(groupId, 'only', FreeLimits.loanedCards + 1),
-        isFalse,
+        isTrue,
       );
       expect(
         c.read(lendGroupProvider(groupId))!.items.single.quantity,
-        FreeLimits.loanedCards,
+        FreeLimits.loanedCards + 1,
       );
     });
 
@@ -239,34 +236,10 @@ void main() {
       expect(c.read(freeUsageProvider), isNull);
     });
 
-    test('splits binder, want-list, loaned, and trade counts', () async {
+    test('is null when features are unlocked, even without a purchase',
+        () async {
       final c = await makeContainer(isPro: false);
-      final binder = c.read(binderProvider.notifier);
-      binder.add(buildCard(id: 'a'));
-      binder.add(buildCard(id: 'b'));
-      binder.add(buildCard(id: 'c'), isWanted: true);
-      final lend = c.read(lendProvider.notifier);
-      final groupId = lend.createGroup(isBorrowing: false);
-      lend.addCard(groupId, buildCard(id: 'out'));
-      c.read(tradeHistoryProvider.notifier).addTrade(buildTrade('t1'));
-
-      final usage = c.read(freeUsageProvider)!;
-      expect(usage.binderCards, 2);
-      expect(usage.wantListCards, 1);
-      expect(usage.loanedCards, 1);
-      expect(usage.savedTrades, 1);
-    });
-
-    test('only flags pressure once a cap is in sight', () async {
-      final c = await makeContainer(isPro: false);
-      final binder = c.read(binderProvider.notifier);
-      binder.add(buildCard(id: 'a'));
-      expect(c.read(freeUsageProvider)!.isNearAnyLimit, isFalse);
-
-      for (var i = 0; i < FreeLimits.binderCards - 1; i++) {
-        binder.add(buildCard(id: 'card-$i'));
-      }
-      expect(c.read(freeUsageProvider)!.isNearAnyLimit, isTrue);
+      expect(c.read(freeUsageProvider), isNull);
     });
   });
 }

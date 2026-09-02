@@ -21,7 +21,7 @@ jest.mock('../../src/contexts/AuthContext.jsx', () => ({
 }));
 
 jest.mock('../../src/contexts/EntitlementContext.jsx', () => ({
-    useEntitlement: () => ({ isPro: false, loading: false }),
+    useEntitlement: () => ({ isPro: true, loading: false }),
 }));
 
 jest.mock('../../src/hooks/useCardData.jsx', () => {
@@ -136,7 +136,7 @@ describe('BinderGrid', () => {
         expect(screen.queryByTestId('binder-tile-want')).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByTestId('binder-tile-system:trade'));
-        expect(await screen.findByTestId('binder-value-total')).toBeInTheDocument();
+        expect(await screen.findByTestId('collection-stats')).toBeInTheDocument();
         expect(screen.queryByTestId('binder-grid')).not.toBeInTheDocument();
         expect(screen.getByTestId('binder-home-title')).toHaveTextContent('My Binders');
         expect(screen.getByTestId('binder-open-name')).toHaveTextContent('Trade Binder');
@@ -207,13 +207,13 @@ describe('BinderGrid', () => {
         renderCollection(false);
         expect(await screen.findByTestId('binder-home-title')).toHaveTextContent('My Binders');
         fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
-        expect(await screen.findByTestId('binder-value-total')).toBeInTheDocument();
+        expect(await screen.findByTestId('collection-stats')).toBeInTheDocument();
 
         fireEvent.click(screen.getByTestId('binder-home-title'));
         expect(await screen.findByTestId('binder-grid')).toBeInTheDocument();
 
         fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
-        expect(await screen.findByTestId('binder-value-total')).toBeInTheDocument();
+        expect(await screen.findByTestId('collection-stats')).toBeInTheDocument();
         fireEvent.click(screen.getAllByRole('link', { name: /My Binders/i })[0]);
         expect(await screen.findByTestId('binder-grid')).toBeInTheDocument();
     });
@@ -321,7 +321,7 @@ describe('BinderGrid', () => {
         prompt.mockRestore();
     });
 
-    test('5th Binder on free shows subscribe CTA and does not create', async () => {
+    test('5th Binder creates without a subscribe CTA', async () => {
         const four = [
             { clientId: 'system:trade', name: 'Trade Binder', role: 'trade', deletedAt: null },
             { clientId: 'system:collection', name: 'Collection', role: 'standard', deletedAt: null },
@@ -329,10 +329,16 @@ describe('BinderGrid', () => {
             { clientId: 'b4', name: 'Fourth', role: 'standard', deletedAt: null },
         ];
         mockGetBinders.mockResolvedValue({ data: { binders: four, all: four }, error: null });
+        mockCreateBinder.mockResolvedValue({
+            data: { clientId: 'b5', name: 'Fifth', role: 'standard', deletedAt: null },
+            error: null,
+        });
+        const prompt = jest.spyOn(window, 'prompt').mockReturnValue('Fifth');
         renderCollection(false);
         expect(await screen.findByText('Fourth')).toBeInTheDocument();
         fireEvent.click(screen.getByTestId('binder-create'));
-        expect(await screen.findByText(/Subscribe in the FABTrades app/)).toBeInTheDocument();
-        expect(mockCreateBinder).not.toHaveBeenCalled();
+        await waitFor(() => expect(mockCreateBinder).toHaveBeenCalled());
+        expect(screen.queryByText(/Subscribe in the FABTrades app/)).not.toBeInTheDocument();
+        prompt.mockRestore();
     });
 });

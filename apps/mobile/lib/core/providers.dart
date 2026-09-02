@@ -23,6 +23,7 @@ import 'data/set_published_on.dart';
 import 'data/settings_repository.dart';
 import 'data/trade_repository.dart';
 import 'logic/confirm_trade.dart';
+import 'logic/feature_access.dart';
 import 'logic/free_limits.dart';
 import 'logic/binder_move.dart';
 import 'logic/binder_names.dart';
@@ -636,10 +637,11 @@ final entitlementProvider = Provider<Entitlement>((ref) {
   );
 });
 
-/// The single check to gate a Pro feature on. Defaults to locked while the
-/// entitlement is still loading or couldn't be read.
+/// Feature access. [unlockAllFeatures] opens everything; flip that flag to
+/// restore gating. [entitlementProvider] still reflects a real purchase for
+/// manage/cancel.
 final isProProvider = Provider<bool>(
-  (ref) => ref.watch(entitlementProvider).isPro,
+  (ref) => unlockAllFeatures || ref.watch(entitlementProvider).isPro,
 );
 
 /// Whether to show subscription UI at all — false on builds without a

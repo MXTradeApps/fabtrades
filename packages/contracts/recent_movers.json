@@ -1,0 +1,561 @@
+{
+  "$comment": "Recent movers ranking: start Low in the 3–5 day window vs latest catalog Low. Web (JS) and mobile (Dart) both assert these cases. SQL fab_recent_movers must emit the same eligibility and order. See packages/contracts/README.md and specs/005-card-gainers-losers/contracts/recent-movers.md.",
+  "today": "2026-08-26",
+  "limits": {
+    "start_low_floor": 1,
+    "max_observed_low": 10000,
+    "max_abs_percent_change": 10
+  },
+  "ranking_cases": [
+    {
+      "name": "TCG uses tcg_low, never cm_low or Market",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "aaa-normal": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 2.0,
+            "tcg_market": 9.0,
+            "cm_low": 10.0
+          }
+        ]
+      },
+      "current_lows": {
+        "aaa-normal": {
+          "tcg_low": 4.0,
+          "cm_low": 10.0,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "aaa-normal",
+            "start_on": "2026-08-23",
+            "start_low": 2.0,
+            "latest_low": 4.0,
+            "percent_change": 1.0,
+            "amount_change": 2.0
+          }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "CardMarket uses cm_low, never tcg_low or Trend",
+      "source": "cardmarket",
+      "snapshots_by_card": {
+        "bbb-foil": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 8.0,
+            "cm_low": 2.0,
+            "cm_trend": 9.0
+          }
+        ]
+      },
+      "current_lows": {
+        "bbb-foil": {
+          "tcg_low": 8.0,
+          "cm_low": 3.0,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "bbb-foil",
+            "start_on": "2026-08-23",
+            "start_low": 2.0,
+            "latest_low": 3.0,
+            "percent_change": 0.5,
+            "amount_change": 1.0
+          }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "null Low is skipped, never coerced to 0",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "null-only": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": null,
+            "tcg_market": 5.0
+          }
+        ],
+        "has-low": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 2.0
+          }
+        ]
+      },
+      "current_lows": {
+        "null-only": {
+          "tcg_low": 4.0,
+          "cm_low": null,
+          "is_sealed": false
+        },
+        "has-low": {
+          "tcg_low": 3.0,
+          "cm_low": null,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "has-low",
+            "start_on": "2026-08-23",
+            "start_low": 2.0,
+            "latest_low": 3.0,
+            "percent_change": 0.5,
+            "amount_change": 1.0
+          }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "start is the most recent non-null Low in the 3–5 day band",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "window-pick": [
+          {
+            "captured_on": "2026-08-21",
+            "tcg_low": 2.0
+          },
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 3.0
+          }
+        ]
+      },
+      "current_lows": {
+        "window-pick": {
+          "tcg_low": 6.0,
+          "cm_low": null,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "window-pick",
+            "start_on": "2026-08-23",
+            "start_low": 3.0,
+            "latest_low": 6.0,
+            "percent_change": 1.0,
+            "amount_change": 3.0
+          }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "2-day and 6-day starts are rejected",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "too-new": [
+          {
+            "captured_on": "2026-08-24",
+            "tcg_low": 2.0
+          }
+        ],
+        "too-old": [
+          {
+            "captured_on": "2026-08-20",
+            "tcg_low": 2.0
+          }
+        ],
+        "in-window": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 2.0
+          }
+        ]
+      },
+      "current_lows": {
+        "too-new": {
+          "tcg_low": 4.0,
+          "cm_low": null,
+          "is_sealed": false
+        },
+        "too-old": {
+          "tcg_low": 4.0,
+          "cm_low": null,
+          "is_sealed": false
+        },
+        "in-window": {
+          "tcg_low": 4.0,
+          "cm_low": null,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "in-window",
+            "start_on": "2026-08-23",
+            "start_low": 2.0,
+            "latest_low": 4.0,
+            "percent_change": 1.0,
+            "amount_change": 2.0
+          }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "start Low under $1 is excluded, including a 30c to 60c spike",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "cheap-spike": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 0.3
+          }
+        ],
+        "just-under": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 0.99
+          }
+        ],
+        "at-floor": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 1.0
+          }
+        ]
+      },
+      "current_lows": {
+        "cheap-spike": {
+          "tcg_low": 0.6,
+          "cm_low": null,
+          "is_sealed": false
+        },
+        "just-under": {
+          "tcg_low": 2.0,
+          "cm_low": null,
+          "is_sealed": false
+        },
+        "at-floor": {
+          "tcg_low": 2.0,
+          "cm_low": null,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "at-floor",
+            "start_on": "2026-08-23",
+            "start_low": 1.0,
+            "latest_low": 2.0,
+            "percent_change": 1.0,
+            "amount_change": 1.0
+          }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "start Low under €1 is excluded on CardMarket",
+      "source": "cardmarket",
+      "snapshots_by_card": {
+        "cm-cheap": [
+          {
+            "captured_on": "2026-08-23",
+            "cm_low": 0.3,
+            "tcg_low": 5.0
+          }
+        ],
+        "cm-floor": [
+          {
+            "captured_on": "2026-08-23",
+            "cm_low": 1.0,
+            "tcg_low": 5.0
+          }
+        ]
+      },
+      "current_lows": {
+        "cm-cheap": {
+          "tcg_low": 5.0,
+          "cm_low": 0.6,
+          "is_sealed": false
+        },
+        "cm-floor": {
+          "tcg_low": 5.0,
+          "cm_low": 2.0,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "cm-floor",
+            "start_on": "2026-08-23",
+            "start_low": 1.0,
+            "latest_low": 2.0,
+            "percent_change": 1.0,
+            "amount_change": 1.0
+          }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "0% change is dropped; null latest Low is ineligible",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "unchanged": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 2.0
+          }
+        ],
+        "no-latest": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 2.0
+          }
+        ],
+        "loser": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 4.0
+          }
+        ]
+      },
+      "current_lows": {
+        "unchanged": {
+          "tcg_low": 2.0,
+          "cm_low": null,
+          "is_sealed": false
+        },
+        "no-latest": {
+          "tcg_low": null,
+          "cm_low": null,
+          "is_sealed": false
+        },
+        "loser": {
+          "tcg_low": 2.0,
+          "cm_low": null,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [],
+        "losers": [
+          {
+            "card_id": "loser",
+            "start_on": "2026-08-23",
+            "start_low": 4.0,
+            "latest_low": 2.0,
+            "percent_change": -0.5,
+            "amount_change": -2.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "sealed products are dropped",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "sealed-box": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 80.0
+          }
+        ],
+        "playable": [
+          {
+            "captured_on": "2026-08-23",
+            "tcg_low": 2.0
+          }
+        ]
+      },
+      "current_lows": {
+        "sealed-box": {
+          "tcg_low": 120.0,
+          "cm_low": null,
+          "is_sealed": true
+        },
+        "playable": {
+          "tcg_low": 3.0,
+          "cm_low": null,
+          "is_sealed": false
+        }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "playable",
+            "start_on": "2026-08-23",
+            "start_low": 2.0,
+            "latest_low": 3.0,
+            "percent_change": 0.5,
+            "amount_change": 1.0
+          }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "top 10 cut keeps the largest percents; never pads",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "g-01": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-02": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-03": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-04": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-05": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-06": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-07": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-08": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-09": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-10": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-11": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "g-12": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }]
+      },
+      "current_lows": {
+        "g-01": { "tcg_low": 11.0, "cm_low": null, "is_sealed": false },
+        "g-02": { "tcg_low": 10.0, "cm_low": null, "is_sealed": false },
+        "g-03": { "tcg_low": 9.0, "cm_low": null, "is_sealed": false },
+        "g-04": { "tcg_low": 8.0, "cm_low": null, "is_sealed": false },
+        "g-05": { "tcg_low": 7.0, "cm_low": null, "is_sealed": false },
+        "g-06": { "tcg_low": 6.0, "cm_low": null, "is_sealed": false },
+        "g-07": { "tcg_low": 5.0, "cm_low": null, "is_sealed": false },
+        "g-08": { "tcg_low": 4.0, "cm_low": null, "is_sealed": false },
+        "g-09": { "tcg_low": 3.0, "cm_low": null, "is_sealed": false },
+        "g-10": { "tcg_low": 2.0, "cm_low": null, "is_sealed": false },
+        "g-11": { "tcg_low": 1.9, "cm_low": null, "is_sealed": false },
+        "g-12": { "tcg_low": 1.8, "cm_low": null, "is_sealed": false }
+      },
+      "expected": {
+        "gainers": [
+          { "card_id": "g-01", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 11.0, "percent_change": 10.0, "amount_change": 10.0 },
+          { "card_id": "g-02", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 10.0, "percent_change": 9.0, "amount_change": 9.0 },
+          { "card_id": "g-03", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 9.0, "percent_change": 8.0, "amount_change": 8.0 },
+          { "card_id": "g-04", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 8.0, "percent_change": 7.0, "amount_change": 7.0 },
+          { "card_id": "g-05", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 7.0, "percent_change": 6.0, "amount_change": 6.0 },
+          { "card_id": "g-06", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 6.0, "percent_change": 5.0, "amount_change": 5.0 },
+          { "card_id": "g-07", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 5.0, "percent_change": 4.0, "amount_change": 4.0 },
+          { "card_id": "g-08", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 4.0, "percent_change": 3.0, "amount_change": 3.0 },
+          { "card_id": "g-09", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 3.0, "percent_change": 2.0, "amount_change": 2.0 },
+          { "card_id": "g-10", "start_on": "2026-08-23", "start_low": 1.0, "latest_low": 2.0, "percent_change": 1.0, "amount_change": 1.0 }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "equal percent is broken by card_id ASC",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "m-bbb": [{ "captured_on": "2026-08-23", "tcg_low": 2.0 }],
+        "m-aaa": [{ "captured_on": "2026-08-23", "tcg_low": 2.0 }]
+      },
+      "current_lows": {
+        "m-bbb": { "tcg_low": 4.0, "cm_low": null, "is_sealed": false },
+        "m-aaa": { "tcg_low": 4.0, "cm_low": null, "is_sealed": false }
+      },
+      "expected": {
+        "gainers": [
+          { "card_id": "m-aaa", "start_on": "2026-08-23", "start_low": 2.0, "latest_low": 4.0, "percent_change": 1.0, "amount_change": 2.0 },
+          { "card_id": "m-bbb", "start_on": "2026-08-23", "start_low": 2.0, "latest_low": 4.0, "percent_change": 1.0, "amount_change": 2.0 }
+        ],
+        "losers": []
+      }
+    },
+    {
+      "name": "implausible Low or percent is omitted, never shown as a real move",
+      "source": "tcgplayer",
+      "snapshots_by_card": {
+        "bogus-latest": [{ "captured_on": "2026-08-23", "tcg_low": 2.0 }],
+        "bogus-start": [{ "captured_on": "2026-08-23", "tcg_low": 150000.0 }],
+        "huge-percent": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "at-percent-cap": [{ "captured_on": "2026-08-23", "tcg_low": 1.0 }],
+        "real-expensive": [{ "captured_on": "2026-08-23", "tcg_low": 2000.0 }]
+      },
+      "current_lows": {
+        "bogus-latest": { "tcg_low": 150000.0, "cm_low": null, "is_sealed": false },
+        "bogus-start": { "tcg_low": 160000.0, "cm_low": null, "is_sealed": false },
+        "huge-percent": { "tcg_low": 50.0, "cm_low": null, "is_sealed": false },
+        "at-percent-cap": { "tcg_low": 11.0, "cm_low": null, "is_sealed": false },
+        "real-expensive": { "tcg_low": 2500.0, "cm_low": null, "is_sealed": false }
+      },
+      "expected": {
+        "gainers": [
+          {
+            "card_id": "at-percent-cap",
+            "start_on": "2026-08-23",
+            "start_low": 1.0,
+            "latest_low": 11.0,
+            "percent_change": 10.0,
+            "amount_change": 10.0
+          },
+          {
+            "card_id": "real-expensive",
+            "start_on": "2026-08-23",
+            "start_low": 2000.0,
+            "latest_low": 2500.0,
+            "percent_change": 0.25,
+            "amount_change": 500.0
+          }
+        ],
+        "losers": []
+      }
+    }
+  ],
+  "owned_id_cases": [
+    {
+      "name": "qty > 0 in any Binder is owned",
+      "entries": [
+        { "card_id": "aaa-normal", "isWanted": false, "quantity": 2, "binderId": "system:trade", "condition": "NM", "deletedAt": null },
+        { "card_id": "bbb-foil", "isWanted": false, "quantity": 1, "binderId": "system:collection", "condition": "LP", "deletedAt": null }
+      ],
+      "expected_ids": ["aaa-normal", "bbb-foil"]
+    },
+    {
+      "name": "Want List is excluded",
+      "entries": [
+        { "card_id": "want-only", "isWanted": true, "quantity": 3, "binderId": null, "condition": "NM", "deletedAt": null },
+        { "card_id": "owned-card", "isWanted": false, "quantity": 1, "binderId": "system:trade", "condition": "NM", "deletedAt": null }
+      ],
+      "expected_ids": ["owned-card"]
+    },
+    {
+      "name": "same Printing in two Binders is one id",
+      "entries": [
+        { "card_id": "dup-print", "isWanted": false, "quantity": 1, "binderId": "system:trade", "condition": "NM", "deletedAt": null },
+        { "card_id": "dup-print", "isWanted": false, "quantity": 2, "binderId": "system:collection", "condition": "NM", "deletedAt": null }
+      ],
+      "expected_ids": ["dup-print"]
+    },
+    {
+      "name": "same Printing in two conditions is one id",
+      "entries": [
+        { "card_id": "cond-print", "isWanted": false, "quantity": 1, "binderId": "system:trade", "condition": "NM", "deletedAt": null },
+        { "card_id": "cond-print", "isWanted": false, "quantity": 1, "binderId": "system:trade", "condition": "LP", "deletedAt": null }
+      ],
+      "expected_ids": ["cond-print"]
+    },
+    {
+      "name": "empty Binders yield no ids",
+      "entries": [],
+      "expected_ids": []
+    },
+    {
+      "name": "qty 0 and tombstones are not owned",
+      "entries": [
+        { "card_id": "zero-qty", "isWanted": false, "quantity": 0, "binderId": "system:trade", "condition": "NM", "deletedAt": null },
+        { "card_id": "tombstoned", "isWanted": false, "quantity": 1, "binderId": "system:trade", "condition": "NM", "deletedAt": "2026-08-20T00:00:00.000Z" }
+      ],
+      "expected_ids": []
+    }
+  ]
+}

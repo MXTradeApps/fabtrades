@@ -163,16 +163,21 @@ void main() {
     expect(find.byType(LineChart), findsOneWidget);
   });
 
-  testWidgets('free + older snapshots show Pro line, not a span control',
+  testWidgets('older snapshots show span control, never a Pro CTA',
       (tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await pumpDetails(
       tester,
       catalog: [card],
       priceHistory: {card.id: chartable(withOlder: true)},
     );
 
-    expect(find.text('See full history with Pro'), findsOneWidget);
-    expect(find.byKey(PriceHistorySection.spanToggleKey), findsNothing);
+    expect(find.text('See full history with Pro'), findsNothing);
+    expect(find.byKey(PriceHistorySection.spanToggleKey), findsOneWidget);
     expect(find.byType(LineChart), findsOneWidget);
   });
 
