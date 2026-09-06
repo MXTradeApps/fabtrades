@@ -9,7 +9,7 @@ cd apps/web && npm install && npm test
 cd apps/mobile && flutter test
 ```
 
-Apply the multi-binders migration to the local/staging Supabase the apps already use. Catalog snapshot unchanged.
+Apply `supabase/migrations/20260822194254_multi_binders.sql` to the local/staging Supabase the apps already use. Catalog snapshot unchanged.
 
 ## Automated checks
 
@@ -29,7 +29,7 @@ Expected:
 
 1. Mobile signed-out: Binder tab shows Trade Binder and Collection. Empty Collection has 0, zero value, no cover. Open Trade Binder; back returns to the grid. Want List tab still works and is not a tile.
 2. Mobile with existing Binder cards (pre-update data): those cards are in Trade Binder; Collection is empty; tile count/value match the list.
-3. Web signed-in `/binder`: same two tiles; `/wants` unchanged. Tile cover on a non-empty Trade Binder is that Binder’s highest-value card art.
+3. Web signed-in `/binder`: same two tiles; `/wants` unchanged. Tile cover on a non-empty Trade Binder is that Binder’s highest-value card art. Drill-in uses `?b=<clientId>`.
 
 ## Manual — Want List (P1)
 
@@ -58,5 +58,5 @@ Expected:
 - [ ] Trade Binder is not deletable; Collection is empty-to-delete
 - [ ] Shared 50-card cap and 4-Binder cap match the fixture; 5th create is Pro upgrade
 - [ ] Confirm Trade / share / filler use Trade Binder only
-- [ ] `docs/CONTEXT.md` and constitution vocabulary updated in the same change
+- [ ] `docs/CONTEXT.md` and constitution 1.1.0 vocabulary (Collection as Binder name) remain in force
 - [ ] Pipeline ingest unchanged

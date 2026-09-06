@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fabtrades/core/data/catalog_repository.dart';
 import 'package:fabtrades/core/data/binder_repository.dart';
+import 'package:fabtrades/core/data/binders_repository.dart';
 import 'package:fabtrades/core/data/lend_repository.dart';
 import 'package:fabtrades/core/data/settings_repository.dart';
 import 'package:fabtrades/core/data/trade_repository.dart';
@@ -86,6 +87,40 @@ void main() {
       expect(loaded.single.quantity, 4);
       expect(loaded.single.isWanted, isFalse);
       expect(loaded.single.binderId, BinderIds.trade);
+    });
+  });
+
+  group('BindersRepository', () {
+    Future<BindersRepository> bindersRepo(
+        [Map<String, Object> seed = const {}]) async {
+      final prefs = await freshPrefs(seed);
+      return BindersRepository(prefs, SyncJournal(prefs));
+    }
+
+    test('first run seeds Trade Binder and Collection', () async {
+      final repo = await bindersRepo();
+      final seeded = repo.loadAndPersistSeed();
+      expect(seeded.map((b) => b.clientId), [
+        BinderIds.trade,
+        BinderIds.collection,
+      ]);
+      expect(repo.load().map((b) => b.clientId), [
+        BinderIds.trade,
+        BinderIds.collection,
+      ]);
+    });
+
+    test('restores Trade Binder if tombstoned and does not resurrect Collection',
+        () async {
+      final stamp = DateTime.utc(2026, 8, 1).toIso8601String();
+      final repo = await bindersRepo({
+        'binders':
+            '[{"client_id":"system:trade","name":"Trade Binder","role":"trade",'
+                '"created_at":"$stamp","updated_at":"$stamp","deleted_at":"$stamp"}]',
+      });
+      final loaded = repo.loadAndPersistSeed();
+      expect(loaded.singleWhere((b) => b.role == BinderRole.trade).isLive, isTrue);
+      expect(loaded.any((b) => b.clientId == BinderIds.collection), isFalse);
     });
   });
 

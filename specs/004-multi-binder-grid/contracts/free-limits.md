@@ -1,6 +1,6 @@
 # Contract: Free limits (multi-Binder)
 
-Extends `packages/contracts/free_limits.json`. Implementations: `freeLimits.js` / `free_limits.dart`. Both suites MUST assert the JSON.
+Extends `packages/contracts/free_limits.json`. Implementations: `apps/web/src/utils/freeLimits.js` / `apps/mobile/lib/core/logic/free_limits.dart`. Both suites MUST assert the JSON.
 
 ## Limits (free)
 
@@ -24,7 +24,7 @@ Fixture cases: keep the fiftieth/fifty-first owned-card cases; add a case that 5
 ## binders
 
 - Live count includes empty Trade Binder and empty Collection.
-- Tombestoned Collection does not count; player may create another Binder (including named Collection) if under 4.
+- Tombstoned Collection does not count; player may create another Binder (including named Collection) if under 4.
 - Case: 3 live Binders → create allowed; 4 live → create forbidden for free, allowed for Pro.
 
 `behaviour.binders = "paywall"` means the create UI presents the Pro upgrade. It does not write entitlements. After a successful Pro purchase, retry create.

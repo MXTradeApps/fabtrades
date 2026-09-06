@@ -5,7 +5,7 @@ Dual-client rules. Golden cases:
 - `packages/contracts/binder_cover.json`
 - `packages/contracts/binder_names.json`
 
-Implementations: `binderCover` / `BinderCover` and `binderNames` / `BinderNames` on each client.
+Implementations: `apps/web/src/utils/binderCover.js` / `apps/mobile/lib/core/logic/binder_cover.dart` and `apps/web/src/utils/binderNames.js` / `apps/mobile/lib/core/logic/binder_names.dart`.
 
 Not an HTTP API. Both suites MUST assert the same JSON.
 
@@ -14,13 +14,13 @@ Not an HTTP API. Both suites MUST assert the same JSON.
 | `clientId` | Default name | `role` | Seed |
 | --- | --- | --- | --- |
 | `system:trade` | Trade Binder | `trade` | Always, if missing |
-| `system:collection` | Collection | `standard` | Always, if missing |
+| `system:collection` | Collection | `standard` | First run, if missing; do not resurrect after delete |
 
 User Binders: `role = standard`, `clientId` = UUID.
 
 ## Name uniqueness
 
-Normalize: `trim`, then case-fold. Empty after trim is invalid.
+Normalize: `trim`, then case-fold for comparison. Display keeps original casing after trim. Empty after trim is invalid.
 
 - Create/rename to a name that matches another **live** Binder → refuse, no write.
 - Rename to the same Binder’s current name → success.

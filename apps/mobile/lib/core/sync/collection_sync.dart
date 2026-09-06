@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'binders_sync.dart';
 import 'remote_store.dart';
 import 'sync_adapter.dart';
 import 'sync_journal.dart';
@@ -126,7 +127,15 @@ class CollectionSync<T> {
       }
     }
 
-    await remote.upsertAll(upserts);
+    try {
+      await remote.upsertAll(upserts);
+    } catch (e) {
+      if (adapter.domain == SyncDomain.binders &&
+          isLiveNameUniqueViolation(e)) {
+        throw StateError('A Binder with that name already exists');
+      }
+      rethrow;
+    }
 
     for (final record in tombstones) {
       await remote.markDeleted(

@@ -115,6 +115,9 @@ apps/web/.catalog-snapshot.json
 supabase/.branches/
 supabase/.temp/
 
+# Netlify CLI local state
+.netlify/
+
 # App Store screenshot drafts / exports (large binary assets)
 screenshots/
 

@@ -17,10 +17,13 @@ import {
     checkCanAddBinderCard,
     ensureBinderShare,
     getBinderEntries,
+    createBinder,
     getPublicBinder,
+    isLiveNameUniqueViolation,
     newBinderShareToken,
     parseCardStub,
     removeEntry,
+    renameBinder,
     upsertEntry,
 } from '../../src/services/binder.js';
 
@@ -398,5 +401,69 @@ describe('binder share helpers', () => {
         const { data, error } = await getPublicBinder('b'.repeat(32));
         expect(data).toBeNull();
         expect(error.message).toMatch(/unavailable/i);
+    });
+});
+
+describe('createBinder / renameBinder unique-violation', () => {
+    const liveRows = [
+        {
+            client_id: 'system:trade',
+            name: 'Trade Binder',
+            role: 'trade',
+            created_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+            deleted_at: null,
+        },
+        {
+            client_id: 'system:collection',
+            name: 'Collection',
+            role: 'standard',
+            created_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+            deleted_at: null,
+        },
+    ];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        asUser('user-1');
+        fetchEntitlement.mockResolvedValue({ isPro: false });
+    });
+
+    test('isLiveNameUniqueViolation detects Postgres 23505', () => {
+        expect(isLiveNameUniqueViolation({ code: '23505' })).toBe(true);
+        expect(isLiveNameUniqueViolation({
+            message: 'duplicate key value violates unique constraint "binders_user_live_name_idx"',
+        })).toBe(true);
+        expect(isLiveNameUniqueViolation({ message: 'network' })).toBe(false);
+    });
+
+    test('createBinder surfaces unique-violation instead of silently renaming', async () => {
+        const listChain = makeChain({ data: liveRows, error: null });
+        const upsertChain = makeChain({
+            data: null,
+            error: { code: '23505', message: 'duplicate key value violates unique constraint "binders_user_live_name_idx"' },
+        });
+        supabase.from.mockReturnValueOnce(listChain).mockReturnValueOnce(upsertChain);
+
+        const { data, error } = await createBinder({ name: 'Side Event', isPro: false });
+        expect(data).toBeNull();
+        expect(error).toMatchObject({ reason: 'duplicate', message: 'duplicate' });
+    });
+
+    test('renameBinder surfaces unique-violation instead of silently renaming', async () => {
+        const listChain = makeChain({ data: liveRows, error: null });
+        const updateChain = makeChain({
+            data: null,
+            error: { code: '23505', message: 'duplicate key value violates unique constraint "binders_user_live_name_idx"' },
+        });
+        supabase.from.mockReturnValueOnce(listChain).mockReturnValueOnce(updateChain);
+
+        const { data, error } = await renameBinder({
+            clientId: 'system:trade',
+            name: 'Event Binder',
+        });
+        expect(data).toBeNull();
+        expect(error).toMatchObject({ reason: 'duplicate', message: 'duplicate' });
     });
 });
