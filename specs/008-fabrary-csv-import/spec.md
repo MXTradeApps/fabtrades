@@ -13,6 +13,7 @@
 ### Session 2026-09-10
 
 - Q: If this Binder already has cards, should confirming the Fabrary file replace those cards or add the imported copies on top of them? → A: Add the imported copies on top of whatever is already in this Binder (same Printing quantities combine).
+- Q: If one owned Fabrary row could match more than one catalog Printing, should that row be skipped or should the product pick one? → A: Pick one candidate using a stable rule (prefer the regular printing when it is a candidate; otherwise a fixed catalog order).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -116,6 +117,7 @@ If they are on the free tier and the import would put them over the shared disti
 - **Non-numeric Have**: That row is skipped and listed with unmatched/skipped owned rows; it does not abort the rest of a valid file.
 - **Duplicate owned rows for one Printing**: Have quantities add together in this Binder.
 - **Identifier is not unique**: Fabrary repeats the same identifier across sets, finishes, treatments, and editions. Matching MUST use set number, finish, treatment, and edition — not identifier or name alone.
+- **More than one catalog Printing fits**: The product MUST pick exactly one. Prefer the regular printing (no special treatment) when it is a candidate. Otherwise pick the first in a fixed catalog order (name, then set number, then finish) so the same file against the same catalog always chooses the same Printing. That row is matched, not unmatched.
 - **Blank finish**: A blank Foiling is the regular (non-foil) printing, not "any foil."
 - **Blank treatment / edition**: Matches the ordinary printing of that set number, not an extended-art, full-art, or First/Unlimited/Alpha variant.
 - **Unmatched owned rows**: Shown to the player. They are not added. Matched rows still import when the player confirms (unless a cap or file refusal applies).
@@ -144,7 +146,7 @@ If they are on the free tier and the import would put them over the shared disti
 - **FR-007**: Before any write, the product MUST show a preview: owned-row count, matched count, unmatched count, copies that will be added (sum of Have on matched rows), and that confirming **adds** those copies to this Binder without removing existing cards.
 - **FR-008**: Canceling the preview or the file picker MUST leave all Binders and Want List unchanged.
 - **FR-009**: Confirming MUST add the matched owned printings to this Binder. Existing cards in this Binder MUST remain. Same Near Mint Printing quantities MUST combine. Other Binders MUST NOT be edited.
-- **FR-010**: Each matched row MUST become the catalog Printing that shares that row's card identity, set number, finish, treatment, and edition. A blank finish MUST map to the regular printing. A filled finish (Rainbow, Cold, Gold) MUST NOT land on a different finish. A treated or edition-specific row MUST NOT land on the untreated / edition-less printing of the same set number.
+- **FR-010**: Each matched row MUST become the catalog Printing that shares that row's card identity, set number, finish, treatment, and edition. A blank finish MUST map to the regular printing. A filled finish (Rainbow, Cold, Gold) MUST NOT land on a different finish. A treated or edition-specific row MUST NOT land on the untreated / edition-less printing of the same set number. If more than one catalog Printing still fits, the product MUST pick exactly one: the regular (no special treatment) printing when it is a candidate, otherwise the first in a fixed catalog order (name, then set number, then finish). The same file against the same catalog MUST always pick the same Printing. That row MUST be counted as matched, not unmatched.
 - **FR-011**: Added quantity MUST be the row's Have value (summed when several owned rows match one Printing). Added copies MUST be Near Mint. If this Binder already has that Printing in Near Mint, the Have quantity MUST be added to that row. Existing rows in other conditions MUST stay unchanged.
 - **FR-012**: Unmatched owned rows MUST be listed for the player (enough identity to find the card: name, set number, finish, treatment, edition). Those rows MUST NOT appear in the Binder.
 - **FR-013**: If the file is readable as a Fabrary export but no owned row matches the catalog, the product MUST refuse the write and say that none of the owned cards were found.
@@ -158,7 +160,7 @@ If they are on the free tier and the import would put them over the shared disti
 
 - **Fabrary collection export**: A collection table exported from Fabrary. The attached example (September 2026) has these columns: Identifier, Name, Pitch, Set, Set number, Edition, Foiling, Treatment, Have, Want in trade, Want to buy, Extra for trade, Extra to sell. One row is one printing of a card. A typical file lists the whole catalog (example: ~17,000 rows) and fills Have only where the player owns copies (example: ~3,800 owned rows, ~6,900 copies).
 - **Owned row**: A file row whose Have is a number greater than zero. This is the only row type that can become a Binder card.
-- **Printing match**: The catalog Printing that corresponds to an owned row's set number, finish, treatment, and edition (plus card/pitch identity). Identifier alone is not a Printing — Fabrary reuses it across variants.
+- **Printing match**: The catalog Printing that corresponds to an owned row's set number, finish, treatment, and edition (plus card/pitch identity). Identifier alone is not a Printing — Fabrary reuses it across variants. When more than one catalog Printing fits, one is chosen by the stable rule in FR-010.
 - **Binder settings**: The per-Binder management surface for one Binder (rename/delete remain elsewhere or here; this feature requires import to live here). Not app-wide Settings. Not Want List.
 - **Import preview**: The confirmation the player sees after a valid file is read and before copies are added to this Binder.
 - **Unmatched owned row**: An owned row with no catalog Printing. Shown to the player; never written.
@@ -177,6 +179,7 @@ If they are on the free tier and the import would put them over the shared disti
 - **SC-007**: 100% of non-Fabrary files and empty-Have Fabrary files leave every Binder unchanged and show a message the tester can act on (get a Fabrary collection export, or export after marking Have).
 - **SC-008**: 100% of free-tier imports that would exceed the shared distinct-card cap leave every Binder unchanged and show the Pro upgrade.
 - **SC-009**: When a valid import includes unmatched owned rows, 100% of those skipped cards are visible to the player by name (and set/finish when present) after confirm.
+- **SC-012**: Importing the same Fabrary file twice against the same catalog adds the same Printings each time (the stable pick for an ambiguous row does not change between runs).
 - **SC-010**: A signed-out player can complete import into an on-device Binder without creating an account.
 - **SC-011**: Canceling at preview leaves this Binder's previous cards in place in 100% of attempts, including when the Binder was non-empty.
 
