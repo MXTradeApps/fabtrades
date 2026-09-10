@@ -10,7 +10,22 @@ const ART_TREATMENTS = [
     'alternate art',
     'alternate text',
     'alternate border',
+    'alt art',
+    'marvel',
+    'treasure',
 ];
+
+/** Fabrary Treatment labels → catalog name parentheticals. */
+const TREATMENT_ALIASES = {
+    'full art': ['full art', 'marvel', 'treasure'],
+    'alternate art': ['alternate art', 'alt art'],
+    'alt art': ['alternate art', 'alt art'],
+    'extended art': ['extended art'],
+    'alternate border': ['alternate border'],
+    'alternate text': ['alternate text'],
+};
+
+const FOIL_NUMBER_SUFFIX = /(cf|rf|gf)$/;
 
 const PITCH_BY_NAME = { red: '1', yellow: '2', blue: '3' };
 const NAME_BY_PITCH = { 1: 'red', 2: 'yellow', 3: 'blue' };
@@ -19,6 +34,29 @@ export function collectorNumberKey(raw) {
     if (raw == null) return null;
     const key = String(raw).toLowerCase().replace(/[^a-z0-9]+/g, '');
     return key === '' ? null : key;
+}
+
+/** Index keys for a collector number, including `//` / `/` faces and foil suffixes. */
+export function collectorNumberKeys(raw) {
+    const text = raw == null ? '' : String(raw);
+    if (!text.trim()) return [];
+    const segments = text.split(/\s*\/\/\s*|\s*\/\s*/).map((part) => part.trim()).filter(Boolean);
+    const keys = [];
+    const seen = new Set();
+    const add = (value) => {
+        const key = collectorNumberKey(value);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        keys.push(key);
+        const stripped = key.replace(FOIL_NUMBER_SUFFIX, '');
+        if (stripped !== key && stripped.length >= 5 && !seen.has(stripped)) {
+            seen.add(stripped);
+            keys.push(stripped);
+        }
+    };
+    add(text);
+    for (const part of segments) add(part);
+    return keys;
 }
 
 export function printingIdOf(card) {
@@ -54,8 +92,8 @@ export function nameQualifier(name) {
     return match ? match[1] : null;
 }
 
-function haystack(card) {
-    return `${card?.name || ''} ${subTypeOf(card)} ${setNameOf(card)}`.toLowerCase();
+function editionHaystack(card) {
+    return `${subTypeOf(card)} ${setNameOf(card)}`.toLowerCase();
 }
 
 function hasArtTreatment(name) {
@@ -67,6 +105,11 @@ function isRegularPrinting(card) {
     return !hasArtTreatment(card?.name || '');
 }
 
+function hasPitchColorName(name) {
+    const lower = String(name || '').toLowerCase();
+    return lower.includes('(red)') || lower.includes('(yellow)') || lower.includes('(blue)');
+}
+
 function matchesPitch(card, fabraryPitch) {
     const want = String(fabraryPitch || '').trim().toLowerCase();
     if (!want) {
@@ -76,10 +119,14 @@ function matchesPitch(card, fabraryPitch) {
     }
     const mapped = PITCH_BY_NAME[want];
     const catalogPitch = pitchOf(card);
-    if (mapped && catalogPitch && String(catalogPitch) === mapped) return true;
+    const hasNumericPitch = catalogPitch && catalogPitch !== '0';
+    if (mapped && hasNumericPitch && String(catalogPitch) === mapped) return true;
     const name = String(card?.name || '').toLowerCase();
     if (name.includes(`(${want})`)) return true;
     if (mapped && NAME_BY_PITCH[catalogPitch] === want) return true;
+    // Super Slam-style names omit (Red)/(Blue); collector number already
+    // identifies the pitch when the catalog row has no pitch field.
+    if (!hasNumericPitch && !hasPitchColorName(name)) return true;
     return false;
 }
 
@@ -95,15 +142,43 @@ function matchesFoil(card, foiling) {
     return sub.includes(want);
 }
 
-function matchesTreatment(card, treatment) {
+function treatmentNeedles(treatment) {
     const want = String(treatment || '').trim().toLowerCase();
-    const name = String(card?.name || '');
-    if (!want) return !hasArtTreatment(name);
-    return name.toLowerCase().includes(`(${want})`);
+    if (!want) return [];
+    return TREATMENT_ALIASES[want] || [want];
+}
+
+function nameHasTreatment(name, needles) {
+    const lower = String(name || '').toLowerCase();
+    return needles.some((token) => lower.includes(`(${token})`));
+}
+
+function applyTreatmentFilter(candidates, treatment) {
+    const want = String(treatment || '').trim();
+    if (!want) {
+        const regular = candidates.filter((card) => !hasArtTreatment(card?.name || ''));
+        return regular.length > 0 ? regular : candidates;
+    }
+    const needles = treatmentNeedles(want);
+    const exact = candidates.filter((card) => nameHasTreatment(card?.name || '', needles));
+    if (exact.length > 0) return exact;
+    // GEM / promo / Marvel rows often omit Fabrary's exact treatment words.
+    // Prefer any remaining art-treated printing so we do not land on the
+    // ordinary version when a special version exists (FR-010).
+    const artish = candidates.filter((card) => hasArtTreatment(card?.name || ''));
+    return artish.length > 0 ? artish : candidates;
+}
+
+function applyFoilFilter(candidates, foiling) {
+    const matched = candidates.filter((card) => matchesFoil(card, foiling));
+    if (matched.length > 0) return matched;
+    const want = String(foiling || '').trim();
+    if (!want) return matched;
+    return candidates.filter((card) => !String(subTypeOf(card) || '').trim());
 }
 
 function hasEditionToken(card, token) {
-    const text = haystack(card);
+    const text = editionHaystack(card);
     if (token === 'first') return /\b1st\b/.test(text) || /\bfirst\b/.test(text);
     if (token === 'unlimited') return /\bunlimited\b/.test(text);
     if (token === 'alpha') return /\balpha\b/.test(text);
@@ -120,17 +195,20 @@ function matchesEdition(card, edition) {
     if (want === 'first') return hasEditionToken(card, 'first');
     if (want === 'unlimited') return hasEditionToken(card, 'unlimited');
     if (want === 'alpha') return hasEditionToken(card, 'alpha');
-    return haystack(card).includes(want);
+    return editionHaystack(card).includes(want);
 }
 
 export function buildSetCodeIndex(catalog) {
     const index = new Map();
     for (const card of catalog || []) {
-        const key = collectorNumberKey(collectorNumberOf(card));
-        if (!key) continue;
-        const list = index.get(key);
-        if (list) list.push(card);
-        else index.set(key, [card]);
+        for (const key of collectorNumberKeys(collectorNumberOf(card))) {
+            const list = index.get(key);
+            if (list) {
+                if (!list.includes(card)) list.push(card);
+            } else {
+                index.set(key, [card]);
+            }
+        }
     }
     return index;
 }
@@ -174,12 +252,12 @@ export function matchFabraryRow(row, catalog) {
 
     const index = Array.isArray(catalog) ? buildSetCodeIndex(catalog) : catalog;
     const pool = (index.get ? index.get(key) : null) || [];
-    const candidates = pool.filter((card) =>
+    const pitched = pool.filter((card) =>
         matchesPitch(card, row?.Pitch ?? row?.pitch)
-        && matchesFoil(card, row?.Foiling ?? row?.foiling)
-        && matchesTreatment(card, row?.Treatment ?? row?.treatment)
         && matchesEdition(card, row?.Edition ?? row?.edition),
     );
+    const foiled = applyFoilFilter(pitched, row?.Foiling ?? row?.foiling);
+    const candidates = applyTreatmentFilter(foiled, row?.Treatment ?? row?.treatment);
 
     const chosen = pickCandidate(candidates);
     if (!chosen) return unmatchedOf(row);

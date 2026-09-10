@@ -92,7 +92,7 @@ void main() {
       n.add(card, quantity: 1, condition: 'LP', binderId: BinderIds.collection);
       n.add(buildCard(id: 'other'), binderId: BinderIds.trade);
       n.add(card, isWanted: true);
-      final ok = await n.applyImportAdds(BinderIds.collection, [
+      final ok = await n.applyImportAdds([
         const FabraryAdd(printingId: 'k', quantity: 3),
       ]);
       expect(ok, isTrue);
@@ -183,6 +183,25 @@ void main() {
       expect(entries.length, 1);
       expect(entries.single.card.id, 'b');
       expect(entries.single.quantity, 3);
+    });
+
+    test('deleting a binder removes its cards from the collection', () async {
+      final c = await makeContainer();
+      final binders = c.read(bindersProvider.notifier);
+      final entries = c.read(binderProvider.notifier);
+      entries.add(buildCard(id: 'keep'), binderId: BinderIds.trade);
+      entries.add(buildCard(id: 'gone'), quantity: 2, binderId: BinderIds.collection);
+      entries.add(buildCard(id: 'want'), isWanted: true);
+      expect(binders.delete(BinderIds.trade), 'trade');
+      expect(
+        c.read(binderProvider).where((e) => e.resolvedBinderId == BinderIds.trade),
+        isNotEmpty,
+      );
+      expect(binders.delete(BinderIds.collection), isNull);
+      final left = c.read(binderProvider);
+      expect(left.where((e) => !e.isWanted).single.card.id, 'keep');
+      expect(left.where((e) => e.isWanted).single.card.id, 'want');
+      expect(binders.byId(BinderIds.collection)?.isLive, isFalse);
     });
 
     test('state persists across a rebuilt container', () async {

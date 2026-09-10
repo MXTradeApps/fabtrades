@@ -24,7 +24,6 @@ import '../search/card_picker.dart';
 import '../want_list/want_list_screen.dart';
 import 'binder_grid.dart';
 import 'binder_list.dart';
-import 'binder_settings_screen.dart';
 import 'collection_stats_screen.dart';
 
 class BinderScreen extends ConsumerStatefulWidget {
@@ -134,13 +133,6 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
               icon: const Icon(Icons.add_box_outlined),
               label: const Text('New'),
             ),
-          if (inBinder)
-            IconButton(
-              key: const Key('binderSettings'),
-              tooltip: 'Settings',
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () => _openSettings(context, openId),
-            ),
           const AppMenuAction(),
         ],
         bottom: inBinder
@@ -173,7 +165,6 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
                   },
                   onRename: (id) => _renameBinder(context, id),
                   onDelete: (id) => _deleteBinder(context, id),
-                  onSettings: (id) => _openSettings(context, id),
                 )
               : BinderList(binderId: openId, pricing: pricing),
           WantListPane(
@@ -249,15 +240,6 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
     return 'Binder';
   }
 
-  Future<void> _openSettings(BuildContext context, String binderId) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        settings: const RouteSettings(name: 'Settings'),
-        builder: (_) => BinderSettingsScreen(binderId: binderId),
-      ),
-    );
-  }
-
   Future<void> _createBinder(BuildContext context) async {
     final isPro = ref.read(isProProvider);
     if (!FreeLimits.canCreateBinder(
@@ -298,11 +280,43 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   }
 
   Future<void> _deleteBinder(BuildContext context, String clientId) async {
+    final binder = ref.read(bindersProvider.notifier).byId(clientId);
+    if (binder == null) return;
+    final copies = ref.read(binderProvider).fold<int>(0, (sum, e) {
+      if (e.isWanted || e.resolvedBinderId != clientId || e.quantity < 1) {
+        return sum;
+      }
+      return sum + e.quantity;
+    });
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const Key('binderDeleteConfirm'),
+        title: Text('Delete ${binder.name}?'),
+        content: Text(
+          copies > 0
+              ? 'This will also remove $copies ${copies == 1 ? 'card' : 'cards'} from your collection. This cannot be undone.'
+              : 'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('binderDeleteCancel'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('binderDeleteConfirmButton'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
     final err = ref.read(bindersProvider.notifier).delete(clientId);
     if (err == null || !context.mounted) return;
     final message = switch (err) {
       'trade' => 'Trade Binder cannot be deleted',
-      'not-empty' => 'Move or remove cards before deleting this Binder',
       _ => 'Could not delete Binder',
     };
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));

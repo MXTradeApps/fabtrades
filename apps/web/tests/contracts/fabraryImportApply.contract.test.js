@@ -2,9 +2,12 @@ import contract from '../../../../packages/contracts/fabrary_import_apply.json';
 import { planFabraryImport } from '../../src/utils/fabraryImportApply.js';
 
 function sortAdds(adds) {
-    return [...(adds || [])].sort((a, b) =>
-        String(a.printingId).localeCompare(String(b.printingId)),
-    );
+    return [...(adds || [])].sort((a, b) => {
+        const byId = String(a.printingId).localeCompare(String(b.printingId));
+        if (byId !== 0) return byId;
+        return String(a.destination || 'collection')
+            .localeCompare(String(b.destination || 'collection'));
+    });
 }
 
 describe('fabrary import apply contract', () => {
@@ -24,11 +27,7 @@ describe('fabrary import apply contract', () => {
             expect(result.copiesToAdd).toBe(testCase.expected.copiesToAdd);
             expect(result.unmatched).toEqual(testCase.expected.unmatched);
             expect(sortAdds(result.adds)).toEqual(sortAdds(testCase.expected.adds));
-            const wantIds = (testCase.expected.adds || []).map((a) => a.printingId);
             expect(result.adds.some((a) => a.printingId === 'want-card')).toBe(false);
-            if (testCase.name.includes('Want and Extra')) {
-                expect(wantIds).not.toContain('want-card');
-            }
         });
     });
 });

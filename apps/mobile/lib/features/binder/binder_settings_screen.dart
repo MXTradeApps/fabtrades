@@ -5,24 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/logic/fabrary_import_apply.dart';
-import '../../core/models/binder.dart';
 import '../../core/providers.dart';
 
 const fabraryRefuseCopy = {
   'not_fabrary': 'This is not a Fabrary collection export',
-  'no_owned': 'No owned cards (Have) were found',
-  'no_matched': 'None of the owned cards were found in the catalog',
+  'no_owned': 'No Have, Want, or Extra quantities were found',
+  'no_matched': 'None of those cards were found in the catalog',
 };
 
-/// Settings for one Binder. Import from Fabrary lives here, not in app Settings.
+/// App-wide Fabrary import. Have → Collection, wants → Want List, extras → Trade.
 class BinderSettingsScreen extends ConsumerStatefulWidget {
   const BinderSettingsScreen({
     super.key,
-    required this.binderId,
     this.pickCsv,
   });
-
-  final String binderId;
 
   /// Test hook. Production uses the device file picker.
   final Future<String?> Function()? pickCsv;
@@ -37,18 +33,6 @@ class _BinderSettingsScreenState extends ConsumerState<BinderSettingsScreen> {
   bool _applying = false;
   FabraryImportPlan? _plan;
   String? _success;
-
-  String get _binderName {
-    final binders = ref.watch(bindersProvider);
-    for (final binder in binders) {
-      if (binder.clientId == widget.binderId && binder.isLive) {
-        return binder.name;
-      }
-    }
-    if (widget.binderId == BinderIds.trade) return 'Trade Binder';
-    if (widget.binderId == BinderIds.collection) return 'Collection';
-    return 'Binder';
-  }
 
   Future<String?> _pickCsvText() async {
     if (widget.pickCsv != null) return widget.pickCsv!();
@@ -79,7 +63,6 @@ class _BinderSettingsScreenState extends ConsumerState<BinderSettingsScreen> {
       final plan = planFabraryImport(
         csv: csv,
         catalog: catalog,
-        binderId: widget.binderId,
         existingEntries: ref.read(binderProvider),
       );
       if (!mounted) return;
@@ -108,9 +91,8 @@ class _BinderSettingsScreenState extends ConsumerState<BinderSettingsScreen> {
     final plan = _plan;
     if (plan == null || !plan.ok || _applying) return;
     setState(() => _applying = true);
-    final ok = await ref
-        .read(binderProvider.notifier)
-        .applyImportAdds(widget.binderId, plan.adds);
+    final ok =
+        await ref.read(binderProvider.notifier).applyImportAdds(plan.adds);
     if (!mounted) return;
     setState(() {
       _applying = false;
@@ -132,20 +114,15 @@ class _BinderSettingsScreenState extends ConsumerState<BinderSettingsScreen> {
   Widget build(BuildContext context) {
     final plan = _plan;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: const Text('Import from Fabrary')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            _binderName,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
           FilledButton.icon(
             key: const Key('importFabrary'),
             onPressed: _working || _applying ? null : _import,
             icon: const Icon(Icons.upload_file),
-            label: const Text('Import from Fabrary'),
+            label: const Text('Choose CSV'),
           ),
           if (_working)
             const Padding(
@@ -201,20 +178,25 @@ class _FabraryPreview extends StatelessWidget {
         children: [
           if (success != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: 12),
               child: Text(success!, key: const Key('fabrarySuccess')),
             ),
-          Text('Owned cards: ${plan.ownedCount}'),
+          Text('Rows with quantities: ${plan.ownedCount}'),
+          Text(
+            'Collection: ${plan.copiesFor(fabraryDestinationCollection)}',
+          ),
+          Text('Want List: ${plan.copiesFor(fabraryDestinationWant)}'),
+          Text('Trade Binder: ${plan.copiesFor(fabraryDestinationTrade)}'),
           Text('Matched: ${plan.matchedCount}'),
           Text('Unmatched: ${plan.unmatched.length}'),
           Text('Copies to add: ${plan.copiesToAdd}'),
           const SizedBox(height: 12),
           const Text(
-            'Confirming adds Near Mint copies to this Binder. Existing cards stay. A second import of the same file will add again.',
+            'Confirming adds Have copies to Collection, Want in trade / Want to buy to Want List, and Extra for trade / Extra to sell to Trade Binder. Existing cards stay. A second import of the same file will add again.',
           ),
           if (plan.unmatched.isNotEmpty) ...[
             const SizedBox(height: 16),
-            const Text('Unmatched owned cards'),
+            const Text('Unmatched cards'),
             const SizedBox(height: 8),
             for (final row in plan.unmatched)
               Padding(

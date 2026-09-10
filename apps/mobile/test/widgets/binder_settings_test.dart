@@ -20,7 +20,7 @@ Map<String, Object> _onboarded() => {
     };
 
 const _headers =
-    'Identifier,Name,Pitch,Set,Set number,Edition,Foiling,Treatment,Have,Want,Extra';
+    'Identifier,Name,Pitch,Set,Set number,Edition,Foiling,Treatment,Have,Want in trade,Want to buy,Extra for trade,Extra to sell';
 
 String _csv(List<String> rows) => '$_headers\n${rows.join('\n')}\n';
 
@@ -34,24 +34,22 @@ final _lightning = buildCard(
 );
 
 String get _ownedCsv => _csv([
-      '1,Lightning Press,,Super Slam,SUP001,,,,2,9,8',
-      '2,Unknown Junk,,Nowhere,ZZZ999,,,,1,,',
+      '1,Lightning Press,,Super Slam,SUP001,,,,2,9,,8,',
+      '2,Unknown Junk,,Nowhere,ZZZ999,,,,1,,,,',
     ]);
 
 String get _wantOnlyCsv => _csv([
-      '1,Lightning Press,,Super Slam,SUP001,,,,0,5,3',
+      '1,Lightning Press,,Super Slam,SUP001,,,,0,5,,3,',
     ]);
 
-Future<ProviderContainer> _pumpSettings(
+Future<ProviderContainer> _pumpImport(
   WidgetTester tester, {
-  required String binderId,
   Future<String?> Function()? pickCsv,
   List<CardModel>? catalog,
 }) async {
   return pumpApp(
     tester,
     BinderSettingsScreen(
-      binderId: binderId,
       pickCsv: pickCsv,
     ),
     catalog: catalog ?? [_lightning],
@@ -60,7 +58,7 @@ Future<ProviderContainer> _pumpSettings(
 }
 
 void main() {
-  testWidgets('open Binder and tile menu open Settings with Import from Fabrary',
+  testWidgets('hamburger offers Import from Fabrary; binder tiles do not',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -74,33 +72,24 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('binderTileSettings-system:collection')),
-        findsNothing);
     await tester.tap(find.byKey(const Key('binderTileMenu-system:collection')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('binderTileSettings-system:collection')),
-        findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('binderTileSettings-system:collection')));
+        findsNothing);
+    expect(find.text('Settings'), findsNothing);
+    await tester.tapAt(const Offset(8, 400));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Settings'), findsOneWidget);
-    expect(find.text('Collection'), findsWidgets);
-    expect(find.byKey(const Key('importFabrary')), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
     expect(find.text('Import from Fabrary'), findsOneWidget);
-
-    await tester.pageBack();
+    await tester.tap(find.text('Import from Fabrary'));
     await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('binderTile-system:collection')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('binderSettings')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('binderSettings')));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Settings'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Import from Fabrary'), findsOneWidget);
     expect(find.byKey(const Key('importFabrary')), findsOneWidget);
   });
 
-  testWidgets('Want List has no Binder Settings; app Settings has no Fabrary',
+  testWidgets('Want List tab and app Settings have no Fabrary import',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -123,7 +112,7 @@ void main() {
     expect(find.byKey(const Key('importFabrary')), findsNothing);
   });
 
-  testWidgets('empty Binder still shows Settings', (tester) async {
+  testWidgets('open Binder no longer shows Settings', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -138,15 +127,14 @@ void main() {
     await tester.tap(find.byKey(const Key('binderTile-system:collection')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('collectionStatsButton')), findsNothing);
-    expect(find.byKey(const Key('binderSettings')), findsOneWidget);
+    expect(find.byKey(const Key('binderSettings')), findsNothing);
   });
 
   testWidgets('preview lists unmatched names; cancel writes nothing',
       (tester) async {
     var picked = false;
-    final container = await _pumpSettings(
+    final container = await _pumpImport(
       tester,
-      binderId: BinderIds.collection,
       pickCsv: () async {
         picked = true;
         await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -160,12 +148,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(picked, isTrue);
     expect(find.byKey(const Key('fabraryPreview')), findsOneWidget);
-    expect(find.textContaining('Owned cards: 2'), findsOneWidget);
-    expect(find.textContaining('Matched: 1'), findsOneWidget);
+    expect(find.textContaining('Rows with quantities: 2'), findsOneWidget);
+    expect(find.textContaining('Collection: 2'), findsOneWidget);
+    expect(find.textContaining('Want List: 9'), findsOneWidget);
+    expect(find.textContaining('Trade Binder: 8'), findsOneWidget);
+    expect(find.textContaining('Matched: 3'), findsOneWidget);
     expect(find.textContaining('Unmatched: 1'), findsOneWidget);
-    expect(find.textContaining('Copies to add: 2'), findsOneWidget);
+    expect(find.textContaining('Copies to add: 19'), findsOneWidget);
     expect(find.textContaining('Unknown Junk'), findsOneWidget);
-    expect(find.textContaining('adds Near Mint'), findsOneWidget);
+    expect(find.textContaining('adds Have copies to Collection'), findsOneWidget);
     expect(tester.widget<FilledButton>(find.byKey(const Key('fabraryConfirm'))).onPressed,
         isNotNull);
 
@@ -176,25 +167,26 @@ void main() {
     expect(find.byKey(const Key('fabraryPreview')), findsNothing);
   });
 
-  testWidgets('Want and Extra do not increase copies to add', (tester) async {
-    await _pumpSettings(
+  testWidgets('Want and Extra preview into Want List and Trade Binder',
+      (tester) async {
+    await _pumpImport(
       tester,
-      binderId: BinderIds.collection,
       pickCsv: () async => _wantOnlyCsv,
     );
     await tester.tap(find.byKey(const Key('importFabrary')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('fabraryPreview')), findsNothing);
-    expect(find.byKey(const Key('fabraryRefuse')), findsOneWidget);
-    expect(find.text('No owned cards (Have) were found'), findsOneWidget);
+    expect(find.byKey(const Key('fabraryPreview')), findsOneWidget);
+    expect(find.textContaining('Collection: 0'), findsOneWidget);
+    expect(find.textContaining('Want List: 5'), findsOneWidget);
+    expect(find.textContaining('Trade Binder: 3'), findsOneWidget);
+    expect(find.byKey(const Key('fabraryRefuse')), findsNothing);
   });
 
-  testWidgets('confirm adds NM copies; second confirm doubles; other piles stay',
+  testWidgets('confirm adds Collection, Want List, and Trade; second doubles',
       (tester) async {
     final other = buildCard(id: 'other-Normal', name: 'Other');
-    final container = await _pumpSettings(
+    final container = await _pumpImport(
       tester,
-      binderId: BinderIds.collection,
       pickCsv: () async => _ownedCsv,
     );
     container.read(binderProvider.notifier).add(
@@ -239,13 +231,22 @@ void main() {
     );
     expect(
       afterFirst
-          .where((e) => e.resolvedBinderId == BinderIds.trade)
+          .where((e) =>
+              !e.isWanted &&
+              e.resolvedBinderId == BinderIds.trade &&
+              e.card.id == _lightning.id)
           .single
-          .card
-          .id,
-      'other-Normal',
+          .quantity,
+      8,
     );
-    expect(afterFirst.where((e) => e.isWanted).single.quantity, 1);
+    expect(
+      afterFirst
+          .where((e) => e.resolvedBinderId == BinderIds.trade && e.card.id == 'other-Normal')
+          .single
+          .quantity,
+      1,
+    );
+    expect(afterFirst.where((e) => e.isWanted && e.card.id == _lightning.id).single.quantity, 10);
     expect(find.textContaining('Unknown Junk'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('fabraryConfirm')));
@@ -264,15 +265,42 @@ void main() {
     );
   });
 
+  testWidgets('confirm restores a deleted Collection binder', (tester) async {
+    final container = await _pumpImport(
+      tester,
+      pickCsv: () async => _ownedCsv,
+    );
+    expect(
+      container.read(bindersProvider.notifier).delete(BinderIds.collection),
+      isNull,
+    );
+    expect(
+      container
+          .read(bindersProvider)
+          .where((b) => b.clientId == BinderIds.collection && b.isLive),
+      isEmpty,
+    );
+
+    await tester.tap(find.byKey(const Key('importFabrary')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('fabraryConfirm')));
+    await tester.pumpAndSettle();
+
+    final collection = container
+        .read(bindersProvider)
+        .where((b) => b.clientId == BinderIds.collection && b.isLive)
+        .single;
+    expect(collection.name, 'Collection');
+  });
+
   testWidgets('refuses bad file and no match; large Binder still previews',
       (tester) async {
     final owned = [
       for (var i = 0; i < 50; i++)
         buildCard(id: 'owned-$i', name: 'Owned $i', collectorNumber: 'X$i'),
     ];
-    final container = await _pumpSettings(
+    final container = await _pumpImport(
       tester,
-      binderId: BinderIds.collection,
       catalog: [_lightning, ...owned],
       pickCsv: () async => 'not,a,fabrary\n1,2,3\n',
     );
@@ -289,23 +317,21 @@ void main() {
     expect(find.text('This is not a Fabrary collection export'), findsOneWidget);
     expect(container.read(binderProvider).where((e) => !e.isWanted).length, 50);
 
-    await _pumpSettings(
+    await _pumpImport(
       tester,
-      binderId: BinderIds.collection,
       pickCsv: () async => _csv([
-        '1,Unknown Junk,,Nowhere,ZZZ999,,,,1,,',
+        '1,Unknown Junk,,Nowhere,ZZZ999,,,,1,,,,',
       ]),
     );
     await tester.tap(find.byKey(const Key('importFabrary')));
     await tester.pumpAndSettle();
     expect(
-      find.text('None of the owned cards were found in the catalog'),
+      find.text('None of those cards were found in the catalog'),
       findsOneWidget,
     );
 
-    final largeContainer = await _pumpSettings(
+    final largeContainer = await _pumpImport(
       tester,
-      binderId: BinderIds.collection,
       catalog: [_lightning, ...owned],
       pickCsv: () async => _ownedCsv,
     );
@@ -319,7 +345,7 @@ void main() {
     await tester.tap(find.byKey(const Key('importFabrary')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('fabraryPreview')), findsOneWidget);
-    expect(find.textContaining('Copies to add: 2'), findsOneWidget);
+    expect(find.textContaining('Copies to add: 19'), findsOneWidget);
     expect(find.text('Upgrade to Pro'), findsNothing);
     expect(find.byKey(const Key('fabraryUpgrade')), findsNothing);
     expect(

@@ -72,6 +72,7 @@ jest.mock('../../src/components/elements/Header.jsx', () => () => (
 
 jest.mock('../../src/components/search/index.js', () => ({
     SearchInput: () => <div data-testid="search-input" />,
+    SearchDialog: () => null,
 }));
 
 jest.mock('../../src/components/auth/SignInDialog.jsx', () => ({
@@ -166,7 +167,9 @@ describe('Collection Stats entry and page', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
         fireEvent.click(button);
-        expect(await screen.findByTestId('collection-stats-headline')).toHaveTextContent('$12.50');
+        await waitFor(() => {
+            expect(screen.getByTestId('collection-stats-headline')).toHaveTextContent('$12.50');
+        });
         expect(screen.getByTestId('collection-stats-headline')).toHaveTextContent('€10.20');
         expect(screen.getByText('Total Value')).toBeInTheDocument();
         expect(screen.getByText('Collection Stats', { selector: 'h4' })).toBeInTheDocument();

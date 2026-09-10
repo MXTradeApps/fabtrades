@@ -17,12 +17,16 @@ import {
     checkCanAddBinderCard,
     ensureBinderShare,
     getBinderEntries,
+    invalidateBinderEntriesCache,
     getPublicBinder,
     newBinderShareToken,
     parseCardStub,
     removeEntry,
     upsertEntry,
     upsertEntries,
+    deleteBinder,
+    TRADE_BINDER_ID,
+    COLLECTION_BINDER_ID,
 } from '../../src/services/binder.js';
 
 const makeChain = (result) => {
@@ -38,6 +42,7 @@ const makeChain = (result) => {
         'in',
         'is',
         'order',
+        'range',
         'update',
         'delete',
         'upsert',
@@ -132,6 +137,11 @@ describe('cardStub / parseCardStub', () => {
 });
 
 describe('getBinderEntries', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        invalidateBinderEntriesCache();
+    });
+
     test('errors when anonymous', async () => {
         asAnonymous();
         const { data, error } = await getBinderEntries();
@@ -176,6 +186,121 @@ describe('getBinderEntries', () => {
         expect(data.wants).toHaveLength(1);
         expect(data.binder[0].card.name).toBe('Fyendal\'s Spring Tunic');
         expect(data.wants[0].cardId).toBe('b');
+    });
+
+    test('reuses the in-memory cache until a mutation', async () => {
+        asUser('user-42');
+        const chain = makeChain({
+            data: [{
+                card_id: 'a',
+                is_wanted: false,
+                quantity: 1,
+                condition: 'NM',
+                card: cardStub(webCard),
+                added_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+            }],
+            error: null,
+        });
+        supabase.from.mockReturnValue(chain);
+
+        const first = await getBinderEntries();
+        const second = await getBinderEntries();
+
+        expect(first.error).toBeNull();
+        expect(second.data.binder).toHaveLength(1);
+        expect(supabase.from).toHaveBeenCalledTimes(1);
+
+        const saved = {
+            card_id: 'a',
+            is_wanted: false,
+            quantity: 2,
+            condition: 'NM',
+            card: cardStub(webCard),
+            added_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-02T00:00:00.000Z',
+        };
+        const writeChain = makeChain({ data: saved, error: null });
+        supabase.from.mockReturnValue(writeChain);
+        await upsertEntry({
+            cardId: 'a',
+            isWanted: false,
+            quantity: 2,
+            card: webCard,
+        });
+
+        const readChain = makeChain({ data: [saved], error: null });
+        supabase.from.mockReturnValue(readChain);
+        const third = await getBinderEntries();
+        expect(third.error).toBeNull();
+        expect(readChain.eq).toHaveBeenCalledWith('user_id', 'user-42');
+    });
+
+    test('does not reuse another user\'s cached rows', async () => {
+        const chainA = makeChain({
+            data: [{
+                card_id: 'a',
+                is_wanted: false,
+                quantity: 1,
+                condition: 'NM',
+                card: cardStub(webCard),
+                added_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+            }],
+            error: null,
+        });
+        asUser('user-a');
+        supabase.from.mockReturnValue(chainA);
+        await getBinderEntries();
+
+        const chainB = makeChain({ data: [], error: null });
+        asUser('user-b');
+        supabase.from.mockReturnValue(chainB);
+        const { data } = await getBinderEntries();
+
+        expect(data.binder).toEqual([]);
+        expect(supabase.from).toHaveBeenCalledTimes(2);
+    });
+
+    test('pages past the PostgREST 1000-row cap', async () => {
+        asUser('user-42');
+        const stub = cardStub(webCard);
+        const page1 = Array.from({ length: 1000 }, (_, i) => ({
+            card_id: `c-${String(i).padStart(4, '0')}`,
+            is_wanted: false,
+            quantity: 1,
+            condition: 'NM',
+            card: { ...stub, id: `c-${String(i).padStart(4, '0')}`, name: `Card ${i}` },
+            added_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+        }));
+        const page2 = [{
+            card_id: 'ice-bolt',
+            is_wanted: false,
+            quantity: 1,
+            condition: 'NM',
+            card: { ...stub, id: 'ice-bolt', name: 'Ice Bolt' },
+            added_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+        }];
+
+        const chain = makeChain({ data: [], error: null });
+        chain.range.mockImplementation((from) => {
+            chain.then = (resolve) => resolve({
+                data: from === 0 ? page1 : page2,
+                error: null,
+            });
+            return chain;
+        });
+        supabase.from.mockReturnValue(chain);
+
+        const { data, error } = await getBinderEntries();
+
+        expect(error).toBeNull();
+        expect(chain.range).toHaveBeenCalledWith(0, 999);
+        expect(chain.range).toHaveBeenCalledWith(1000, 1999);
+        expect(data.binder).toHaveLength(1001);
+        expect(data.binder[1000].cardId).toBe('ice-bolt');
     });
 });
 
@@ -441,5 +566,46 @@ describe('binder share helpers', () => {
         const { data, error } = await getPublicBinder('b'.repeat(32));
         expect(data).toBeNull();
         expect(error.message).toMatch(/unavailable/i);
+    });
+});
+
+describe('deleteBinder', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('refuses Trade Binder without writing', async () => {
+        asUser();
+        const { data, error } = await deleteBinder({ clientId: TRADE_BINDER_ID });
+        expect(data).toBeNull();
+        expect(error.reason).toBe('trade');
+        expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    test('tombstones binder cards then the binder', async () => {
+        asUser('user-1');
+        const entriesChain = makeChain({ error: null });
+        const bindersChain = makeChain({ error: null });
+        supabase.from
+            .mockReturnValueOnce(entriesChain)
+            .mockReturnValueOnce(bindersChain);
+
+        const { data, error } = await deleteBinder({ clientId: COLLECTION_BINDER_ID });
+        expect(error).toBeNull();
+        expect(data.success).toBe(true);
+        expect(supabase.from).toHaveBeenNthCalledWith(1, 'binder_entries');
+        expect(entriesChain.update).toHaveBeenCalledWith(expect.objectContaining({
+            deleted_at: expect.any(String),
+            updated_at: expect.any(String),
+        }));
+        expect(entriesChain.eq).toHaveBeenCalledWith('user_id', 'user-1');
+        expect(entriesChain.eq).toHaveBeenCalledWith('binder_id', COLLECTION_BINDER_ID);
+        expect(entriesChain.eq).toHaveBeenCalledWith('is_wanted', false);
+        expect(entriesChain.is).toHaveBeenCalledWith('deleted_at', null);
+        expect(supabase.from).toHaveBeenNthCalledWith(2, 'binders');
+        expect(bindersChain.update).toHaveBeenCalledWith(expect.objectContaining({
+            deleted_at: expect.any(String),
+        }));
+        expect(bindersChain.eq).toHaveBeenCalledWith('client_id', COLLECTION_BINDER_ID);
     });
 });

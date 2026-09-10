@@ -276,8 +276,32 @@ export async function getBinders() {
     }
 }
 
+/** In-memory binder_entries snapshot, keyed by the signed-in user. */
+let entriesCache = null;
+/** In-flight fetch so Collection Stats / card detail / Binder share one pull. */
+let entriesInflight = null;
+/** Bumped on invalidate so a fetch started before a mutation cannot re-cache. */
+let entriesCacheGen = 0;
+
+/**
+ * Drop the binder_entries snapshot. Mutations call this so the next read
+ * hits Supabase instead of serving a stale list.
+ */
+export function invalidateBinderEntriesCache() {
+    entriesCache = null;
+    entriesInflight = null;
+    entriesCacheGen += 1;
+}
+
+function rememberBinderEntries(userId, data, gen) {
+    if (gen !== entriesCacheGen) return;
+    entriesCache = { userId, data };
+}
+
 /**
  * Load live binder + want-list entries for the signed-in user.
+ * Repeats within a session reuse the last successful snapshot until a
+ * mutation invalidates it.
  *
  * @returns {Promise<{ data: { binder: Array, wants: Array, all: Array }|null, error: Object|null }>}
  */
@@ -290,24 +314,38 @@ export async function getBinderEntries() {
             return { data: null, error: authError };
         }
 
-        const { data, error } = await supabase
-            .from('binder_entries')
-            .select('*')
-            .eq('user_id', user.id)
-            .is('deleted_at', null)
-            .order('added_at', { ascending: false });
+        if (entriesCache && entriesCache.userId === user.id) {
+            return { data: entriesCache.data, error: null };
+        }
+        if (entriesInflight && entriesInflight.userId === user.id) {
+            return entriesInflight.promise;
+        }
 
-        if (error) throw error;
+        const gen = entriesCacheGen;
+        const promise = (async () => {
+            try {
+                const data = await fetchAllBinderEntryRows(user.id);
 
-        const all = (data || []).map(mapRow);
-        return {
-            data: {
-                binder: all.filter((e) => !e.isWanted),
-                wants: all.filter((e) => e.isWanted),
-                all,
-            },
-            error: null,
-        };
+                const all = (data || []).map(mapRow);
+                const mapped = {
+                    binder: all.filter((e) => !e.isWanted),
+                    wants: all.filter((e) => e.isWanted),
+                    all,
+                };
+                rememberBinderEntries(user.id, mapped, gen);
+                return { data: mapped, error: null };
+            } catch (error) {
+                console.error('Error fetching binder entries:', error);
+                return { data: null, error };
+            }
+        })().finally(() => {
+            if (entriesInflight?.promise === promise) {
+                entriesInflight = null;
+            }
+        });
+
+        entriesInflight = { userId: user.id, promise };
+        return promise;
     } catch (error) {
         console.error('Error fetching binder entries:', error);
         return { data: null, error };
@@ -388,6 +426,7 @@ export async function upsertEntry({
 
         if (error) throw error;
 
+        invalidateBinderEntriesCache();
         return { data: mapRow(data), error: null };
     } catch (error) {
         console.error('Error upserting binder entry:', error);
@@ -397,11 +436,36 @@ export async function upsertEntry({
 
 const UPSERT_CHUNK = 400;
 
+/** PostgREST returns at most 1000 rows unless the client pages with `range`. */
+const BINDER_ENTRIES_PAGE = 1000;
+
 /**
- * Batch upsert owned Near Mint rows for a Fabrary import.
+ * Load every live binder_entries row for [userId]. A single select is silently
+ * truncated at 1000, which drops the rest of a Fabrary-sized collection.
+ */
+async function fetchAllBinderEntryRows(userId) {
+    const pages = [];
+    for (let from = 0; ; from += BINDER_ENTRIES_PAGE) {
+        const { data, error } = await supabase
+            .from('binder_entries')
+            .select('*')
+            .eq('user_id', userId)
+            .is('deleted_at', null)
+            .order('added_at', { ascending: false })
+            .order('client_id', { ascending: true })
+            .range(from, from + BINDER_ENTRIES_PAGE - 1);
+        if (error) throw error;
+        pages.push(...(data || []));
+        if (!data || data.length < BINDER_ENTRIES_PAGE) break;
+    }
+    return pages;
+}
+
+/**
+ * Batch upsert Binder and Want List rows for a Fabrary import.
  * Callers must not apply a half-import to local UI when this returns an error.
  *
- * @param {Array<{ cardId: string, quantity: number, binderId: string, card: Object }>} rows
+ * @param {Array<{ cardId: string, quantity: number, binderId?: string|null, isWanted?: boolean, card: Object }>} rows
  * @returns {Promise<{ data: { rows: Object[] }|null, error: Object|null }>}
  */
 export async function upsertEntries(rows) {
@@ -418,17 +482,18 @@ export async function upsertEntries(rows) {
         const payload = list.map((row) => {
             const cardId = row.cardId;
             const cond = BINDER_CONDITIONS.includes(row.condition) ? row.condition : 'NM';
-            const ownedBinderId = row.binderId || TRADE_BINDER_ID;
+            const wanted = Boolean(row.isWanted);
+            const ownedBinderId = wanted ? null : (row.binderId || TRADE_BINDER_ID);
             return {
                 user_id: user.id,
                 client_id: entryClientId({
                     cardId,
-                    isWanted: false,
+                    isWanted: wanted,
                     binderId: ownedBinderId,
                     condition: cond,
                 }),
                 card_id: cardId,
-                is_wanted: false,
+                is_wanted: wanted,
                 binder_id: ownedBinderId,
                 quantity: Math.floor(Number(row.quantity) || 0),
                 condition: cond,
@@ -450,6 +515,7 @@ export async function upsertEntries(rows) {
             upserted.push(...(data || []));
         }
 
+        invalidateBinderEntriesCache();
         return { data: { rows: upserted.map(mapRow) }, error: null };
     } catch (error) {
         console.error('Error upserting binder entries:', error);
@@ -493,6 +559,7 @@ export async function removeEntry(cardId, isWanted, { binderId, condition = 'NM'
 
         if (error) throw error;
 
+        invalidateBinderEntriesCache();
         return { data: { success: true }, error: null };
     } catch (error) {
         console.error('Error removing binder entry:', error);
@@ -749,6 +816,47 @@ export async function getPublicBinder(token) {
     }
 }
 
+/**
+ * Undelete or seed Collection (`system:collection`). Live Collection is left as-is.
+ */
+export async function ensureCollectionBinder() {
+    try {
+        const { user, error: authError } = await requireAuthenticatedUser(
+            'You must be logged in to update your binders',
+        );
+        if (authError) return { data: null, error: authError };
+
+        const { data: existing, error: listError } = await getBinders();
+        if (listError) return { data: null, error: listError };
+        const all = existing?.all || existing?.binders || [];
+        const current = all.find((b) => b.clientId === COLLECTION_BINDER_ID);
+        if (current && !current.deletedAt) {
+            return { data: current, error: null };
+        }
+
+        const now = new Date().toISOString();
+        const row = {
+            user_id: user.id,
+            client_id: COLLECTION_BINDER_ID,
+            name: 'Collection',
+            role: 'standard',
+            created_at: current?.createdAt || now,
+            updated_at: now,
+            deleted_at: null,
+        };
+        const { data, error } = await supabase
+            .from('binders')
+            .upsert(row, { onConflict: 'user_id,client_id' })
+            .select()
+            .single();
+        if (error) throw error;
+        return { data: mapBinder(data), error: null };
+    } catch (error) {
+        console.error('Error restoring Collection binder:', error);
+        return { data: null, error };
+    }
+}
+
 export async function createBinder({ name, isPro = false }) {
     try {
         const { user, error: authError } = await requireAuthenticatedUser(
@@ -830,7 +938,7 @@ export async function renameBinder({ clientId, name }) {
     }
 }
 
-export async function deleteBinder({ clientId, entries = [] }) {
+export async function deleteBinder({ clientId }) {
     try {
         const { user, error: authError } = await requireAuthenticatedUser(
             'You must be logged in to delete a binder',
@@ -839,19 +947,22 @@ export async function deleteBinder({ clientId, entries = [] }) {
         if (clientId === TRADE_BINDER_ID) {
             return { data: null, error: { message: 'trade', reason: 'trade' } };
         }
-        const occupied = (entries || []).some((e) =>
-            !e.isWanted && (e.binderId || TRADE_BINDER_ID) === clientId && (e.quantity || 0) >= 1,
-        );
-        if (occupied) {
-            return { data: null, error: { message: 'not-empty', reason: 'not-empty' } };
-        }
         const now = new Date().toISOString();
+        const { error: entriesError } = await supabase
+            .from('binder_entries')
+            .update({ deleted_at: now, updated_at: now })
+            .eq('user_id', user.id)
+            .eq('binder_id', clientId)
+            .eq('is_wanted', false)
+            .is('deleted_at', null);
+        if (entriesError) throw entriesError;
         const { error } = await supabase
             .from('binders')
             .update({ deleted_at: now, updated_at: now })
             .eq('user_id', user.id)
             .eq('client_id', clientId);
         if (error) throw error;
+        invalidateBinderEntriesCache();
         return { data: { success: true }, error: null };
     } catch (error) {
         console.error('Error deleting binder:', error);

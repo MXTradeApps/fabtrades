@@ -16,8 +16,11 @@ const catalogUrl = () => {
 }
 
 // https://vite.dev/config/
-export default defineConfig(() => {
-  const url = catalogUrl()
+export default defineConfig(({ command }) => {
+  // Only bake the snapshot into `vite build`. `vite dev` must read Supabase
+  // live, or a leftover `.catalog-snapshot.json` freezes the "prices updated"
+  // stamp (and the prices themselves) at the last generateCatalog run.
+  const url = command === 'build' ? catalogUrl() : null
   if (url) console.log(`[vite] Catalog snapshot: ${url}`)
 
   return {

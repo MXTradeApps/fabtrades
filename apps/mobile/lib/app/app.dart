@@ -8,6 +8,7 @@ import '../core/analytics/analytics.dart';
 import '../core/models/app_settings.dart';
 import '../core/providers.dart';
 import '../features/binder/binder_screen.dart';
+import '../features/binder/binder_settings_screen.dart';
 import '../features/lend/lend_screen.dart';
 import '../features/life_tracker/life_tracker_screen.dart';
 import '../features/onboarding/onboarding_keys.dart';
@@ -366,6 +367,19 @@ class _AppMenuDrawer extends ConsumerWidget {
                 MaterialPageRoute(
                   builder: (_) => const LifeTrackerScreen(),
                   settings: const RouteSettings(name: 'Life Tracker'),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: const Text('Import from Fabrary'),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(parentContext).push(
+                MaterialPageRoute(
+                  builder: (_) => const BinderSettingsScreen(),
+                  settings: const RouteSettings(name: 'Import from Fabrary'),
                 ),
               );
             },

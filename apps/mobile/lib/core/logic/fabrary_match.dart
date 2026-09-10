@@ -7,7 +7,21 @@ const _artTreatments = [
   'alternate art',
   'alternate text',
   'alternate border',
+  'alt art',
+  'marvel',
+  'treasure',
 ];
+
+const _treatmentAliases = {
+  'full art': ['full art', 'marvel', 'treasure'],
+  'alternate art': ['alternate art', 'alt art'],
+  'alt art': ['alternate art', 'alt art'],
+  'extended art': ['extended art'],
+  'alternate border': ['alternate border'],
+  'alternate text': ['alternate text'],
+};
+
+final _foilNumberSuffix = RegExp(r'(cf|rf|gf)$');
 
 const _pitchByName = {'red': '1', 'yellow': '2', 'blue': '3'};
 
@@ -113,17 +127,26 @@ bool _hasArtTreatment(String name) {
 
 bool _isRegularPrinting(dynamic card) => !_hasArtTreatment(nameOf(card));
 
-String _haystack(dynamic card) =>
-    '${nameOf(card)} ${subTypeOf(card)} ${setNameOf(card)}'.toLowerCase();
+String _editionHaystack(dynamic card) =>
+    '${subTypeOf(card)} ${setNameOf(card)}'.toLowerCase();
+
+bool _hasPitchColorName(String name) {
+  final lower = name.toLowerCase();
+  return lower.contains('(red)') ||
+      lower.contains('(yellow)') ||
+      lower.contains('(blue)');
+}
 
 bool _matchesPitch(dynamic card, String fabraryPitch) {
   final want = fabraryPitch.trim().toLowerCase();
   if (want.isEmpty) return true;
   final mapped = _pitchByName[want];
   final catalogPitch = pitchOf(card);
-  if (mapped != null && catalogPitch == mapped) return true;
+  final hasNumericPitch = catalogPitch.isNotEmpty && catalogPitch != '0';
+  if (mapped != null && hasNumericPitch && catalogPitch == mapped) return true;
   final name = nameOf(card).toLowerCase();
   if (name.contains('($want)')) return true;
+  if (!hasNumericPitch && !_hasPitchColorName(name)) return true;
   return false;
 }
 
@@ -141,15 +164,69 @@ bool _matchesFoil(dynamic card, String foiling) {
   return sub.contains(want);
 }
 
-bool _matchesTreatment(dynamic card, String treatment) {
+List<String> _treatmentNeedles(String treatment) {
   final want = treatment.trim().toLowerCase();
-  final name = nameOf(card);
-  if (want.isEmpty) return !_hasArtTreatment(name);
-  return name.toLowerCase().contains('($want)');
+  if (want.isEmpty) return const <String>[];
+  return _treatmentAliases[want] ?? <String>[want];
+}
+
+bool _nameHasTreatment(String name, List<String> needles) {
+  final lower = name.toLowerCase();
+  return needles.any((token) => lower.contains('($token)'));
+}
+
+List<dynamic> _applyTreatmentFilter(List<dynamic> candidates, String treatment) {
+  final want = treatment.trim();
+  if (want.isEmpty) {
+    final regular =
+        candidates.where((card) => !_hasArtTreatment(nameOf(card))).toList();
+    return regular.isNotEmpty ? regular : candidates;
+  }
+  final needles = _treatmentNeedles(want);
+  final exact = candidates
+      .where((card) => _nameHasTreatment(nameOf(card), needles))
+      .toList();
+  if (exact.isNotEmpty) return exact;
+  final artish =
+      candidates.where((card) => _hasArtTreatment(nameOf(card))).toList();
+  return artish.isNotEmpty ? artish : candidates;
+}
+
+List<dynamic> _applyFoilFilter(List<dynamic> candidates, String foiling) {
+  final matched =
+      candidates.where((card) => _matchesFoil(card, foiling)).toList();
+  if (matched.isNotEmpty) return matched;
+  if (foiling.trim().isEmpty) return matched;
+  return candidates.where((card) => subTypeOf(card).trim().isEmpty).toList();
+}
+
+final _collectorNumberSplit = RegExp(r'\s*//\s*|\s*/\s*');
+
+List<String> collectorNumberKeys(String? raw) {
+  final text = raw ?? '';
+  if (text.trim().isEmpty) return const <String>[];
+  final keys = <String>[];
+  final seen = <String>{};
+  void add(String value) {
+    final key = collectorNumberKey(value);
+    if (key == null || !seen.add(key)) return;
+    keys.add(key);
+    final stripped = key.replaceFirst(_foilNumberSuffix, '');
+    if (stripped != key && stripped.length >= 5 && seen.add(stripped)) {
+      keys.add(stripped);
+    }
+  }
+
+  add(text);
+  for (final part in text.split(_collectorNumberSplit)) {
+    final trimmed = part.trim();
+    if (trimmed.isNotEmpty) add(trimmed);
+  }
+  return keys;
 }
 
 bool _hasEditionToken(dynamic card, String token) {
-  final text = _haystack(card);
+  final text = _editionHaystack(card);
   if (token == 'first') {
     return RegExp(r'\b1st\b').hasMatch(text) ||
         RegExp(r'\bfirst\b').hasMatch(text);
@@ -169,7 +246,7 @@ bool _matchesEdition(dynamic card, String edition) {
   if (want == 'first') return _hasEditionToken(card, 'first');
   if (want == 'unlimited') return _hasEditionToken(card, 'unlimited');
   if (want == 'alpha') return _hasEditionToken(card, 'alpha');
-  return _haystack(card).contains(want);
+  return _editionHaystack(card).contains(want);
 }
 
 FabraryUnmatched _unmatchedOf(Map<String, dynamic> row) => FabraryUnmatched(
@@ -198,35 +275,43 @@ dynamic _pickCandidate(List<dynamic> candidates) {
 Map<String, List<dynamic>> buildFabrarySetIndex(Iterable<dynamic> catalog) {
   final index = <String, List<dynamic>>{};
   for (final card in catalog) {
-    final key = collectorNumberKey(collectorNumberOf(card));
-    if (key == null) continue;
-    index.putIfAbsent(key, () => <dynamic>[]).add(card);
+    for (final key in collectorNumberKeys(collectorNumberOf(card))) {
+      final list = index.putIfAbsent(key, () => <dynamic>[]);
+      if (!list.contains(card)) list.add(card);
+    }
   }
   return index;
 }
 
 /// Match one Fabrary owned row to a catalog Printing.
 ///
-/// [catalog] may be [CardModel]s or catalog-shaped maps. Identifier is ignored.
+/// [catalog] may be [CardModel]s, catalog-shaped maps, or a prebuilt set-code
+/// index from [buildFabrarySetIndex]. Identifier is ignored.
 FabraryMatch matchFabraryRow(
   Map<String, dynamic> row,
-  Iterable<dynamic> catalog,
+  dynamic catalog,
 ) {
   final setNumber = _rowValue(row, 'Set number', 'setNumber');
   final key = collectorNumberKey(setNumber);
   if (key == null) return FabraryMatch.miss(_unmatchedOf(row));
 
-  final index = buildFabrarySetIndex(catalog);
+  final index = catalog is Map<String, List<dynamic>>
+      ? catalog
+      : buildFabrarySetIndex(
+          catalog is Iterable ? catalog as Iterable<dynamic> : const <dynamic>[],
+        );
   final pool = index[key] ?? const <dynamic>[];
-  final candidates = pool
+  final pitched = pool
       .where(
         (card) =>
             _matchesPitch(card, _rowValue(row, 'Pitch', 'pitch')) &&
-            _matchesFoil(card, _rowValue(row, 'Foiling', 'foiling')) &&
-            _matchesTreatment(card, _rowValue(row, 'Treatment', 'treatment')) &&
             _matchesEdition(card, _rowValue(row, 'Edition', 'edition')),
       )
       .toList();
+  final foiled =
+      _applyFoilFilter(pitched, _rowValue(row, 'Foiling', 'foiling'));
+  final candidates =
+      _applyTreatmentFilter(foiled, _rowValue(row, 'Treatment', 'treatment'));
 
   final chosen = _pickCandidate(candidates);
   if (chosen == null) return FabraryMatch.miss(_unmatchedOf(row));

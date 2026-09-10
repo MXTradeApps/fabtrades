@@ -10,6 +10,7 @@ import { pricedPrinting } from '../fixtures/printings.js';
 const mockGetBinderEntries = jest.fn();
 const mockGetBinders = jest.fn();
 const mockUpsertEntries = jest.fn();
+const mockEnsureCollectionBinder = jest.fn();
 
 let mockUser = { id: 'user-1' };
 let mockIsPro = true;
@@ -50,6 +51,7 @@ jest.mock('../../src/services/binder.js', () => ({
     getBinderEntries: (...args) => mockGetBinderEntries(...args),
     getBinders: (...args) => mockGetBinders(...args),
     upsertEntries: (...args) => mockUpsertEntries(...args),
+    ensureCollectionBinder: (...args) => mockEnsureCollectionBinder(...args),
     upsertEntry: jest.fn(),
     removeEntry: jest.fn(),
     ensureBinderShare: jest.fn(),
@@ -63,6 +65,7 @@ jest.mock('../../src/services/binder.js', () => ({
 
 jest.mock('../../src/components/search/index.js', () => ({
     SearchInput: () => <div data-testid="search-input" />,
+    SearchDialog: () => null,
 }));
 
 jest.mock('../../src/components/auth/SignInDialog.jsx', () => ({
@@ -81,13 +84,13 @@ const defaultBinders = {
 };
 
 const emptyEntries = {
-    data: { binder: [], wants: [] },
+    data: { binder: [], wants: [], all: [] },
     error: null,
 };
 
-const headers = 'Identifier,Name,Pitch,Set,Set number,Edition,Foiling,Treatment,Have,Want,Extra';
-const ownedCsv = `${headers}\n1,Lightning Press,,Super Slam,SUP001,,,,2,9,8\n2,Unknown Junk,,Nowhere,ZZZ999,,,,1,,\n`;
-const wantOnlyCsv = `${headers}\n1,Lightning Press,,Super Slam,SUP001,,,,0,5,3\n`;
+const headers = 'Identifier,Name,Pitch,Set,Set number,Edition,Foiling,Treatment,Have,Want in trade,Want to buy,Extra for trade,Extra to sell';
+const ownedCsv = `${headers}\n1,Lightning Press,,Super Slam,SUP001,,,,2,9,,8,\n2,Unknown Junk,,Nowhere,ZZZ999,,,,1,,,,\n`;
+const wantOnlyCsv = `${headers}\n1,Lightning Press,,Super Slam,SUP001,,,,0,5,,3,\n`;
 
 function makeFile(text, name = 'export.csv', delayMs = 0) {
     const file = new File([text], name, { type: 'text/csv' });
@@ -97,7 +100,7 @@ function makeFile(text, name = 'export.csv', delayMs = 0) {
     return file;
 }
 
-const renderSettings = (path = '/binder/settings?b=system:collection') =>
+const renderImport = (path = '/binder/import') =>
     render(
         <ThemeProvider theme={createTheme()}>
             <ThemeModeProvider>
@@ -105,6 +108,7 @@ const renderSettings = (path = '/binder/settings?b=system:collection') =>
                     <Routes>
                         <Route path="/binder" element={<BinderCollection isWanted={false} />} />
                         <Route path="/wants" element={<BinderCollection isWanted />} />
+                        <Route path="/binder/import" element={<BinderSettings />} />
                         <Route path="/binder/settings" element={<BinderSettings />} />
                     </Routes>
                 </MemoryRouter>
@@ -112,69 +116,41 @@ const renderSettings = (path = '/binder/settings?b=system:collection') =>
         </ThemeProvider>,
     );
 
-describe('BinderSettings', () => {
+describe('Fabrary import', () => {
     beforeEach(() => {
         mockUser = { id: 'user-1' };
         mockIsPro = true;
         mockGetBinders.mockResolvedValue(defaultBinders);
         mockGetBinderEntries.mockResolvedValue(emptyEntries);
         mockUpsertEntries.mockResolvedValue({ data: { rows: [] }, error: null });
-    });
-
-    test('open Binder header Settings and tile Settings go to this Binder', async () => {
-        mockGetBinderEntries.mockResolvedValue({
-            data: {
-                binder: [{
-                    cardId: pricedPrinting._uniqueId,
-                    quantity: 1,
-                    isWanted: false,
-                    binderId: 'system:collection',
-                    card: pricedPrinting,
-                }],
-                wants: [],
-            },
+        mockEnsureCollectionBinder.mockResolvedValue({
+            data: { clientId: 'system:collection', name: 'Collection' },
             error: null,
         });
-        render(
-            <ThemeProvider theme={createTheme()}>
-                <ThemeModeProvider>
-                    <MemoryRouter initialEntries={['/binder']}>
-                        <Routes>
-                            <Route path="/binder" element={<BinderCollection isWanted={false} />} />
-                            <Route path="/binder/settings" element={<BinderSettings />} />
-                        </Routes>
-                    </MemoryRouter>
-                </ThemeModeProvider>
-            </ThemeProvider>,
-        );
+    });
+
+    test('grid shows Import from Fabrary next to New Binder, not on a Binder', async () => {
+        renderImport('/binder');
+        expect(await screen.findByTestId('import-fabrary')).toBeInTheDocument();
+        expect(screen.getByTestId('binder-create')).toBeInTheDocument();
         fireEvent.click(await screen.findByTestId('binder-tile-system:collection'));
-        expect(await screen.findByTestId('binder-settings')).toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('binder-settings'));
-        expect(await screen.findByTestId('import-fabrary')).toBeInTheDocument();
-        expect(screen.getByText('Collection')).toBeInTheDocument();
-        expect(screen.getByText('Settings')).toBeInTheDocument();
+        expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
     });
 
-    test('tile menu Settings navigates to /binder/settings', async () => {
-        render(
-            <ThemeProvider theme={createTheme()}>
-                <ThemeModeProvider>
-                    <MemoryRouter initialEntries={['/binder']}>
-                        <Routes>
-                            <Route path="/binder" element={<BinderCollection isWanted={false} />} />
-                            <Route path="/binder/settings" element={<BinderSettings />} />
-                        </Routes>
-                    </MemoryRouter>
-                </ThemeModeProvider>
-            </ThemeProvider>,
-        );
+    test('tile menu has no Settings; Import opens the import page', async () => {
+        renderImport('/binder');
         fireEvent.click(await screen.findByTestId('binder-tile-menu-system:trade'));
-        fireEvent.click(await screen.findByTestId('binder-tile-settings-system:trade'));
-        expect(await screen.findByTestId('import-fabrary')).toBeInTheDocument();
-        expect(screen.getByText('Trade Binder')).toBeInTheDocument();
+        expect(screen.queryByTestId('binder-tile-settings-system:trade')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('import-fabrary'));
+        expect(await screen.findByText('Import from Fabrary')).toBeInTheDocument();
+        const importBack = screen.getByTestId('binder-settings-back');
+        const importTitle = screen.getByText('Import from Fabrary');
+        expect(importBack.compareDocumentPosition(importTitle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByTestId('fabrary-file')).toBeInTheDocument();
     });
 
-    test('/wants has no Binder Settings; Header has no settings import', async () => {
+    test('/wants has no import; Header has no Fabrary item', async () => {
         render(
             <ThemeProvider theme={createTheme()}>
                 <ThemeModeProvider>
@@ -204,32 +180,35 @@ describe('BinderSettings', () => {
         expect(screen.queryByRole('link', { name: /Settings/i })).not.toBeInTheDocument();
     });
 
-    test('signed-out /binder/settings uses the Binder sign-in gate', async () => {
+    test('signed-out /binder/import uses the Binder sign-in gate', async () => {
         mockUser = null;
-        renderSettings();
+        renderImport();
         expect(await screen.findByText('Sign In Required')).toBeInTheDocument();
-        expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('fabrary-file')).not.toBeInTheDocument();
     });
 
-    test('empty Binder still shows Import from Fabrary', async () => {
-        renderSettings();
+    test('import page is available with an empty Collection', async () => {
+        renderImport();
         expect(await screen.findByTestId('import-fabrary')).toBeInTheDocument();
-        expect(await screen.findByText('Collection')).toBeInTheDocument();
+        expect(screen.getByText('Import from Fabrary')).toBeInTheDocument();
     });
 
     test('preview shows unmatched names; cancel does not write', async () => {
-        renderSettings();
+        renderImport();
         await screen.findByTestId('import-fabrary');
         const file = makeFile(ownedCsv, 'export.csv', 30);
         fireEvent.change(screen.getByTestId('fabrary-file'), { target: { files: [file] } });
         expect(await screen.findByTestId('fabrary-working')).toBeInTheDocument();
         expect(await screen.findByTestId('fabrary-preview')).toBeInTheDocument();
-        expect(screen.getByText(/Owned cards: 2/)).toBeInTheDocument();
-        expect(screen.getByText(/Matched: 1/)).toBeInTheDocument();
+        expect(screen.getByText(/Rows with quantities: 2/)).toBeInTheDocument();
+        expect(screen.getByText(/Collection: 2/)).toBeInTheDocument();
+        expect(screen.getByText(/Want List: 9/)).toBeInTheDocument();
+        expect(screen.getByText(/Trade Binder: 8/)).toBeInTheDocument();
+        expect(screen.getByText(/Matched: 3/)).toBeInTheDocument();
         expect(screen.getByText(/Unmatched: 1/)).toBeInTheDocument();
-        expect(screen.getByText(/Copies to add: 2/)).toBeInTheDocument();
+        expect(screen.getByText(/Copies to add: 19/)).toBeInTheDocument();
         expect(screen.getByText(/Unknown Junk/)).toBeInTheDocument();
-        expect(screen.getByText(/adds Near Mint/)).toBeInTheDocument();
+        expect(screen.getByText(/adds Have copies to Collection/)).toBeInTheDocument();
         expect(screen.getByTestId('fabrary-confirm')).not.toBeDisabled();
 
         fireEvent.click(screen.getByTestId('fabrary-cancel'));
@@ -237,36 +216,37 @@ describe('BinderSettings', () => {
         expect(mockUpsertEntries).not.toHaveBeenCalled();
     });
 
-    test('Want and Extra do not increase copies to add', async () => {
-        renderSettings();
+    test('Want and Extra preview into Want List and Trade Binder', async () => {
+        renderImport();
         await screen.findByTestId('import-fabrary');
         fireEvent.change(screen.getByTestId('fabrary-file'), {
             target: { files: [makeFile(wantOnlyCsv)] },
         });
-        expect(await screen.findByTestId('fabrary-refuse')).toHaveTextContent(
-            'No owned cards (Have) were found',
-        );
+        expect(await screen.findByTestId('fabrary-preview')).toBeInTheDocument();
+        expect(screen.getByText(/Want List: 5/)).toBeInTheDocument();
+        expect(screen.getByText(/Trade Binder: 3/)).toBeInTheDocument();
+        expect(screen.queryByTestId('fabrary-refuse')).not.toBeInTheDocument();
         expect(mockUpsertEntries).not.toHaveBeenCalled();
     });
 
-    test('confirm upserts this Binder only and a second confirm adds again', async () => {
+    test('confirm upserts Collection, Want List, and Trade; second confirm adds again', async () => {
         let stored = [];
         mockGetBinderEntries.mockImplementation(async () => ({
-            data: { binder: stored, wants: [] },
+            data: { binder: stored.filter((r) => !r.isWanted), wants: stored.filter((r) => r.isWanted), all: stored },
             error: null,
         }));
         mockUpsertEntries.mockImplementation(async (rows) => {
             stored = rows.map((row) => ({
                 cardId: row.cardId,
                 quantity: row.quantity,
-                isWanted: false,
-                binderId: row.binderId,
+                isWanted: Boolean(row.isWanted),
+                binderId: row.binderId ?? null,
                 condition: 'NM',
                 card: row.card,
             }));
             return { data: { rows: stored }, error: null };
         });
-        renderSettings();
+        renderImport();
         await screen.findByTestId('import-fabrary');
         fireEvent.change(screen.getByTestId('fabrary-file'), {
             target: { files: [makeFile(ownedCsv)] },
@@ -274,23 +254,40 @@ describe('BinderSettings', () => {
         await screen.findByTestId('fabrary-preview');
         fireEvent.click(screen.getByTestId('fabrary-confirm'));
         await waitFor(() => expect(mockUpsertEntries).toHaveBeenCalledTimes(1));
+        expect(mockEnsureCollectionBinder).toHaveBeenCalled();
         const first = mockUpsertEntries.mock.calls[0][0];
-        expect(first).toEqual([
+        expect(first).toEqual(expect.arrayContaining([
             expect.objectContaining({
                 cardId: pricedPrinting._uniqueId,
                 quantity: 2,
                 binderId: 'system:collection',
+                isWanted: false,
             }),
-        ]);
+            expect.objectContaining({
+                cardId: pricedPrinting._uniqueId,
+                quantity: 9,
+                binderId: null,
+                isWanted: true,
+            }),
+            expect.objectContaining({
+                cardId: pricedPrinting._uniqueId,
+                quantity: 8,
+                binderId: 'system:trade',
+                isWanted: false,
+            }),
+        ]));
         expect(await screen.findByText(/Unknown Junk/)).toBeInTheDocument();
 
         fireEvent.click(screen.getByTestId('fabrary-confirm'));
         await waitFor(() => expect(mockUpsertEntries).toHaveBeenCalledTimes(2));
-        expect(mockUpsertEntries.mock.calls[1][0][0].quantity).toBe(4);
+        const second = mockUpsertEntries.mock.calls[1][0];
+        expect(second.find((row) => row.binderId === 'system:collection').quantity).toBe(4);
+        expect(second.find((row) => row.isWanted).quantity).toBe(18);
+        expect(second.find((row) => row.binderId === 'system:trade').quantity).toBe(16);
     });
 
     test('refuse reasons do not call upsertEntries', async () => {
-        renderSettings();
+        renderImport();
         await screen.findByTestId('import-fabrary');
         fireEvent.change(screen.getByTestId('fabrary-file'), {
             target: { files: [makeFile('nope\n1\n')] },
@@ -300,10 +297,10 @@ describe('BinderSettings', () => {
         );
 
         fireEvent.change(screen.getByTestId('fabrary-file'), {
-            target: { files: [makeFile(`${headers}\n1,Unknown Junk,,Nowhere,ZZZ999,,,,1,,\n`)] },
+            target: { files: [makeFile(`${headers}\n1,Unknown Junk,,Nowhere,ZZZ999,,,,1,,,,\n`)] },
         });
         expect(await screen.findByTestId('fabrary-refuse')).toHaveTextContent(
-            'None of the owned cards were found in the catalog',
+            'None of those cards were found in the catalog',
         );
         expect(mockUpsertEntries).not.toHaveBeenCalled();
     });
@@ -318,16 +315,22 @@ describe('BinderSettings', () => {
                     binderId: 'system:trade',
                 })),
                 wants: [],
+                all: Array.from({ length: 50 }, (_, i) => ({
+                    cardId: `owned-${i}`,
+                    quantity: 1,
+                    isWanted: false,
+                    binderId: 'system:trade',
+                })),
             },
             error: null,
         });
-        renderSettings();
+        renderImport();
         await screen.findByTestId('import-fabrary');
         fireEvent.change(screen.getByTestId('fabrary-file'), {
             target: { files: [makeFile(ownedCsv)] },
         });
         expect(await screen.findByTestId('fabrary-preview')).toBeInTheDocument();
-        expect(screen.getByText(/Copies to add: 2/)).toBeInTheDocument();
+        expect(screen.getByText(/Copies to add: 19/)).toBeInTheDocument();
         expect(screen.queryByText(/Upgrade to Pro/i)).not.toBeInTheDocument();
         expect(screen.queryByTestId('fabrary-upgrade')).not.toBeInTheDocument();
         expect(mockUpsertEntries).not.toHaveBeenCalled();

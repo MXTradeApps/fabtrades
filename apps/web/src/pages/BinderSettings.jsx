@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
     Alert,
     Box,
@@ -9,27 +9,31 @@ import {
     Typography,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useDocumentHead } from '../utils/seo.js';
-import { getOpenBinderId, targetOwnedBinderId } from '../utils/openBinder.js';
-import { applyImportAddsToEntries, planFabraryImport } from '../utils/fabraryImportApply.js';
+import {
+    applyImportAddsToEntries,
+    copiesForDestination,
+    FABRARY_DESTINATION,
+    planFabraryImport,
+} from '../utils/fabraryImportApply.js';
 import {
     getBinderEntries,
-    getBinders,
     upsertEntries,
+    ensureCollectionBinder,
     TRADE_BINDER_ID,
     COLLECTION_BINDER_ID,
 } from '../services/binder.js';
 
 const FABRARY_REFUSE_COPY = {
     not_fabrary: 'This is not a Fabrary collection export',
-    no_owned: 'No owned cards (Have) were found',
-    no_matched: 'None of the owned cards were found in the catalog',
+    no_owned: 'No Have, Want, or Extra quantities were found',
+    no_matched: 'None of those cards were found in the catalog',
 };
 
 async function readPickedFile(file) {
@@ -42,34 +46,34 @@ async function readPickedFile(file) {
     });
 }
 
+function destinationBinderId(destination) {
+    if (destination === FABRARY_DESTINATION.want) return null;
+    if (destination === FABRARY_DESTINATION.trade) return TRADE_BINDER_ID;
+    return COLLECTION_BINDER_ID;
+}
+
 const BinderSettings = () => {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
     const { user } = useAuth();
     const { isDark } = useThemeMode();
     const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
     const fileInputRef = useRef(null);
     const [signInOpen, setSignInOpen] = useState(false);
-    const [binders, setBinders] = useState([]);
-    const [entries, setEntries] = useState([]);
     const [working, setWorking] = useState(false);
     const [applying, setApplying] = useState(false);
     const [plan, setPlan] = useState(null);
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
 
-    const binderId = searchParams.get('b') || getOpenBinderId() || targetOwnedBinderId() || TRADE_BINDER_ID;
-
     useDocumentHead({
-        title: 'Settings',
-        description: 'Binder settings and Fabrary collection import.',
-        canonicalPath: '/binder',
+        title: 'Import from Fabrary',
+        description: 'Import a Fabrary collection CSV into Collection, Want List, and Trade Binder.',
+        canonicalPath: '/binder/import',
     });
 
     const bgGradient = isDark
         ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
         : 'linear-gradient(135deg, #f5f1ed 0%, #e8dfd6 50%, #f0e6dc 100%)';
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
     const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
     const accentColor = isDark ? '#e4c09c' : '#8b4513';
     const paperBg = isDark ? 'rgba(44, 24, 16, 0.6)' : '#ffffff';
@@ -83,26 +87,6 @@ const BinderSettings = () => {
         return map;
     }, [cards]);
 
-    const binderName = useMemo(() => {
-        const named = binders.find((b) => b.clientId === binderId && !b.deletedAt);
-        if (named?.name) return named.name;
-        if (binderId === TRADE_BINDER_ID) return 'Trade Binder';
-        if (binderId === COLLECTION_BINDER_ID) return 'Collection';
-        return 'Binder';
-    }, [binders, binderId]);
-
-    const load = useCallback(async () => {
-        const [entryRes, binderRes] = await Promise.all([getBinderEntries(), getBinders()]);
-        setEntries(entryRes.data?.binder || []);
-        setBinders(binderRes.data?.binders || []);
-    }, []);
-
-    useEffect(() => {
-        if (!user) return undefined;
-        load();
-        return undefined;
-    }, [user, load]);
-
     const onPickFile = async (event) => {
         const file = event.target.files?.[0];
         event.target.value = '';
@@ -114,12 +98,13 @@ const BinderSettings = () => {
         try {
             const csv = await readPickedFile(file);
             const entryRes = await getBinderEntries();
-            const latest = entryRes.data?.binder || entries;
-            if (entryRes.data?.binder) setEntries(entryRes.data.binder);
+            const latest = entryRes.data?.all || [
+                ...(entryRes.data?.binder || []),
+                ...(entryRes.data?.wants || []),
+            ];
             const next = planFabraryImport({
                 csv,
                 catalog: cards || [],
-                binderId,
                 existingEntries: latest,
             });
             setPlan(next);
@@ -142,21 +127,36 @@ const BinderSettings = () => {
         if (!plan?.ok || applying) return;
         setApplying(true);
         setError('');
+        if (plan.restoreCollection) {
+            const restored = await ensureCollectionBinder();
+            if (restored.error) {
+                setError(restored.error.message || 'Could not restore Collection');
+                setApplying(false);
+                return;
+            }
+        }
         const entryRes = await getBinderEntries();
-        const latest = entryRes.data?.binder || entries;
-        if (entryRes.data?.binder) setEntries(entryRes.data.binder);
-        const combined = applyImportAddsToEntries(latest, binderId, plan.adds);
+        const latest = entryRes.data?.all || [
+            ...(entryRes.data?.binder || []),
+            ...(entryRes.data?.wants || []),
+        ];
+        const combined = applyImportAddsToEntries(latest, plan.adds);
         const rows = plan.adds.map((add) => {
-            const entry = combined.find((row) =>
-                !row.isWanted
-                && (row.binderId || TRADE_BINDER_ID) === binderId
-                && (row.condition || 'NM') === 'NM'
-                && (row.cardId || row.printingId) === add.printingId,
-            );
+            const wanted = add.destination === FABRARY_DESTINATION.want;
+            const binderId = destinationBinderId(add.destination);
+            const entry = combined.find((row) => {
+                const id = row.cardId || row.printingId;
+                if (id !== add.printingId) return false;
+                if (wanted) return Boolean(row.isWanted);
+                return !row.isWanted
+                    && (row.binderId || TRADE_BINDER_ID) === binderId
+                    && (row.condition || 'NM') === 'NM';
+            });
             return {
                 cardId: add.printingId,
                 quantity: entry?.quantity ?? add.quantity,
                 binderId,
+                isWanted: wanted,
                 card: catalogById.get(add.printingId),
             };
         }).filter((row) => row.card);
@@ -166,7 +166,6 @@ const BinderSettings = () => {
             setApplying(false);
             return;
         }
-        await load();
         setSuccess(`Added ${plan.copiesToAdd} Near Mint copies`);
         setApplying(false);
     };
@@ -178,7 +177,7 @@ const BinderSettings = () => {
     };
 
     const goBack = () => {
-        navigate(`/binder?b=${encodeURIComponent(binderId)}`);
+        navigate('/binder');
     };
 
     if (!user) {
@@ -250,22 +249,19 @@ const BinderSettings = () => {
                         border: `1px solid ${paperBorder}`,
                     }}
                 >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="h5" sx={{ color: accentColor, fontWeight: 700 }}>
-                            Settings
-                        </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, minWidth: 0 }}>
                         <Button
                             data-testid="binder-settings-back"
                             startIcon={<ArrowBackIcon />}
                             onClick={goBack}
-                            sx={{ color: accentColor, textTransform: 'none' }}
+                            sx={{ color: accentColor, textTransform: 'none', flexShrink: 0 }}
                         >
                             Back
                         </Button>
+                        <Typography variant="h5" sx={{ color: accentColor, fontWeight: 700 }}>
+                            Import from Fabrary
+                        </Typography>
                     </Box>
-                    <Typography sx={{ color: textColor, fontWeight: 600, mb: 2 }}>
-                        {binderName}
-                    </Typography>
                     <input
                         ref={fileInputRef}
                         data-testid="fabrary-file"
@@ -280,7 +276,7 @@ const BinderSettings = () => {
                         onClick={() => fileInputRef.current?.click()}
                         disabled={working || applying}
                     >
-                        Import from Fabrary
+                        Choose CSV
                     </Button>
                     {working && (
                         <Box data-testid="fabrary-working" sx={{ mt: 3, textAlign: 'center' }}>
@@ -304,16 +300,19 @@ const BinderSettings = () => {
                                     {success}
                                 </Alert>
                             )}
-                            <Typography>Owned cards: {plan.ownedCount}</Typography>
+                            <Typography>Rows with quantities: {plan.ownedCount}</Typography>
+                            <Typography>Collection: {copiesForDestination(plan.adds, FABRARY_DESTINATION.collection)}</Typography>
+                            <Typography>Want List: {copiesForDestination(plan.adds, FABRARY_DESTINATION.want)}</Typography>
+                            <Typography>Trade Binder: {copiesForDestination(plan.adds, FABRARY_DESTINATION.trade)}</Typography>
                             <Typography>Matched: {plan.matchedCount}</Typography>
                             <Typography>Unmatched: {plan.unmatched.length}</Typography>
                             <Typography>Copies to add: {plan.copiesToAdd}</Typography>
                             <Typography sx={{ mt: 1.5, color: mutedColor }}>
-                                Confirming adds Near Mint copies to this Binder. Existing cards stay. A second import of the same file will add again.
+                                Confirming adds Have copies to Collection, Want in trade / Want to buy to Want List, and Extra for trade / Extra to sell to Trade Binder. Existing cards stay. A second import of the same file will add again.
                             </Typography>
                             {plan.unmatched.length > 0 && (
                                 <Box sx={{ mt: 2 }}>
-                                    <Typography sx={{ fontWeight: 700, mb: 1 }}>Unmatched owned cards</Typography>
+                                    <Typography sx={{ fontWeight: 700, mb: 1 }}>Unmatched cards</Typography>
                                     {plan.unmatched.map((row, index) => (
                                         <Typography key={`${row.name}-${index}`} sx={{ mb: 0.5 }}>
                                             {[row.name, row.setNumber, row.foiling, row.treatment, row.edition]

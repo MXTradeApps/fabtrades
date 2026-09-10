@@ -690,6 +690,451 @@
           "edition": ""
         }
       }
+    },
+    {
+      "name": "Full Art matches Marvel Cold Foil",
+      "row": {
+        "Identifier": "drop",
+        "Name": "A Drop in the Ocean",
+        "Pitch": "Blue",
+        "Set": "Part the Mistveil",
+        "Set number": "MST095",
+        "Edition": "",
+        "Foiling": "Cold",
+        "Treatment": "Full Art",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "mst095-normal",
+          "name": "A Drop in the Ocean // Inner Chi",
+          "collectorNumber": "MST095",
+          "extNumber": "MST095",
+          "subTypeName": "Normal",
+          "pitch": "3",
+          "setName": "Part the Mistveil"
+        },
+        {
+          "id": "mst095-marvel",
+          "name": "A Drop in the Ocean // Inner Chi (Marvel)",
+          "collectorNumber": "MST095",
+          "extNumber": "MST095",
+          "subTypeName": "Cold Foil",
+          "pitch": "3",
+          "setName": "Part the Mistveil"
+        }
+      ],
+      "expected": { "printingId": "mst095-marvel" }
+    },
+    {
+      "name": "Extended Art on GEM matches Rainbow when the name has no treatment",
+      "row": {
+        "Identifier": "fight",
+        "Name": "A Good Clean Fight",
+        "Pitch": "Red",
+        "Set": "GEM",
+        "Set number": "GEM088",
+        "Edition": "",
+        "Foiling": "Rainbow",
+        "Treatment": "Extended Art",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "gem088-normal",
+          "name": "A Good Clean Fight",
+          "collectorNumber": "GEM088",
+          "extNumber": "GEM088",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "GEM Pack 3"
+        },
+        {
+          "id": "gem088-rainbow",
+          "name": "A Good Clean Fight",
+          "collectorNumber": "GEM088",
+          "extNumber": "GEM088",
+          "subTypeName": "Rainbow Foil",
+          "pitch": "1",
+          "setName": "GEM Pack 3"
+        }
+      ],
+      "expected": { "printingId": "gem088-rainbow" }
+    },
+    {
+      "name": "promo Extended Art matches the only printing of that set number",
+      "row": {
+        "Identifier": "drop",
+        "Name": "A Drop in the Ocean",
+        "Pitch": "Blue",
+        "Set": "Promos",
+        "Set number": "LGS282",
+        "Edition": "",
+        "Foiling": "Rainbow",
+        "Treatment": "Extended Art",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "lgs282-rf",
+          "name": "A Drop in the Ocean // Inner Chi - LGS282",
+          "collectorNumber": "LGS282",
+          "extNumber": "LGS282",
+          "subTypeName": "Rainbow Foil",
+          "pitch": "3",
+          "setName": "Flesh and Blood: Promo Cards"
+        }
+      ],
+      "expected": { "printingId": "lgs282-rf" }
+    },
+    {
+      "name": "Cold Full Art matches a foil-suffixed collector number",
+      "row": {
+        "Identifier": "nasreth",
+        "Name": "Nasreth, the Soul Harrower",
+        "Pitch": "",
+        "Set": "Dusk till Dawn",
+        "Set number": "DTD193",
+        "Edition": "",
+        "Foiling": "Cold",
+        "Treatment": "Full Art",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "dtd193-normal",
+          "name": "Nasreth, the Soul Harrower",
+          "collectorNumber": "DTD193",
+          "extNumber": "DTD193",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Dusk till Dawn"
+        },
+        {
+          "id": "dtd193-marvel",
+          "name": "Nasreth, the Soul Harrower (Marvel)",
+          "collectorNumber": "DTD193-CF",
+          "extNumber": "DTD193-CF",
+          "subTypeName": "Cold Foil",
+          "pitch": null,
+          "setName": "Dusk till Dawn"
+        }
+      ],
+      "expected": { "printingId": "dtd193-marvel" }
+    },
+    {
+      "name": "Cold Alternate Border matches Marvel when that is the only Cold printing",
+      "row": {
+        "Identifier": "tiara",
+        "Name": "Amethyst Tiara",
+        "Pitch": "",
+        "Set": "Dynasty",
+        "Set number": "DYN171",
+        "Edition": "",
+        "Foiling": "Cold",
+        "Treatment": "Alternate Border",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "dyn171-normal",
+          "name": "Amethyst Tiara",
+          "collectorNumber": "DYN171",
+          "extNumber": "DYN171",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Dynasty"
+        },
+        {
+          "id": "dyn171-rainbow",
+          "name": "Amethyst Tiara",
+          "collectorNumber": "DYN171",
+          "extNumber": "DYN171",
+          "subTypeName": "Rainbow Foil",
+          "pitch": null,
+          "setName": "Dynasty"
+        },
+        {
+          "id": "dyn171-marvel",
+          "name": "Amethyst Tiara (Marvel)",
+          "collectorNumber": "DYN171",
+          "extNumber": "DYN171",
+          "subTypeName": "Cold Foil",
+          "pitch": null,
+          "setName": "Dynasty"
+        }
+      ],
+      "expected": { "printingId": "dyn171-marvel" }
+    },
+    {
+      "name": "double-faced // collector number matches Fabrary's single side",
+      "row": {
+        "Identifier": "pox",
+        "Name": "Bloodrot Pox",
+        "Pitch": "",
+        "Set": "Promos",
+        "Set number": "LGS125",
+        "Edition": "",
+        "Foiling": "Cold",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "lgs125-cf",
+          "name": "Bloodrot Pox // Frailty - LGS125",
+          "collectorNumber": "LGS125 // LGS126",
+          "extNumber": "LGS125 // LGS126",
+          "subTypeName": "Cold Foil",
+          "pitch": null,
+          "setName": "Flesh and Blood: Promo Cards"
+        }
+      ],
+      "expected": { "printingId": "lgs125-cf" }
+    },
+    {
+      "name": "single-slash collector number matches the back-face code",
+      "row": {
+        "Identifier": "ashwing",
+        "Name": "Aether Ashwing",
+        "Pitch": "",
+        "Set": "Blitz Deck: Uprising - Dromai",
+        "Set number": "DRO003",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "dro002-ash",
+          "name": "Ash // Aether Ashwing",
+          "collectorNumber": "DRO002/DRO003",
+          "extNumber": "DRO002/DRO003",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Blitz Deck: Uprising - Dromai"
+        }
+      ],
+      "expected": { "printingId": "dro002-ash" }
+    },
+    {
+      "name": "young-hero side code matches the DFC Normal, not Marvel Cold",
+      "row": {
+        "Identifier": "pleiades",
+        "Name": "Pleiades",
+        "Pitch": "",
+        "Set": "Super Slam",
+        "Set number": "SUP010",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "sup010-marvel",
+          "name": "Pleiades (Marvel)",
+          "collectorNumber": "SUP010",
+          "extNumber": "SUP010",
+          "subTypeName": "Cold Foil",
+          "pitch": null,
+          "setName": "Super Slam"
+        },
+        {
+          "id": "sup010-dfc",
+          "name": "Pleiades // Lyath Goldmane",
+          "collectorNumber": "SUP010 // SUP072",
+          "extNumber": "SUP010 // SUP072",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Super Slam"
+        }
+      ],
+      "expected": { "printingId": "sup010-dfc" }
+    },
+    {
+      "name": "blank edition does not exclude a card named First Tenet of Chi",
+      "row": {
+        "Identifier": "moon",
+        "Name": "First Tenet of Chi: Moon",
+        "Pitch": "Blue",
+        "Set": "Part the Mistveil",
+        "Set number": "MST092",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "mst092-rf",
+          "name": "First Tenet of Chi: Moon",
+          "collectorNumber": "MST092",
+          "extNumber": "MST092",
+          "subTypeName": "Rainbow Foil",
+          "pitch": "3",
+          "setName": "Part the Mistveil"
+        },
+        {
+          "id": "mst092-normal",
+          "name": "First Tenet of Chi: Moon",
+          "collectorNumber": "MST092",
+          "extNumber": "MST092",
+          "subTypeName": "Normal",
+          "pitch": "3",
+          "setName": "Part the Mistveil"
+        }
+      ],
+      "expected": { "printingId": "mst092-normal" }
+    },
+    {
+      "name": "Strike First in the name is not an edition token",
+      "row": {
+        "Identifier": "tenet",
+        "Name": "Fire Tenet: Strike First",
+        "Pitch": "Red",
+        "Set": "The Hunted",
+        "Set number": "HNT083",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "hnt083-normal",
+          "name": "Fire Tenet: Strike First (Red)",
+          "collectorNumber": "HNT083",
+          "extNumber": "HNT083",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "The Hunted"
+        }
+      ],
+      "expected": { "printingId": "hnt083-normal" }
+    },
+    {
+      "name": "Super Slam pitch matches when the name has no (Red) and catalog pitch is missing",
+      "row": {
+        "Identifier": "jaws",
+        "Name": "Jaws of Victory",
+        "Pitch": "Red",
+        "Set": "Super Slam",
+        "Set number": "SUP005",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "sup005-normal",
+          "name": "Jaws of Victory",
+          "collectorNumber": "SUP005",
+          "extNumber": "SUP005",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Super Slam"
+        },
+        {
+          "id": "sup005-rf",
+          "name": "Jaws of Victory",
+          "collectorNumber": "SUP005",
+          "extNumber": "SUP005",
+          "subTypeName": "Rainbow Foil",
+          "pitch": null,
+          "setName": "Super Slam"
+        }
+      ],
+      "expected": { "printingId": "sup005-normal" }
+    },
+    {
+      "name": "blank Treatment keeps the only printing when it is Extended Art",
+      "row": {
+        "Identifier": "arakni",
+        "Name": "Arakni, 5L!p3d 7hRu 7h3 cR4X",
+        "Pitch": "",
+        "Set": "Armory Deck: Arakni",
+        "Set number": "AAC001",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "aac001-ea",
+          "name": "Arakni, 5L!p3d 7hRu 7h3 cR4X (Extended Art)",
+          "collectorNumber": "AAC001",
+          "extNumber": "AAC001",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Armory Deck: Arakni"
+        }
+      ],
+      "expected": { "printingId": "aac001-ea" }
+    },
+    {
+      "name": "Cold foil still matches a Treasure-named printing when that is the Cold row",
+      "row": {
+        "Identifier": "wave",
+        "Name": "Washed Up Wave",
+        "Pitch": "",
+        "Set": "High Seas",
+        "Set number": "SEA046",
+        "Edition": "",
+        "Foiling": "Cold",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "sea046-normal",
+          "name": "Washed Up Wave",
+          "collectorNumber": "SEA046",
+          "extNumber": "SEA046",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "High Seas"
+        },
+        {
+          "id": "sea046-treasure",
+          "name": "Washed Up Wave (Treasure)",
+          "collectorNumber": "SEA046",
+          "extNumber": "SEA046",
+          "subTypeName": "Cold Foil",
+          "pitch": null,
+          "setName": "High Seas"
+        }
+      ],
+      "expected": { "printingId": "sea046-treasure" }
+    },
+    {
+      "name": "requested foil matches an unlabeled subtype when that is the only printing",
+      "row": {
+        "Identifier": "circlet",
+        "Name": "Circlet of Eternal End",
+        "Pitch": "",
+        "Set": "Usurp the Shadow Throne",
+        "Set number": "IAR223",
+        "Edition": "",
+        "Foiling": "Cold",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "iar223",
+          "name": "Circlet of Eternal End",
+          "collectorNumber": "IAR223",
+          "extNumber": "IAR223",
+          "subTypeName": "",
+          "pitch": null,
+          "setName": "Usurp the Shadow Throne"
+        }
+      ],
+      "expected": { "printingId": "iar223" }
     }
   ]
 }

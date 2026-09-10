@@ -222,17 +222,13 @@ const TradeHistory = () => {
                     {/* Header */}
                     <Box sx={{
                         display: 'flex',
-                        justifyContent: 'space-between',
                         alignItems: 'center',
+                        gap: 1,
                         mb: 3,
                         pb: 2,
-                        borderBottom: '2px solid #d4a574'
+                        borderBottom: '2px solid #d4a574',
+                        minWidth: 0,
                     }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 700, color: accentColor }}>
-                                Trade History
-                            </Typography>
-                        </Box>
                         <Button
                             variant="outlined"
                             size="small"
@@ -241,6 +237,7 @@ const TradeHistory = () => {
                             sx={{
                                 borderColor: paperBorder,
                                 color: accentColor,
+                                flexShrink: 0,
                                 '&:hover': {
                                     borderColor: accentColor,
                                     backgroundColor: isDark ? 'rgba(200, 113, 55, 0.12)' : 'rgba(139, 69, 19, 0.08)'
@@ -249,6 +246,9 @@ const TradeHistory = () => {
                         >
                             Back to Trading
                         </Button>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: accentColor }}>
+                            Trade History
+                        </Typography>
                     </Box>
 
                     {/* Search Bar */}

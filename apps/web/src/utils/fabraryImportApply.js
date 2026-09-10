@@ -1,17 +1,45 @@
 /**
- * Plan a Fabrary Binder import: Have-only, add-on-top. No free-tier cap.
+ * Plan a Fabrary import:
+ * Have → Collection, Want in trade / Want to buy → Want List,
+ * Extra for trade / Extra to sell → Trade Binder. Add-on-top. No free-tier cap.
  */
 
 import { parseFabraryCsv, hasFabraryHeaders } from './fabraryCsv.js';
-import { matchFabraryRow } from './fabraryMatch.js';
+import { buildSetCodeIndex, matchFabraryRow } from './fabraryMatch.js';
 
-export function parseHave(raw) {
+export const FABRARY_DESTINATION = {
+    collection: 'collection',
+    trade: 'trade',
+    want: 'want',
+};
+
+export function parseQty(raw) {
     const text = String(raw ?? '').trim();
-    if (text === '') return { kind: 'empty' };
+    if (text === '') return { kind: 'empty', quantity: 0 };
     const n = Number(text);
-    if (!Number.isFinite(n)) return { kind: 'invalid', raw: text };
-    if (n <= 0) return { kind: 'empty' };
+    if (!Number.isFinite(n)) return { kind: 'invalid', quantity: 0 };
+    if (n <= 0) return { kind: 'empty', quantity: 0 };
     return { kind: 'owned', quantity: n };
+}
+
+/** @deprecated Use parseQty. Have-only alias kept for existing callers. */
+export function parseHave(raw) {
+    return parseQty(raw);
+}
+
+function qtyOf(row, ...keys) {
+    let quantity = 0;
+    let invalid = false;
+    let seen = false;
+    for (const key of keys) {
+        const parsed = parseQty(row?.[key]);
+        if (parsed.kind === 'invalid') invalid = true;
+        if (parsed.kind === 'owned') {
+            seen = true;
+            quantity += parsed.quantity;
+        }
+    }
+    return { quantity, invalid, seen };
 }
 
 function unmatchedFromRow(row) {
@@ -37,14 +65,30 @@ function emptyPlan(refuseReason, extras = {}) {
     };
 }
 
+function addQty(map, printingId, quantity) {
+    map.set(printingId, (map.get(printingId) || 0) + quantity);
+}
+
+function addsFromMap(map, destination) {
+    return [...map.entries()].map(([printingId, quantity]) => ({
+        printingId,
+        quantity,
+        destination,
+    }));
+}
+
+export function copiesForDestination(adds, destination) {
+    return (adds || [])
+        .filter((add) => add.destination === destination)
+        .reduce((sum, add) => sum + add.quantity, 0);
+}
+
 /**
  * @param {Object} input
  * @param {string[]} [input.headers]
  * @param {Object[]} [input.rows]
  * @param {string} [input.csv]
  * @param {Object[]} input.catalog
- * @param {string} input.binderId
- * @param {Object[]} [input.existingEntries]
  */
 export function planFabraryImport(input = {}) {
     let headers = input.headers;
@@ -60,36 +104,45 @@ export function planFabraryImport(input = {}) {
     }
 
     const unmatched = [];
-    const qtyById = new Map();
+    const collectionById = new Map();
+    const tradeById = new Map();
+    const wantById = new Map();
     let ownedCount = 0;
-    let matchedRows = 0;
+    const catalogIndex = buildSetCodeIndex(input.catalog || []);
 
     for (const row of rows || []) {
-        const have = parseHave(row.Have);
-        if (have.kind === 'empty') continue;
-        if (have.kind === 'invalid') {
-            ownedCount += 1;
+        const have = qtyOf(row, 'Have');
+        const want = qtyOf(row, 'Want in trade', 'Want to buy');
+        const extra = qtyOf(row, 'Extra for trade', 'Extra to sell');
+        const hasValid = have.quantity > 0 || want.quantity > 0 || extra.quantity > 0;
+        const hasInvalidOnly = !hasValid && (have.invalid || want.invalid || extra.invalid);
+        if (!hasValid && !hasInvalidOnly) continue;
+
+        ownedCount += 1;
+        if (hasInvalidOnly) {
             unmatched.push(unmatchedFromRow(row));
             continue;
         }
-        ownedCount += 1;
-        const match = matchFabraryRow(row, input.catalog || []);
+
+        const match = matchFabraryRow(row, catalogIndex);
         if (match.unmatched) {
             unmatched.push(match.unmatched);
             continue;
         }
-        matchedRows += 1;
-        qtyById.set(match.printingId, (qtyById.get(match.printingId) || 0) + have.quantity);
+        if (have.quantity > 0) addQty(collectionById, match.printingId, have.quantity);
+        if (want.quantity > 0) addQty(wantById, match.printingId, want.quantity);
+        if (extra.quantity > 0) addQty(tradeById, match.printingId, extra.quantity);
     }
 
     if (ownedCount === 0) {
         return emptyPlan('no_owned');
     }
 
-    const adds = [...qtyById.entries()].map(([printingId, quantity]) => ({
-        printingId,
-        quantity,
-    }));
+    const adds = [
+        ...addsFromMap(collectionById, FABRARY_DESTINATION.collection),
+        ...addsFromMap(wantById, FABRARY_DESTINATION.want),
+        ...addsFromMap(tradeById, FABRARY_DESTINATION.trade),
+    ];
     const matchedCount = adds.length;
     const copiesToAdd = adds.reduce((sum, add) => sum + add.quantity, 0);
 
@@ -113,28 +166,44 @@ export function planFabraryImport(input = {}) {
         copiesToAdd,
         unmatched,
         adds,
-        matchedRows,
-        binderId: input.binderId,
+        restoreCollection: collectionById.size > 0,
     };
 }
 
+function binderIdFor(destination, collectionBinderId, tradeBinderId) {
+    if (destination === FABRARY_DESTINATION.trade) return tradeBinderId;
+    if (destination === FABRARY_DESTINATION.want) return null;
+    return collectionBinderId;
+}
+
 /**
- * Combine Have quantities onto existing NM rows in this Binder only.
+ * Combine planned quantities onto existing NM rows (or Want List rows).
  *
  * @param {Object[]} existingEntries
- * @param {string} binderId
- * @param {{ printingId: string, quantity: number }[]} adds
+ * @param {{ printingId: string, quantity: number, destination?: string }[]} adds
+ * @param {{ collectionBinderId?: string, tradeBinderId?: string }} [ids]
  * @returns {Object[]}
  */
-export function applyImportAddsToEntries(existingEntries, binderId, adds) {
+export function applyImportAddsToEntries(
+    existingEntries,
+    adds,
+    ids = {},
+) {
+    const collectionBinderId = ids.collectionBinderId || 'system:collection';
+    const tradeBinderId = ids.tradeBinderId || 'system:trade';
     const next = (existingEntries || []).map((entry) => ({ ...entry }));
     for (const add of adds || []) {
-        const idx = next.findIndex((entry) =>
-            !entry.isWanted
-            && (entry.binderId || 'system:trade') === binderId
-            && (entry.condition || 'NM') === 'NM'
-            && (entry.printingId || entry.cardId) === add.printingId,
-        );
+        const destination = add.destination || FABRARY_DESTINATION.collection;
+        const wanted = destination === FABRARY_DESTINATION.want;
+        const binderId = binderIdFor(destination, collectionBinderId, tradeBinderId);
+        const idx = next.findIndex((entry) => {
+            const id = entry.printingId || entry.cardId;
+            if (id !== add.printingId) return false;
+            if (wanted) return Boolean(entry.isWanted);
+            if (entry.isWanted) return false;
+            return (entry.binderId || 'system:trade') === binderId
+                && (entry.condition || 'NM') === 'NM';
+        });
         if (idx >= 0) {
             next[idx] = {
                 ...next[idx],
@@ -144,8 +213,8 @@ export function applyImportAddsToEntries(existingEntries, binderId, adds) {
             next.push({
                 printingId: add.printingId,
                 cardId: add.printingId,
-                binderId,
-                isWanted: false,
+                binderId: wanted ? null : binderId,
+                isWanted: wanted,
                 quantity: add.quantity,
                 condition: 'NM',
             });

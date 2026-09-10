@@ -7,9 +7,12 @@ List<Map<String, dynamic>> _sortAdds(Iterable<dynamic> adds) {
   final mapped = adds
       .map((e) => Map<String, dynamic>.from(e as Map))
       .toList()
-    ..sort(
-      (a, b) => '${a['printingId']}'.compareTo('${b['printingId']}'),
-    );
+    ..sort((a, b) {
+      final byId = '${a['printingId']}'.compareTo('${b['printingId']}');
+      if (byId != 0) return byId;
+      return '${a['destination'] ?? 'collection'}'
+          .compareTo('${b['destination'] ?? 'collection'}');
+    });
   return mapped;
 }
 

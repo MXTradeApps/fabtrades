@@ -1,5 +1,5 @@
 {
-  "description": "Fabrary import plan: Have-only owned rows, add-on-top preview. Want/Extra never write Binder or Want List. Import is not capped.",
+  "description": "Fabrary import plan: Have → Collection, Want in trade / Want to buy → Want List, Extra for trade / Extra to sell → Trade Binder. Add-on-top. Import is not capped.",
   "requiredHeaders": [
     "Identifier",
     "Name",
@@ -13,7 +13,7 @@
   ],
   "cases": [
     {
-      "name": "ownedCount is Have>0 only; blank Have adds nothing",
+      "name": "Have goes to Collection; Want columns go to Want List",
       "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have", "Want in trade"],
       "rows": [
         {
@@ -74,7 +74,7 @@
         },
         {
           "id": "wtr001-reg",
-          "name": "Alpha",
+          "name": "Enlightened Strike",
           "collectorNumber": "WTR001",
           "extNumber": "WTR001",
           "subTypeName": "Normal",
@@ -87,15 +87,20 @@
       "expected": {
         "ok": true,
         "refuseReason": null,
-        "ownedCount": 1,
-        "matchedCount": 1,
-        "copiesToAdd": 2,
+        "ownedCount": 3,
+        "matchedCount": 4,
+        "copiesToAdd": 16,
         "unmatched": [],
-        "adds": [{ "printingId": "wtr101-normal", "quantity": 2 }]
+        "adds": [
+          { "printingId": "wtr101-normal", "quantity": 2, "destination": "collection" },
+          { "printingId": "wtr101-normal", "quantity": 9, "destination": "want" },
+          { "printingId": "wtr000-reg", "quantity": 4, "destination": "want" },
+          { "printingId": "wtr001-reg", "quantity": 1, "destination": "want" }
+        ]
       }
     },
     {
-      "name": "Want and Extra columns do not change adds",
+      "name": "Want and Extra columns write Want List and Trade Binder",
       "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have", "Want in trade", "Want to buy", "Extra for trade", "Extra to sell"],
       "rows": [
         {
@@ -140,10 +145,14 @@
         "ok": true,
         "refuseReason": null,
         "ownedCount": 1,
-        "matchedCount": 1,
-        "copiesToAdd": 1,
+        "matchedCount": 3,
+        "copiesToAdd": 15,
         "unmatched": [],
-        "adds": [{ "printingId": "wtr101-normal", "quantity": 1 }]
+        "adds": [
+          { "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" },
+          { "printingId": "wtr101-normal", "quantity": 8, "destination": "want" },
+          { "printingId": "wtr101-normal", "quantity": 6, "destination": "trade" }
+        ]
       }
     },
     {
@@ -193,7 +202,7 @@
         "matchedCount": 1,
         "copiesToAdd": 5,
         "unmatched": [],
-        "adds": [{ "printingId": "wtr101-normal", "quantity": 5 }]
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 5, "destination": "collection" }]
       }
     },
     {
@@ -249,7 +258,7 @@
         "matchedCount": 1,
         "copiesToAdd": 3,
         "unmatched": [],
-        "adds": [{ "printingId": "wtr101-normal", "quantity": 3 }]
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 3, "destination": "collection" }]
       }
     },
     {
@@ -297,7 +306,7 @@
         "matchedCount": 1,
         "copiesToAdd": 1,
         "unmatched": [],
-        "adds": [{ "printingId": "wtr101-normal", "quantity": 1 }]
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" }]
       }
     },
     {
@@ -345,7 +354,7 @@
         "matchedCount": 1,
         "copiesToAdd": 1,
         "unmatched": [],
-        "adds": [{ "printingId": "wtr101-normal", "quantity": 1 }]
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" }]
       }
     },
     {
@@ -414,8 +423,8 @@
         "copiesToAdd": 2,
         "unmatched": [],
         "adds": [
-          { "printingId": "wtr101-normal", "quantity": 1 },
-          { "printingId": "wtr000-reg", "quantity": 1 }
+          { "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" },
+          { "printingId": "wtr000-reg", "quantity": 1, "destination": "collection" }
         ]
       }
     },
@@ -464,7 +473,7 @@
         "matchedCount": 1,
         "copiesToAdd": 2,
         "unmatched": [],
-        "adds": [{ "printingId": "wtr101-normal", "quantity": 2 }]
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 2, "destination": "collection" }]
       }
     },
     {
@@ -515,7 +524,7 @@
       }
     },
     {
-      "name": "no Have>0 refuses with no_owned",
+      "name": "no Have/Want/Extra quantities refuses with no_owned",
       "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
       "rows": [
         {
@@ -625,7 +634,7 @@
             "edition": "First"
           }
         ],
-        "adds": [{ "printingId": "wtr101-normal", "quantity": 1 }]
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" }]
       }
     }
   ]

@@ -27,6 +27,7 @@ function App() {
                             <Route path="/" element={<Home />} />
                             <Route path="/history" element={<TradeHistory />} />
                             <Route path="/binder" element={<BinderCollection isWanted={false} />} />
+                            <Route path="/binder/import" element={<BinderSettings />} />
                             <Route path="/binder/settings" element={<BinderSettings />} />
                             <Route path="/binder/stats" element={<CollectionStats />} />
                             <Route path="/wants" element={<BinderCollection isWanted={true} />} />
