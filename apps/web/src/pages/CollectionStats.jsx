@@ -10,7 +10,8 @@ import {
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
-import MoverBox, { moverBoxGridSx } from '../components/movers/MoverBox.jsx';
+import MoverBox from '../components/movers/MoverBox.jsx';
+import { moverBoxGridSx } from '../components/movers/moverBoxStyles.js';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';

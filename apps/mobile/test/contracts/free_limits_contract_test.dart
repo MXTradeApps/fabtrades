@@ -51,6 +51,7 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         subscriptionProvider.overrideWith(_FreeSubscription.new),
+        isProProvider.overrideWith((ref) => false),
       ],
     );
     addTearDown(container.dispose);
@@ -70,7 +71,8 @@ void main() {
     for (final testCase in cases.where(
       (c) =>
           (c['limit'] == 'binderCards' || c['limit'] == 'wantListCards') &&
-          c['action'] != 'move',
+          c['action'] != 'move' &&
+          c['action'] != 'import',
     )) {
       test(testCase['name'] as String, () async {
         final container = await freeContainer();
@@ -156,6 +158,19 @@ void main() {
         expect(
           FreeLimits.canCreateBinder(
             live,
+            isPro: testCase['isPro'] as bool? ?? false,
+          ),
+          testCase['allowed'],
+        );
+      });
+    }
+
+    for (final testCase in cases.where((c) => c['action'] == 'import')) {
+      test(testCase['name'] as String, () {
+        expect(
+          FreeLimits.canImportDistinctPrintings(
+            (testCase['existingIds'] as List).map((e) => '$e'),
+            (testCase['incomingIds'] as List).map((e) => '$e'),
             isPro: testCase['isPro'] as bool? ?? false,
           ),
           testCase['allowed'],

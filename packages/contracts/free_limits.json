@@ -114,6 +114,60 @@
       "tombstonedCollection": true,
       "isPro": false,
       "allowed": true
+    },
+    {
+      "name": "a free import is allowed when resulting distinct stays at fifty",
+      "limit": "binderCards",
+      "action": "import",
+      "existingIds": ["a", "b", "c"],
+      "incomingIds": ["c", "d"],
+      "isPro": false,
+      "allowed": true
+    },
+    {
+      "name": "a free import of already-owned printings consumes no new slot",
+      "limit": "binderCards",
+      "action": "import",
+      "existingIds": [
+        "o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9",
+        "o10", "o11", "o12", "o13", "o14", "o15", "o16", "o17", "o18", "o19",
+        "o20", "o21", "o22", "o23", "o24", "o25", "o26", "o27", "o28", "o29",
+        "o30", "o31", "o32", "o33", "o34", "o35", "o36", "o37", "o38", "o39",
+        "o40", "o41", "o42", "o43", "o44", "o45", "o46", "o47", "o48", "o49"
+      ],
+      "incomingIds": ["o0", "o1", "o2"],
+      "isPro": false,
+      "allowed": true
+    },
+    {
+      "name": "a free import that would make fifty-one distinct printings is refused",
+      "limit": "binderCards",
+      "action": "import",
+      "existingIds": [
+        "o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9",
+        "o10", "o11", "o12", "o13", "o14", "o15", "o16", "o17", "o18", "o19",
+        "o20", "o21", "o22", "o23", "o24", "o25", "o26", "o27", "o28", "o29",
+        "o30", "o31", "o32", "o33", "o34", "o35", "o36", "o37", "o38", "o39",
+        "o40", "o41", "o42", "o43", "o44", "o45", "o46", "o47", "o48", "o49"
+      ],
+      "incomingIds": ["new-printing"],
+      "isPro": false,
+      "allowed": false
+    },
+    {
+      "name": "a Pro import is allowed even when resulting distinct exceeds fifty",
+      "limit": "binderCards",
+      "action": "import",
+      "existingIds": [
+        "o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8", "o9",
+        "o10", "o11", "o12", "o13", "o14", "o15", "o16", "o17", "o18", "o19",
+        "o20", "o21", "o22", "o23", "o24", "o25", "o26", "o27", "o28", "o29",
+        "o30", "o31", "o32", "o33", "o34", "o35", "o36", "o37", "o38", "o39",
+        "o40", "o41", "o42", "o43", "o44", "o45", "o46", "o47", "o48", "o49"
+      ],
+      "incomingIds": ["new-1", "new-2", "new-3"],
+      "isPro": true,
+      "allowed": true
     }
   ]
 }

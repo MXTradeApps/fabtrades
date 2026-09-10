@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Box,
-    Button,
     Chip,
     CircularProgress,
     Container,
@@ -13,7 +12,6 @@ import {
     Snackbar,
     Typography,
 } from '@mui/material';
-import { AddShoppingCart as AddShoppingCartIcon } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
@@ -22,13 +20,14 @@ import Header from '../components/elements/Header.jsx';
 import { getPublicBinder } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
 import { addCardToTradeDraft } from '../utils/tradeDraft.js';
+import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
 const SORT_OPTIONS = [
-    { id: 'nameAsc', label: 'Name (A–Z)' },
     { id: 'priceDesc', label: 'Price (high → low)' },
     { id: 'priceAsc', label: 'Price (low → high)' },
+    { id: 'nameAsc', label: 'Name (A–Z)' },
     { id: 'numberAsc', label: 'Collector #' },
 ];
 
@@ -72,91 +71,6 @@ function compareEntries(a, b, sort, resolveCard) {
     }
 }
 
-function SharedCardArt({ imageUrl, fallbackUrl, alt, onClick, qty, mutedColor }) {
-    const [src, setSrc] = useState(imageUrl || fallbackUrl || '');
-    const [failed, setFailed] = useState(false);
-
-    useEffect(() => {
-        setSrc(imageUrl || fallbackUrl || '');
-        setFailed(false);
-    }, [imageUrl, fallbackUrl]);
-
-    const handleError = () => {
-        if (fallbackUrl && src !== fallbackUrl) {
-            setSrc(fallbackUrl);
-            return;
-        }
-        setFailed(true);
-    };
-
-    return (
-        <Box
-            component="button"
-            type="button"
-            onClick={onClick}
-            aria-label={`Preview ${alt || 'card'}`}
-            sx={{
-                position: 'relative',
-                width: '100%',
-                height: 112,
-                p: 0,
-                border: 0,
-                cursor: 'pointer',
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                overflow: 'hidden',
-            }}
-        >
-            {!failed && src ? (
-                <Box
-                    component="img"
-                    src={src}
-                    alt={alt || ''}
-                    loading="lazy"
-                    onError={handleError}
-                    sx={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'top',
-                        display: 'block',
-                    }}
-                />
-            ) : (
-                <Box
-                    sx={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        px: 0.5,
-                    }}
-                >
-                    <Typography sx={{ color: mutedColor, fontSize: '0.65rem', textAlign: 'center' }}>
-                        {alt || 'No image'}
-                    </Typography>
-                </Box>
-            )}
-            <Box
-                sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    px: 0.6,
-                    py: 0.15,
-                    fontSize: '0.65rem',
-                    fontWeight: 800,
-                    color: '#fff',
-                    backgroundColor: 'rgba(0, 0, 0, 0.78)',
-                    borderBottomRightRadius: 5,
-                }}
-            >
-                {qty}x
-            </Box>
-        </Box>
-    );
-}
-
 /**
  * Read-only public binder view at `/b/:token`.
  */
@@ -169,7 +83,7 @@ const SharedBinder = () => {
     const [entries, setEntries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [sort, setSort] = useState('nameAsc');
+    const [sort, setSort] = useState('priceDesc');
     const [toast, setToast] = useState('');
 
     const bgGradient = isDark
@@ -415,135 +329,20 @@ const SharedBinder = () => {
                                     This binder is empty.
                                 </Typography>
                             ) : (
-                                <Box
-                                    sx={{
-                                        display: 'grid',
-                                        gridTemplateColumns: {
-                                            xs: 'repeat(2, 1fr)',
-                                            sm: 'repeat(3, 1fr)',
-                                            md: 'repeat(4, 1fr)',
-                                            lg: 'repeat(5, 1fr)',
-                                            xl: 'repeat(6, 1fr)',
-                                        },
-                                        gap: 1,
-                                    }}
-                                >
-                                    {sorted.map((entry) => {
-                                        const card = resolveCard(entry);
-                                        return (
-                                            <Paper
-                                                key={entry.cardId}
-                                                elevation={0}
-                                                sx={{
-                                                    overflow: 'hidden',
-                                                    backgroundColor: isDark
-                                                        ? 'rgba(26, 15, 10, 0.55)'
-                                                        : 'rgba(255, 255, 255, 0.9)',
-                                                    border: `1px solid ${paperBorder}`,
-                                                    borderRadius: 1,
-                                                }}
-                                            >
-                                                <SharedCardArt
-                                                    imageUrl={card.imageUrl}
-                                                    fallbackUrl={card.imageUrlFallback}
-                                                    alt={card.name}
-                                                    qty={entry.quantity}
-                                                    mutedColor={mutedColor}
-                                                    onClick={() => openEntryDetail(entry)}
-                                                />
-                                                <Box sx={{ px: 0.75, py: 0.6 }}>
-                                                    <Typography
-                                                        component={catalogById.get(entry.cardId) ? 'button' : 'span'}
-                                                        type={catalogById.get(entry.cardId) ? 'button' : undefined}
-                                                        onClick={
-                                                            catalogById.get(entry.cardId)
-                                                                ? () => openEntryDetail(entry)
-                                                                : undefined
-                                                        }
-                                                        aria-label={
-                                                            catalogById.get(entry.cardId)
-                                                                ? `View details for ${card.name}`
-                                                                : undefined
-                                                        }
-                                                        sx={{
-                                                            color: textColor,
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: 700,
-                                                            lineHeight: 1.25,
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
-                                                            border: 0,
-                                                            background: 'none',
-                                                            p: 0,
-                                                            m: 0,
-                                                            width: '100%',
-                                                            textAlign: 'left',
-                                                            fontFamily: 'inherit',
-                                                            cursor: catalogById.get(entry.cardId) ? 'pointer' : 'default',
-                                                        }}
-                                                    >
-                                                        {card.name}
-                                                    </Typography>
-                                                    <Typography
-                                                        sx={{
-                                                            color: mutedColor,
-                                                            fontSize: '0.65rem',
-                                                            lineHeight: 1.3,
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
-                                                        }}
-                                                    >
-                                                        {[card.collectorNumber, card.finish, entry.condition]
-                                                            .filter(Boolean)
-                                                            .join(' · ')}
-                                                    </Typography>
-                                                    <Typography
-                                                        sx={{
-                                                            color: accentColor,
-                                                            fontSize: '0.7rem',
-                                                            fontWeight: 700,
-                                                            mt: 0.25,
-                                                        }}
-                                                    >
-                                                        {card.market
-                                                            ? formatCurrency(card.market.toFixed(2))
-                                                            : '—'}
-                                                    </Typography>
-                                                    <Button
-                                                        size="small"
-                                                        fullWidth
-                                                        variant="contained"
-                                                        startIcon={
-                                                            <AddShoppingCartIcon
-                                                                sx={{ fontSize: '0.9rem !important' }}
-                                                            />
-                                                        }
-                                                        onClick={() => handleAddToTrade(entry)}
-                                                        sx={{
-                                                            mt: 0.6,
-                                                            minHeight: 26,
-                                                            py: 0.25,
-                                                            fontSize: '0.65rem',
-                                                            fontWeight: 700,
-                                                            textTransform: 'none',
-                                                            backgroundColor: accentColor,
-                                                            color: isDark ? '#1a0f0a' : '#ffffff',
-                                                            '&:hover': {
-                                                                backgroundColor: isDark
-                                                                    ? '#d4a574'
-                                                                    : '#5d2f0d',
-                                                            },
-                                                        }}
-                                                    >
-                                                        Add to trade
-                                                    </Button>
-                                                </Box>
-                                            </Paper>
-                                        );
-                                    })}
-                                </Box>
+                                <BinderEntryList
+                                    entries={sorted}
+                                    resolveCard={resolveCard}
+                                    resetKey={`${token}|${sort}`}
+                                    catalogById={catalogById}
+                                    variant="shared"
+                                    onOpenDetail={openEntryDetail}
+                                    onAddToTrade={handleAddToTrade}
+                                    mutedColor={mutedColor}
+                                    accentColor={accentColor}
+                                    textColor={textColor}
+                                    paperBorder={paperBorder}
+                                    isDark={isDark}
+                                />
                             )}
                         </>
                     )}

@@ -112,7 +112,7 @@ class Binder {
   }
 
   /// Trade Binder is never absent and never left tombstoned. Collection is not
-  /// re-created here — deleting it must stick.
+  /// re-created here — deleting it must stick until an import restores it.
   static List<Binder> ensureTrade(List<Binder> existing, {DateTime? now}) {
     final stamp = now ?? DateTime.now();
     final next = [...existing];
@@ -121,6 +121,24 @@ class Binder {
       next.add(Binder.tradeDefault(now: stamp));
     } else if (next[tradeIndex].deletedAt != null) {
       next[tradeIndex] = next[tradeIndex].copyWith(
+        updatedAt: stamp,
+        clearDeletedAt: true,
+      );
+    }
+    return next;
+  }
+
+  /// Recreate or undelete Collection (`system:collection`). Live Collection is
+  /// left as-is, including a custom name.
+  static List<Binder> ensureCollection(List<Binder> existing, {DateTime? now}) {
+    final stamp = now ?? DateTime.now();
+    final next = [...existing];
+    final index = next.indexWhere((b) => b.clientId == BinderIds.collection);
+    if (index < 0) {
+      next.add(Binder.collectionDefault(now: stamp));
+    } else if (next[index].deletedAt != null) {
+      next[index] = next[index].copyWith(
+        name: 'Collection',
         updatedAt: stamp,
         clearDeletedAt: true,
       );
@@ -149,8 +167,8 @@ class Binder {
       return a.clientId.compareTo(b.clientId);
     });
     return [
-      if (trade != null) trade,
-      if (collection != null) collection,
+      ?trade,
+      ?collection,
       ...rest,
     ];
   }

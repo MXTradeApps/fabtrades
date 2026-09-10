@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,8 +33,17 @@ class BinderList extends ConsumerStatefulWidget {
 }
 
 class _BinderListState extends ConsumerState<BinderList> {
+  static const _pageSize = 50;
+
   final _controller = TextEditingController();
   Timer? _debounce;
+  int _page = 0;
+
+  @override
+  void didUpdateWidget(BinderList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.binderId != widget.binderId) _page = 0;
+  }
 
   @override
   void dispose() {
@@ -47,6 +57,7 @@ class _BinderListState extends ConsumerState<BinderList> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       ref.read(binderFiltersProvider.notifier).setQuery(value);
+      if (mounted) setState(() => _page = 0);
     });
   }
 
@@ -54,14 +65,14 @@ class _BinderListState extends ConsumerState<BinderList> {
     _debounce?.cancel();
     _controller.clear();
     ref.read(binderFiltersProvider.notifier).setQuery('');
-    setState(() {});
+    setState(() => _page = 0);
   }
 
   void _clearFilters() {
     _debounce?.cancel();
     _controller.clear();
     ref.read(binderFiltersProvider.notifier).clear();
-    setState(() {});
+    setState(() => _page = 0);
   }
 
   @override
@@ -100,6 +111,7 @@ class _BinderListState extends ConsumerState<BinderList> {
     final filters = ref.watch(binderFiltersProvider);
     final visible = ref.watch(filteredBinderProvider);
     final hasQuery = filters.query.trim().isNotEmpty;
+    final pageRows = _pageSlice(visible);
 
     return Column(
       children: [
@@ -112,9 +124,19 @@ class _BinderListState extends ConsumerState<BinderList> {
             onChanged: _onChanged,
             onClear: _clearQuery,
             sort: filters.sort,
-            onSort: (s) => ref.read(binderFiltersProvider.notifier).setSort(s),
+            onSort: (s) {
+              setState(() => _page = 0);
+              ref.read(binderFiltersProvider.notifier).setSort(s);
+            },
           ),
         ),
+        if (visible.isNotEmpty)
+          _BinderPager(
+            page: _clampedPage(visible.length),
+            pageSize: _pageSize,
+            total: visible.length,
+            onPage: (next) => setState(() => _page = next),
+          ),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () => refreshBinderSync(context, ref),
@@ -128,11 +150,11 @@ class _BinderListState extends ConsumerState<BinderList> {
                 : ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.only(bottom: 96),
-                    itemCount: visible.length,
+                    itemCount: pageRows.length,
                     separatorBuilder: (_, _) =>
-                        const Divider(height: 1, indent: 58),
+                        const Divider(height: 1, indent: 46),
                     itemBuilder: (context, i) => _EntryRow(
-                      entry: visible[i],
+                      entry: pageRows[i],
                       pricing: pricing,
                       binderId: widget.binderId,
                       liveBinders: binders,
@@ -142,6 +164,19 @@ class _BinderListState extends ConsumerState<BinderList> {
         ),
       ],
     );
+  }
+
+  int _clampedPage(int total) {
+    final last = math.max(0, ((total + _pageSize - 1) ~/ _pageSize) - 1);
+    return _page.clamp(0, last).toInt();
+  }
+
+  List<BinderEntry> _pageSlice(List<BinderEntry> visible) {
+    if (visible.isEmpty) return const [];
+    final page = _clampedPage(visible.length);
+    final start = page * _pageSize;
+    final end = math.min(start + _pageSize, visible.length);
+    return visible.sublist(start, end);
   }
 }
 
@@ -158,6 +193,61 @@ class _ScrollableCenter extends StatelessWidget {
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Center(child: child),
         ),
+      ),
+    );
+  }
+}
+
+class _BinderPager extends StatelessWidget {
+  const _BinderPager({
+    required this.page,
+    required this.pageSize,
+    required this.total,
+    required this.onPage,
+  });
+
+  final int page;
+  final int pageSize;
+  final int total;
+  final ValueChanged<int> onPage;
+
+  @override
+  Widget build(BuildContext context) {
+    if (total <= pageSize) return const SizedBox.shrink();
+    final last = math.max(0, ((total + pageSize - 1) ~/ pageSize) - 1);
+    final from = page * pageSize + 1;
+    final to = math.min((page + 1) * pageSize, total);
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+      child: Row(
+        key: const Key('binderPager'),
+        children: [
+          Expanded(
+            child: Text(
+              '$from–$to of $total',
+              key: const Key('binderPagerLabel'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          IconButton(
+            key: const Key('binderPagerPrev'),
+            tooltip: 'Previous page',
+            visualDensity: VisualDensity.compact,
+            onPressed: page > 0 ? () => onPage(page - 1) : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          IconButton(
+            key: const Key('binderPagerNext'),
+            tooltip: 'Next page',
+            visualDensity: VisualDensity.compact,
+            onPressed: page < last ? () => onPage(page + 1) : null,
+            icon: const Icon(Icons.chevron_right),
+          ),
+        ],
       ),
     );
   }
@@ -359,7 +449,7 @@ class _EntryRow extends ConsumerWidget {
         binderId: binderId,
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
         child: Row(
           children: [
             GestureDetector(
@@ -368,11 +458,11 @@ class _EntryRow extends ConsumerWidget {
               child: CardThumbnail(
                 url: card.imageUrl,
                 foil: card.isFoil,
-                width: 36,
-                height: 50,
+                width: 28,
+                height: 40,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: InkWell(
                 key: Key('binderRow-${card.id}'),
@@ -387,8 +477,8 @@ class _EntryRow extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 1),
                       CardMetaLine(card: card),
                     ],
                   ),

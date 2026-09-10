@@ -280,11 +280,43 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   }
 
   Future<void> _deleteBinder(BuildContext context, String clientId) async {
+    final binder = ref.read(bindersProvider.notifier).byId(clientId);
+    if (binder == null) return;
+    final copies = ref.read(binderProvider).fold<int>(0, (sum, e) {
+      if (e.isWanted || e.resolvedBinderId != clientId || e.quantity < 1) {
+        return sum;
+      }
+      return sum + e.quantity;
+    });
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const Key('binderDeleteConfirm'),
+        title: Text('Delete ${binder.name}?'),
+        content: Text(
+          copies > 0
+              ? 'This will also remove $copies ${copies == 1 ? 'card' : 'cards'} from your collection. This cannot be undone.'
+              : 'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('binderDeleteCancel'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('binderDeleteConfirmButton'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
     final err = ref.read(bindersProvider.notifier).delete(clientId);
     if (err == null || !context.mounted) return;
     final message = switch (err) {
       'trade' => 'Trade Binder cannot be deleted',
-      'not-empty' => 'Move or remove cards before deleting this Binder',
       _ => 'Could not delete Binder',
     };
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));

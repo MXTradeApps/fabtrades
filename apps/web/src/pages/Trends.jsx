@@ -10,7 +10,8 @@ import {
 import { Search as SearchIcon } from '@mui/icons-material';
 import Header from '../components/elements/Header.jsx';
 import RecentMoversSection from '../components/movers/RecentMoversSection.jsx';
-import MoverBox, { moverBoxGridSx } from '../components/movers/MoverBox.jsx';
+import MoverBox from '../components/movers/MoverBox.jsx';
+import { moverBoxGridSx } from '../components/movers/moverBoxStyles.js';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { usePriceType } from '../contexts/PriceContext.jsx';

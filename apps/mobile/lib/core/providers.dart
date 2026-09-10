@@ -23,6 +23,7 @@ import 'data/set_published_on.dart';
 import 'data/settings_repository.dart';
 import 'data/trade_repository.dart';
 import 'logic/confirm_trade.dart';
+import 'logic/fabrary_import_apply.dart';
 import 'logic/feature_access.dart';
 import 'logic/free_limits.dart';
 import 'logic/binder_move.dart';
@@ -863,15 +864,13 @@ class BindersNotifier extends Notifier<List<Binder>> {
     return check;
   }
 
-  /// Null on success. `trade` / `not-empty` / `missing` on refusal.
+  /// Null on success. `trade` / `missing` on refusal.
+  /// Owned cards in this Binder leave the collection; Want List is unchanged.
   String? delete(String clientId) {
     final binder = byId(clientId);
     if (binder == null || !binder.isLive) return 'missing';
     if (binder.isTrade) return 'trade';
-    final entries = ref.read(binderProvider);
-    final occupied = entries.any((e) =>
-        !e.isWanted && e.resolvedBinderId == clientId && e.quantity >= 1);
-    if (occupied) return 'not-empty';
+    ref.read(binderProvider.notifier).removeOwnedInBinder(clientId);
     final stamp = DateTime.now();
     state = [
       for (final b in state)
@@ -882,6 +881,12 @@ class BindersNotifier extends Notifier<List<Binder>> {
     ];
     _persist();
     return null;
+  }
+
+  /// Undelete or seed Collection. Live Collection is left as-is.
+  void ensureCollection() {
+    state = Binder.ensureCollection(state);
+    _persist();
   }
 }
 
@@ -1042,6 +1047,16 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
     );
   }
 
+  /// Drops every owned row in [binderId]. Want List rows stay.
+  void removeOwnedInBinder(String binderId) {
+    final next = state
+        .where((e) => e.isWanted || e.resolvedBinderId != binderId)
+        .toList();
+    if (next.length == state.length) return;
+    state = next;
+    _persist();
+  }
+
   /// Decrements binder/want qty, clamping at zero (silent — no warnings).
   void decrement(String cardId, int quantity,
       {bool isWanted = false, String? binderId}) {
@@ -1082,6 +1097,75 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
 
   bool isWanted(String cardId) =>
       state.any((e) => e.card.id == cardId && e.isWanted && e.quantity > 0);
+
+  /// Adds planned Fabrary quantities as Near Mint copies (or Want List rows).
+  /// Have → Collection, wants → Want List, extras → Trade Binder.
+  /// Restores Collection when Have copies are present. One state replace, one
+  /// save, then a single sync. Failed persist restores the previous entries.
+  Future<bool> applyImportAdds(List<FabraryAdd> adds) async {
+    if (adds.isEmpty) return true;
+    if (adds.any((add) => add.destination == fabraryDestinationCollection)) {
+      ref.read(bindersProvider.notifier).ensureCollection();
+    }
+    final prior = List<BinderEntry>.from(state);
+    final catalog = ref.read(catalogByIdProvider);
+    final next = List<BinderEntry>.from(state);
+    final now = DateTime.now();
+    for (final add in adds) {
+      final wanted = add.destination == fabraryDestinationWant;
+      final binderId = wanted
+          ? null
+          : (add.destination == fabraryDestinationTrade
+              ? BinderIds.trade
+              : BinderIds.collection);
+      final idx = next.indexWhere((e) {
+        if (e.card.id != add.printingId) return false;
+        if (wanted) return e.isWanted;
+        return !e.isWanted &&
+            e.resolvedBinderId == binderId &&
+            e.condition == 'NM';
+      });
+      if (idx >= 0) {
+        next[idx] =
+            next[idx].copyWith(quantity: next[idx].quantity + add.quantity);
+        continue;
+      }
+      CardModel? card = catalog[add.printingId];
+      if (card == null) {
+        for (final entry in prior) {
+          if (entry.card.id == add.printingId) {
+            card = entry.card;
+            break;
+          }
+        }
+      }
+      if (card == null) continue;
+      next.add(BinderEntry(
+        card: card,
+        quantity: add.quantity,
+        condition: 'NM',
+        isWanted: wanted,
+        binderId: binderId,
+        addedAt: now,
+      ));
+    }
+    state = next;
+    try {
+      _persist();
+    } catch (_) {
+      state = prior;
+      return false;
+    }
+    final account = ref.read(accountProvider).value;
+    if (account != null) {
+      try {
+        await ref.read(syncProvider.notifier).syncAfterBinderMutation(account.id);
+      } catch (_) {
+        // Local persist already succeeded; a sync miss must not roll back.
+      }
+    }
+    return true;
+  }
 
   /// Applies Confirm Trade binder side-effects (given leave / received enter /
   /// want-list clear). Does not touch trade history or the draft.

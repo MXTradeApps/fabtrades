@@ -327,10 +327,17 @@ void main() {
     await tester.tap(find.byKey(const Key('binderTileMenu-system:collection')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('deleteBinder-system:collection')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.textContaining('Move or remove cards'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('binderDeleteConfirm')), findsOneWidget);
+    expect(find.textContaining('remove 1 card'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('binderDeleteCancel')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('binderTile-system:collection')), findsOneWidget);
+    expect(
+      container.read(binderProvider).any((e) =>
+          !e.isWanted && e.resolvedBinderId == BinderIds.collection),
+      isTrue,
+    );
 
     expect(binders.create('Third', isPro: false).ok, isTrue);
     await tester.pump();
@@ -339,6 +346,38 @@ void main() {
     await tester.pump();
     expect(binders.live, hasLength(5));
     expect(find.textContaining('Subscriptions are unavailable'), findsNothing);
+  });
+
+  testWidgets('confirming delete removes the binder and its cards', (tester) async {
+    final container = await pumpGrid(tester);
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'keep', name: 'Keep'),
+          binderId: BinderIds.trade,
+        );
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'gone', name: 'Gone'),
+          quantity: 2,
+          binderId: BinderIds.collection,
+        );
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'want', name: 'Want'),
+          isWanted: true,
+        );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('binderTileMenu-system:collection')));
+    await tester.tap(find.byKey(const Key('binderTileMenu-system:collection')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('deleteBinder-system:collection')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('binderDeleteConfirm')), findsOneWidget);
+    expect(find.textContaining('remove 2 cards'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('binderDeleteConfirmButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('binderTile-system:collection')), findsNothing);
+    expect(find.byKey(const Key('binderTile-system:trade')), findsOneWidget);
+    final left = container.read(binderProvider);
+    expect(left.where((e) => !e.isWanted).single.card.id, 'keep');
+    expect(left.where((e) => e.isWanted).single.card.id, 'want');
   });
 
   testWidgets('row tap opens printing picker; art tap opens card detail',
@@ -395,5 +434,31 @@ void main() {
           .onTap,
       isNotNull,
     );
+  });
+
+  testWidgets('open binder paginates compact rows', (tester) async {
+    final container = await pumpGrid(tester);
+    for (var i = 0; i < 51; i++) {
+      final n = i.toString().padLeft(3, '0');
+      container.read(binderProvider.notifier).add(
+            buildCard(id: 'c$n-Normal', name: 'Card $n'),
+            binderId: BinderIds.trade,
+          );
+    }
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('binderPager')), findsOneWidget);
+    expect(find.byKey(const Key('binderPagerLabel')), findsOneWidget);
+    expect(find.text('1–50 of 51'), findsOneWidget);
+    expect(find.byKey(const Key('binderRow-c000-Normal')), findsOneWidget);
+    expect(find.byKey(const Key('binderRow-c050-Normal')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('binderPagerNext')));
+    await tester.pumpAndSettle();
+    expect(find.text('51–51 of 51'), findsOneWidget);
+    expect(find.byKey(const Key('binderRow-c050-Normal')), findsOneWidget);
+    expect(find.byKey(const Key('binderRow-c000-Normal')), findsNothing);
   });
 }

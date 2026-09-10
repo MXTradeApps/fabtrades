@@ -13,6 +13,7 @@ import {
     FormControl,
     FormControlLabel,
     IconButton,
+    InputAdornment,
     MenuItem,
     Paper,
     Select,
@@ -24,9 +25,9 @@ import {
 import {
     Add as AddIcon,
     ArrowBack as ArrowBackIcon,
+    Clear as ClearIcon,
     ContentCopy as ContentCopyIcon,
-    Delete as DeleteIcon,
-    Remove as RemoveIcon,
+    Search as SearchIcon,
     Share as ShareIcon,
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -36,7 +37,7 @@ import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import Header from '../components/elements/Header.jsx';
-import { SearchInput } from '../components/search/index.js';
+import { SearchDialog } from '../components/search/index.js';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import {
     ensureBinderShare,
@@ -54,15 +55,16 @@ import {
 } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
+import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
-/** Matches mobile `CardSort` labels / ordering. */
+/** Matches mobile `CardSort` labels / ordering. Default is price high → low. */
 const SORT_OPTIONS = [
-    { id: 'nameAsc', label: 'Name (A–Z)' },
     { id: 'priceDesc', label: 'Price (high → low)' },
     { id: 'priceAsc', label: 'Price (low → high)' },
+    { id: 'nameAsc', label: 'Name (A–Z)' },
     { id: 'numberAsc', label: 'Collector #' },
 ];
 
@@ -95,6 +97,10 @@ function compareBinderEntries(a, b, sort, resolveCard) {
     }
 }
 
+function ownedIdentity(entry) {
+    return `${entry.cardId}|${entry.binderId || TRADE_BINDER_ID}|${entry.condition || 'NM'}`;
+}
+
 /** Same CDN pattern as useCardData — rebuild when the stub URL is stale/empty. */
 function fabCdnUrl(collectorNumber, finish) {
     if (!collectorNumber) return '';
@@ -105,97 +111,6 @@ function fabCdnUrl(collectorNumber, finish) {
     if (sub.includes('cold foil')) suffix = '-CF';
     else if (sub.includes('rainbow foil')) suffix = '-RF';
     return `${FAB_CDN_BASE}/${code}${suffix}.webp`;
-}
-
-/**
- * Card art with CDN → catalog/TCG fallback. Binder stubs often lack a working
- * image_url; catalog merge can miss if ids diverge — always try the CDN code.
- */
-function BinderCardArt({ imageUrl, fallbackUrl, alt, onClick, qty, mutedColor }) {
-    const [src, setSrc] = useState(imageUrl || fallbackUrl || '');
-    const [failed, setFailed] = useState(false);
-
-    useEffect(() => {
-        setSrc(imageUrl || fallbackUrl || '');
-        setFailed(false);
-    }, [imageUrl, fallbackUrl]);
-
-    const handleError = () => {
-        if (fallbackUrl && src !== fallbackUrl) {
-            setSrc(fallbackUrl);
-            return;
-        }
-        setFailed(true);
-    };
-
-    return (
-        <Box
-            component="button"
-            type="button"
-            onClick={onClick}
-            aria-label={`Preview ${alt || 'card'}`}
-            sx={{
-                position: 'relative',
-                width: '100%',
-                height: 112,
-                p: 0,
-                border: 0,
-                cursor: 'pointer',
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                overflow: 'hidden',
-            }}
-        >
-            {!failed && src ? (
-                <Box
-                    component="img"
-                    src={src}
-                    alt={alt || ''}
-                    loading="lazy"
-                    onError={handleError}
-                    sx={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'top',
-                        display: 'block',
-                    }}
-                />
-            ) : (
-                <Box
-                    sx={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        px: 0.5,
-                    }}
-                >
-                    <Typography
-                        sx={{ color: mutedColor, fontSize: '0.65rem', textAlign: 'center' }}
-                    >
-                        {alt || 'No image'}
-                    </Typography>
-                </Box>
-            )}
-            <Box
-                sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    px: 0.6,
-                    py: 0.15,
-                    fontSize: '0.65rem',
-                    fontWeight: 800,
-                    color: '#fff',
-                    backgroundColor: 'rgba(0, 0, 0, 0.78)',
-                    borderBottomRightRadius: 5,
-                }}
-            >
-                {qty}x
-            </Box>
-        </Box>
-    );
 }
 
 /**
@@ -210,8 +125,8 @@ const BinderCollection = ({ isWanted = false }) => {
     const { openDetail } = useCardDetail();
     const { cards, cardGroups, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
-    const [entries, setEntries] = useState([]);
     const [allOwned, setAllOwned] = useState([]);
+    const [wants, setWants] = useState([]);
     const [binders, setBinders] = useState([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const openBinderId = isWanted ? null : searchParams.get('b');
@@ -223,16 +138,18 @@ const BinderCollection = ({ isWanted = false }) => {
         }
         setSearchParams({ b: id });
     }, [isWanted, setSearchParams]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(Boolean(user));
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sort, setSort] = useState('nameAsc');
+    const [sort, setSort] = useState('priceDesc');
+    const [addOpen, setAddOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
     const [busyCardId, setBusyCardId] = useState(null);
     const [toast, setToast] = useState('');
     const [shareOpen, setShareOpen] = useState(false);
     const [share, setShare] = useState(null);
     const [shareBusy, setShareBusy] = useState(false);
+    const [pendingDelete, setPendingDelete] = useState(null);
 
     const listLabel = isWanted ? 'Want List' : 'Binder';
     const pageTitle = isWanted ? 'Want List' : 'My Binders';
@@ -247,26 +164,18 @@ const BinderCollection = ({ isWanted = false }) => {
     const paperBorder = isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.15)';
 
     const loadEntries = useCallback(async () => {
-        setLoading(true);
         setError(null);
         const { data, error: fetchError } = await getBinderEntries();
         if (fetchError) {
             setError(fetchError.message || `Failed to load ${listLabel.toLowerCase()}`);
-            setEntries([]);
             setAllOwned([]);
+            setWants([]);
         } else {
-            const owned = data.binder || [];
-            setAllOwned(owned);
-            if (isWanted) {
-                setEntries(data.wants || []);
-            } else if (openBinderId) {
-                setEntries(owned.filter((e) => (e.binderId || TRADE_BINDER_ID) === openBinderId));
-            } else {
-                setEntries(owned);
-            }
+            setAllOwned(data.binder || []);
+            setWants(data.wants || []);
         }
         setLoading(false);
-    }, [isWanted, listLabel, openBinderId]);
+    }, [listLabel]);
 
     const loadBinders = useCallback(async () => {
         if (isWanted) return;
@@ -275,11 +184,22 @@ const BinderCollection = ({ isWanted = false }) => {
     }, [isWanted]);
 
     useEffect(() => {
-        if (user) {
-            loadEntries();
-            loadBinders();
+        if (!user) {
+            setLoading(false);
+            return;
         }
+        setLoading(true);
+        loadEntries();
+        loadBinders();
     }, [user, loadEntries, loadBinders]);
+
+    const entries = useMemo(() => {
+        if (isWanted) return wants;
+        if (openBinderId) {
+            return allOwned.filter((e) => (e.binderId || TRADE_BINDER_ID) === openBinderId);
+        }
+        return allOwned;
+    }, [isWanted, wants, allOwned, openBinderId]);
 
     useEffect(() => {
         setOpenBinderId(isWanted ? null : openBinderId);
@@ -418,10 +338,22 @@ const BinderCollection = ({ isWanted = false }) => {
             return;
         }
 
-        setEntries((prev) => {
-            const without = prev.filter((e) => e.cardId !== cardId);
-            return [data, ...without];
-        });
+        if (isWanted) {
+            setWants((prev) => {
+                const without = prev.filter((e) => e.cardId !== cardId);
+                return [data, ...without];
+            });
+        } else {
+            const key = ownedIdentity({
+                cardId,
+                binderId,
+                condition: existing?.condition || 'NM',
+            });
+            setAllOwned((prev) => {
+                const without = prev.filter((e) => ownedIdentity(e) !== key);
+                return [data, ...without];
+            });
+        }
         setToast(`Added ${catalogCard.name} to ${listLabel}`);
     };
 
@@ -437,7 +369,12 @@ const BinderCollection = ({ isWanted = false }) => {
                 setToast(delError.message || 'Failed to remove card');
                 return;
             }
-            setEntries((prev) => prev.filter((e) => e.cardId !== entry.cardId));
+            if (isWanted) {
+                setWants((prev) => prev.filter((e) => e.cardId !== entry.cardId));
+            } else {
+                const key = ownedIdentity(entry);
+                setAllOwned((prev) => prev.filter((e) => ownedIdentity(e) !== key));
+            }
             return;
         }
 
@@ -456,7 +393,12 @@ const BinderCollection = ({ isWanted = false }) => {
             setToast(upsertError.message || 'Failed to update quantity');
             return;
         }
-        setEntries((prev) => prev.map((e) => (e.cardId === entry.cardId ? data : e)));
+        if (isWanted) {
+            setWants((prev) => prev.map((e) => (e.cardId === entry.cardId ? data : e)));
+        } else {
+            const key = ownedIdentity(entry);
+            setAllOwned((prev) => prev.map((e) => (ownedIdentity(e) === key ? data : e)));
+        }
     };
 
     /**
@@ -505,11 +447,21 @@ const BinderCollection = ({ isWanted = false }) => {
             return;
         }
 
-        setEntries((prev) => {
-            const withoutOld = prev.filter((e) => e.cardId !== entry.cardId);
-            const withoutTarget = withoutOld.filter((e) => e.cardId !== newCardId);
-            return [upserted, ...withoutTarget];
-        });
+        if (isWanted) {
+            setWants((prev) => {
+                const withoutOld = prev.filter((e) => e.cardId !== entry.cardId);
+                const withoutTarget = withoutOld.filter((e) => e.cardId !== newCardId);
+                return [upserted, ...withoutTarget];
+            });
+        } else {
+            const oldKey = ownedIdentity(entry);
+            const nextKey = ownedIdentity(upserted);
+            setAllOwned((prev) => {
+                const withoutOld = prev.filter((e) => ownedIdentity(e) !== oldKey);
+                const withoutTarget = withoutOld.filter((e) => ownedIdentity(e) !== nextKey);
+                return [upserted, ...withoutTarget];
+            });
+        }
         setToast(`Changed to ${newCard.subTypeName || 'new version'}`);
     };
 
@@ -525,7 +477,12 @@ const BinderCollection = ({ isWanted = false }) => {
             setToast(delError.message || 'Failed to remove card');
             return;
         }
-        setEntries((prev) => prev.filter((e) => e.cardId !== entry.cardId));
+        if (isWanted) {
+            setWants((prev) => prev.filter((e) => e.cardId !== entry.cardId));
+        } else {
+            const key = ownedIdentity(entry);
+            setAllOwned((prev) => prev.filter((e) => ownedIdentity(e) !== key));
+        }
     };
 
     const promptName = (title, initial = '') => {
@@ -566,21 +523,38 @@ const BinderCollection = ({ isWanted = false }) => {
         setBinders((prev) => prev.map((b) => (b.clientId === data.clientId ? data : b)));
     };
 
-    const handleDeleteBinder = async (binder) => {
+    const handleDeleteBinder = (binder) => {
+        setPendingDelete(binder);
+    };
+
+    const pendingDeleteCopies = pendingDelete
+        ? allOwned
+            .filter((e) =>
+                !e.isWanted &&
+                (e.binderId || TRADE_BINDER_ID) === pendingDelete.clientId,
+            )
+            .reduce((sum, e) => sum + (Number(e.quantity) || 0), 0)
+        : 0;
+
+    const confirmDeleteBinder = async () => {
+        const binder = pendingDelete;
+        if (!binder) return;
         const { error: deleteError } = await deleteBinder({
             clientId: binder.clientId,
-            entries: allOwned,
         });
         if (deleteError) {
             const message = deleteError.reason === 'trade'
                 ? 'Trade Binder cannot be deleted'
-                : deleteError.reason === 'not-empty'
-                    ? 'Move or remove cards before deleting this Binder'
-                    : (deleteError.message || 'Could not delete Binder');
+                : (deleteError.message || 'Could not delete Binder');
             setToast(message);
+            setPendingDelete(null);
             return;
         }
         setBinders((prev) => prev.filter((b) => b.clientId !== binder.clientId));
+        setAllOwned((prev) => prev.filter((e) =>
+            (e.binderId || TRADE_BINDER_ID) !== binder.clientId,
+        ));
+        setPendingDelete(null);
     };
 
     const handleMove = async (entry) => {
@@ -762,6 +736,28 @@ const BinderCollection = ({ isWanted = false }) => {
                         }}
                     >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                            <Button
+                                variant="text"
+                                size="small"
+                                data-testid="binder-back"
+                                startIcon={<ArrowBackIcon sx={{ fontSize: '1rem !important' }} />}
+                                onClick={() => {
+                                    if (openBinderId) {
+                                        setOpenBinder(null);
+                                        return;
+                                    }
+                                    navigate('/');
+                                }}
+                                sx={{
+                                    color: accentColor,
+                                    fontSize: '0.75rem',
+                                    minHeight: 28,
+                                    px: 0.75,
+                                    flexShrink: 0,
+                                }}
+                            >
+                                Back
+                            </Button>
                             <Typography
                                 component={!isWanted && openBinderId ? 'button' : 'h1'}
                                 type={!isWanted && openBinderId ? 'button' : undefined}
@@ -863,6 +859,22 @@ const BinderCollection = ({ isWanted = false }) => {
                                 </Button>
                             )}
                             {showingGrid && (
+                                <>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    data-testid="import-fabrary"
+                                    onClick={() => navigate('/binder/import')}
+                                    sx={{
+                                        color: accentColor,
+                                        borderColor: paperBorder,
+                                        fontSize: '0.75rem',
+                                        minHeight: 28,
+                                        px: 0.75,
+                                    }}
+                                >
+                                    Import from Fabrary
+                                </Button>
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -878,28 +890,8 @@ const BinderCollection = ({ isWanted = false }) => {
                                 >
                                     New Binder
                                 </Button>
+                                </>
                             )}
-                            <Button
-                                variant="text"
-                                size="small"
-                                data-testid="binder-back"
-                                startIcon={<ArrowBackIcon sx={{ fontSize: '1rem !important' }} />}
-                                onClick={() => {
-                                    if (openBinderId) {
-                                        setOpenBinder(null);
-                                        return;
-                                    }
-                                    navigate('/');
-                                }}
-                                sx={{
-                                    color: accentColor,
-                                    fontSize: '0.75rem',
-                                    minHeight: 28,
-                                    px: 0.75,
-                                }}
-                            >
-                                Back
-                            </Button>
                         </Box>
                     </Box>
 
@@ -931,23 +923,80 @@ const BinderCollection = ({ isWanted = false }) => {
                             flexWrap: { xs: 'wrap', sm: 'nowrap' },
                         }}
                     >
-                        <Box sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 0 } }}>
-                            <SearchInput
-                                label=""
-                                size="small"
-                                placeholder="Search to add cards…"
-                                items={cardOptions}
-                                value={searchQuery}
-                                onChange={(_e, value) => setSearchQuery(value || '')}
-                                onSelect={handleAddCard}
-                                keepOpenOnSelect
-                                keepInputOnSelect
-                            />
-                        </Box>
+                        <TextField
+                            data-testid="collection-search"
+                            size="small"
+                            fullWidth
+                            placeholder={isWanted ? 'Search Want List…' : 'Search Binder…'}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            inputProps={{ 'aria-label': isWanted ? 'Search Want List' : 'Search Binder' }}
+                            sx={{
+                                flexGrow: 1,
+                                minWidth: { xs: '100%', sm: 0 },
+                                '& .MuiOutlinedInput-root': {
+                                    backgroundColor: isDark
+                                        ? 'rgba(26, 15, 10, 0.6)'
+                                        : 'rgba(255, 255, 255, 0.7)',
+                                    color: textColor,
+                                    fontSize: '0.8125rem',
+                                    minHeight: 36,
+                                    '& fieldset': { borderColor: paperBorder },
+                                    '&:hover fieldset': { borderColor: accentColor },
+                                    '& input': { py: 0.75 },
+                                },
+                                '& input::placeholder': {
+                                    color: isDark ? 'rgba(212, 165, 116, 0.7)' : 'rgba(93, 58, 26, 0.6)',
+                                    opacity: 1,
+                                },
+                            }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon
+                                            sx={{
+                                                fontSize: '1rem',
+                                                color: mutedColor,
+                                            }}
+                                        />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: searchQuery ? (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            size="small"
+                                            aria-label="clear search"
+                                            onClick={() => setSearchQuery('')}
+                                            sx={{ p: 0.35 }}
+                                        >
+                                            <ClearIcon sx={{ fontSize: '0.95rem', color: mutedColor }} />
+                                        </IconButton>
+                                    </InputAdornment>
+                                ) : null,
+                            }}
+                        />
+                        <Button
+                            data-testid="add-card"
+                            variant="contained"
+                            size="small"
+                            startIcon={<AddIcon sx={{ fontSize: '1rem !important' }} />}
+                            onClick={() => setAddOpen(true)}
+                            sx={{
+                                flexShrink: 0,
+                                minHeight: 36,
+                                px: 1.25,
+                                fontSize: '0.75rem',
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            Add Card
+                        </Button>
                         <FormControl
                             size="small"
                             sx={{
-                                minWidth: { xs: '100%', sm: 150 },
+                                minWidth: { xs: 140, sm: 150 },
                                 flexShrink: 0,
                                 '& .MuiOutlinedInput-root': {
                                     backgroundColor: isDark
@@ -1000,326 +1049,60 @@ const BinderCollection = ({ isWanted = false }) => {
                                     ? 'No matching cards in this list'
                                     : `${listLabel} is empty`}
                             </Typography>
-                            <Typography variant="body2" sx={{ color: mutedColor }}>
+                            <Typography variant="body2" sx={{ color: mutedColor, mb: searchQuery.trim() ? 0 : 2 }}>
                                 {searchQuery.trim()
-                                    ? 'Pick a result above to add it, or clear the search.'
-                                    : `Type in the search box above to add cards.`}
+                                    ? 'Clear the search or try a different name.'
+                                    : `Use Add Card to add cards to this ${listLabel.toLowerCase()}.`}
                             </Typography>
+                            {!searchQuery.trim() && (
+                                <Button
+                                    variant="contained"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => setAddOpen(true)}
+                                    sx={{ textTransform: 'none', fontWeight: 700 }}
+                                >
+                                    Add Card
+                                </Button>
+                            )}
                         </Box>
                     )}
 
                     {!loading && filtered.length > 0 && (
-                        <Box
-                            sx={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                                gap: 1,
-                            }}
-                        >
-                            {filtered.map((entry) => {
-                                const card = resolveCard(entry);
-                                const qty = entry.quantity || 1;
-                                const busy = busyCardId === entry.cardId;
-                                const editions = editionsByCardId.get(entry.cardId) || [];
-                                const canChangeVersion = editions.length >= 2;
-                                const idLine = [card.collectorNumber, card.rarity]
-                                    .filter(Boolean)
-                                    .join(' · ');
-                                const priceRows = [
-                                    ['Market', card.market],
-                                    ['Low', card.low],
-                                    ['Mid', card.mid],
-                                    ['High', card.high],
-                                ].filter(([, v]) => v != null && Number.isFinite(v) && v > 0);
-
-                                return (
-                                    <Box
-                                        key={entry.cardId}
-                                        sx={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            borderRadius: 1.5,
-                                            overflow: 'hidden',
-                                            backgroundColor: isDark
-                                                ? 'rgba(26, 15, 10, 0.55)'
-                                                : 'rgba(255, 255, 255, 0.92)',
-                                            border: `1px solid ${paperBorder}`,
-                                            fontSize: '0.75rem',
-                                        }}
-                                    >
-                                        <BinderCardArt
-                                            imageUrl={card.imageUrl}
-                                            fallbackUrl={card.imageUrlFallback}
-                                            alt={card.name}
-                                            qty={qty}
-                                            mutedColor={mutedColor}
-                                            onClick={() => openEntryDetail(entry)}
-                                        />
-
-                                        <Box
-                                            sx={{
-                                                px: 0.85,
-                                                py: 0.65,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: 0.3,
-                                                flexGrow: 1,
-                                            }}
-                                        >
-                                            <Typography
-                                                component={catalogById.get(entry.cardId) ? 'button' : 'span'}
-                                                type={catalogById.get(entry.cardId) ? 'button' : undefined}
-                                                onClick={
-                                                    catalogById.get(entry.cardId)
-                                                        ? () => openEntryDetail(entry)
-                                                        : undefined
-                                                }
-                                                aria-label={
-                                                    catalogById.get(entry.cardId)
-                                                        ? `View details for ${card.name}`
-                                                        : undefined
-                                                }
-                                                sx={{
-                                                    fontWeight: 700,
-                                                    fontSize: '0.8rem',
-                                                    color: textColor,
-                                                    lineHeight: 1.2,
-                                                    display: '-webkit-box',
-                                                    WebkitLineClamp: 2,
-                                                    WebkitBoxOrient: 'vertical',
-                                                    overflow: 'hidden',
-                                                    border: 0,
-                                                    background: 'none',
-                                                    p: 0,
-                                                    m: 0,
-                                                    textAlign: 'left',
-                                                    fontFamily: 'inherit',
-                                                    cursor: catalogById.get(entry.cardId) ? 'pointer' : 'default',
-                                                }}
-                                            >
-                                                {card.name}
-                                            </Typography>
-
-                                            <Typography
-                                                sx={{
-                                                    color: mutedColor,
-                                                    fontSize: '0.68rem',
-                                                    lineHeight: 1.2,
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                }}
-                                            >
-                                                {idLine || card.setName || '—'}
-                                            </Typography>
-
-                                            {card.typeLine && (
-                                                <Typography
-                                                    sx={{
-                                                        color: mutedColor,
-                                                        fontSize: '0.65rem',
-                                                        lineHeight: 1.2,
-                                                        whiteSpace: 'nowrap',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                    }}
-                                                >
-                                                    {card.typeLine}
-                                                </Typography>
-                                            )}
-
-                                            <Box
-                                                component="dl"
-                                                sx={{
-                                                    m: 0,
-                                                    mt: 0.35,
-                                                    display: 'grid',
-                                                    gridTemplateColumns: '1fr auto',
-                                                    columnGap: 1,
-                                                    rowGap: 0.15,
-                                                    '& dt, & dd': {
-                                                        m: 0,
-                                                        fontSize: '0.68rem',
-                                                        lineHeight: 1.25,
-                                                    },
-                                                    '& dt': { color: mutedColor },
-                                                    '& dd': {
-                                                        color: accentColor,
-                                                        fontWeight: 600,
-                                                        textAlign: 'right',
-                                                        fontVariantNumeric: 'tabular-nums',
-                                                    },
-                                                }}
-                                            >
-                                                {priceRows.map(([label, value]) => (
-                                                    <Box
-                                                        key={label}
-                                                        sx={{ display: 'contents' }}
-                                                    >
-                                                        <Box component="dt">{label}</Box>
-                                                        <Box component="dd">
-                                                            {formatCurrency(value.toFixed(2))}
-                                                        </Box>
-                                                    </Box>
-                                                ))}
-                                                {priceRows.length === 0 && (
-                                                    <>
-                                                        <Box component="dt">Market</Box>
-                                                        <Box component="dd">—</Box>
-                                                    </>
-                                                )}
-                                            </Box>
-
-                                            {canChangeVersion ? (
-                                                <FormControl
-                                                    size="small"
-                                                    fullWidth
-                                                    sx={{ mt: 0.5 }}
-                                                >
-                                                    <Select
-                                                        value={entry.cardId}
-                                                        disabled={busy}
-                                                        onChange={(e) =>
-                                                            changeVersion(entry, e.target.value)
-                                                        }
-                                                        aria-label={`Version of ${card.name}`}
-                                                        sx={{
-                                                            color: mutedColor,
-                                                            fontSize: '0.65rem',
-                                                            fontWeight: 600,
-                                                            backgroundColor: isDark
-                                                                ? 'rgba(212, 165, 116, 0.12)'
-                                                                : 'rgba(139, 69, 19, 0.08)',
-                                                            height: 26,
-                                                            '& .MuiSelect-select': {
-                                                                py: 0.35,
-                                                                px: 0.75,
-                                                                textAlign: 'center',
-                                                            },
-                                                            '& .MuiOutlinedInput-notchedOutline': {
-                                                                borderColor: 'transparent',
-                                                            },
-                                                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                                borderColor: paperBorder,
-                                                            },
-                                                        }}
-                                                    >
-                                                        {editions.map((edition) => (
-                                                            <MenuItem
-                                                                key={edition.uniqueId}
-                                                                value={edition.uniqueId}
-                                                                dense
-                                                                sx={{ fontSize: '0.75rem' }}
-                                                            >
-                                                                {edition.subTypeName || 'Normal'}
-                                                                {edition.cardPrice
-                                                                    ? ` · ${formatCurrency(Number(edition.cardPrice).toFixed(2))}`
-                                                                    : ''}
-                                                            </MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
-                                            ) : (
-                                                <Box
-                                                    sx={{
-                                                        mt: 0.5,
-                                                        px: 0.75,
-                                                        py: 0.35,
-                                                        borderRadius: 1,
-                                                        backgroundColor: isDark
-                                                            ? 'rgba(212, 165, 116, 0.12)'
-                                                            : 'rgba(139, 69, 19, 0.08)',
-                                                        color: mutedColor,
-                                                        fontSize: '0.65rem',
-                                                        fontWeight: 600,
-                                                        textAlign: 'center',
-                                                        whiteSpace: 'nowrap',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                    }}
-                                                >
-                                                    {card.finish}
-                                                </Box>
-                                            )}
-
-                                            <Box
-                                                sx={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 0.25,
-                                                    mt: 'auto',
-                                                    pt: 0.5,
-                                                    borderTop: `1px solid ${paperBorder}`,
-                                                }}
-                                            >
-                                                <IconButton
-                                                    size="small"
-                                                    disabled={busy}
-                                                    onClick={() =>
-                                                        updateQuantity(entry, qty - 1)
-                                                    }
-                                                    aria-label="decrease quantity"
-                                                    sx={{ p: 0.35 }}
-                                                >
-                                                    <RemoveIcon sx={{ fontSize: 16 }} />
-                                                </IconButton>
-                                                <Typography
-                                                    sx={{
-                                                        minWidth: 18,
-                                                        textAlign: 'center',
-                                                        fontWeight: 700,
-                                                        fontSize: '0.8rem',
-                                                        color: textColor,
-                                                    }}
-                                                >
-                                                    {qty}
-                                                </Typography>
-                                                <IconButton
-                                                    size="small"
-                                                    disabled={busy}
-                                                    onClick={() =>
-                                                        updateQuantity(entry, qty + 1)
-                                                    }
-                                                    aria-label="increase quantity"
-                                                    sx={{ p: 0.35 }}
-                                                >
-                                                    <AddIcon sx={{ fontSize: 16 }} />
-                                                </IconButton>
-
-                                                <IconButton
-                                                    size="small"
-                                                    disabled={busy}
-                                                    onClick={() => handleRemove(entry)}
-                                                    aria-label="remove card"
-                                                    sx={{ color: 'error.main', p: 0.35, ml: 'auto' }}
-                                                >
-                                                    {busy ? (
-                                                        <CircularProgress size={14} />
-                                                    ) : (
-                                                        <DeleteIcon sx={{ fontSize: 16 }} />
-                                                    )}
-                                                </IconButton>
-                                                {!isWanted && (
-                                                    <Button
-                                                        size="small"
-                                                        data-testid={`binder-move-${entry.cardId}`}
-                                                        onClick={() => handleMove(entry)}
-                                                        sx={{ fontSize: '0.7rem', minWidth: 0, px: 0.5 }}
-                                                    >
-                                                        Move
-                                                    </Button>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    </Box>
-                                );
-                            })}
-                        </Box>
+                        <BinderEntryList
+                            entries={filtered}
+                            resolveCard={resolveCard}
+                            resetKey={`${openBinderId || 'wants'}|${sort}|${searchQuery}`}
+                            catalogById={catalogById}
+                            editionsByCardId={editionsByCardId}
+                            busyCardId={busyCardId}
+                            variant="owned"
+                            isWanted={isWanted}
+                            onOpenDetail={openEntryDetail}
+                            onChangeVersion={changeVersion}
+                            onUpdateQuantity={updateQuantity}
+                            onRemove={handleRemove}
+                            onMove={isWanted ? undefined : handleMove}
+                            mutedColor={mutedColor}
+                            accentColor={accentColor}
+                            textColor={textColor}
+                            paperBorder={paperBorder}
+                            isDark={isDark}
+                        />
                     )}
                     </>
                     )}
                 </Paper>
             </Container>
+
+            <SearchDialog
+                open={addOpen}
+                onClose={() => setAddOpen(false)}
+                title={isWanted ? 'Add to Want List' : 'Add to Binder'}
+                items={cardOptions}
+                onSelect={handleAddCard}
+                keepOpenOnSelect
+                keepInputOnSelect
+            />
 
             <Dialog
                 open={shareOpen}
@@ -1381,6 +1164,38 @@ const BinderCollection = ({ isWanted = false }) => {
                     </Button>
                     <Button onClick={() => setShareOpen(false)} disabled={shareBusy}>
                         Done
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={Boolean(pendingDelete)}
+                onClose={() => setPendingDelete(null)}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>Delete {pendingDelete?.name}?</DialogTitle>
+                <DialogContent>
+                    <Typography data-testid="binder-delete-copy">
+                        {pendingDeleteCopies > 0
+                            ? `This will also remove ${pendingDeleteCopies} ${pendingDeleteCopies === 1 ? 'card' : 'cards'} from your collection. This cannot be undone.`
+                            : 'This cannot be undone.'}
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        data-testid="binder-delete-cancel"
+                        onClick={() => setPendingDelete(null)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        data-testid="binder-delete-confirm"
+                        onClick={confirmDeleteBinder}
+                        color="error"
+                        variant="contained"
+                    >
+                        Delete
                     </Button>
                 </DialogActions>
             </Dialog>

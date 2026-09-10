@@ -13,7 +13,8 @@ import { useCardDetail } from '../../contexts/CardDetailContext.jsx';
 import { useCardData } from '../../hooks/useCardData.jsx';
 import { recentMovers } from '../../services/fabDb.js';
 import { splitMoversByDirection } from '../../utils/recentMovers.js';
-import MoverBox, { moverBoxGridSx } from './MoverBox.jsx';
+import MoverBox from './MoverBox.jsx';
+import { moverBoxGridSx } from './moverBoxStyles.js';
 
 const sourceLabel = (priceSource) =>
     priceSource === 'cardmarket' ? 'CardMarket' : 'TCGplayer';

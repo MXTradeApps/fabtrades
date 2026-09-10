@@ -93,15 +93,15 @@ Moving is not deleting. It is not adding to Want List.
 
 ### User Story 4 - Add, rename, and delete Binders (Priority: P3)
 
-The player can create additional named Binders (for a side event, a keep pile, a friend's cards they are holding, and so on), up to **4 Binders total on the free tier**. Each Binder MUST have a unique name. They can rename any Binder to another unused name. They can delete Collection and user-created Binders once those Binders are empty.
+The player can create additional named Binders (for a side event, a keep pile, a friend's cards they are holding, and so on), up to **4 Binders total on the free tier**. Each Binder MUST have a unique name. They can rename any Binder to another unused name. They can delete Collection and user-created Binders after confirming. Confirming delete also removes every card in that Binder from the player's collection.
 
 **Trade Binder cannot be deleted.** It is always on the grid. The player cannot remove the tradeable-stock Binder from their set. They may rename Trade Binder; the renamed Binder is still the one used for trades.
 
-Collection can be renamed or deleted (once empty). User-created Binders can be renamed or deleted (once empty). Deleting a Binder does not delete Trade Binder and does not strand cards in an invisible pile.
+Collection can be renamed or deleted. User-created Binders can be renamed or deleted. Deleting a Binder does not delete Trade Binder, does not touch Want List, and does not leave that Binder's cards in an invisible pile — those cards leave the collection.
 
 **Why this priority**: The grid is built for "Binders the user has," which can grow. The non-deletable Trade Binder is the safety rail. Creating extra Binders is valuable after the two defaults and move already work.
 
-**Independent Test**: Create a Binder named "Side Event", add no cards, rename it, then delete it. Attempt to delete Trade Binder and confirm the product refuses. Confirm Trade Binder is still on the grid.
+**Independent Test**: Create a Binder named "Side Event", add cards to it, choose Delete, cancel the confirmation (cards and Binder remain), then confirm. The Binder leaves the grid and those cards are gone from the collection. Attempt to delete Trade Binder and confirm the product refuses. Confirm Trade Binder is still on the grid.
 
 **Acceptance Scenarios**:
 
@@ -110,8 +110,8 @@ Collection can be renamed or deleted (once empty). User-created Binders can be r
 3. **Given** a Binder already named "Side Event", **When** they try to create or rename another Binder to "Side Event" (including different capitalization or extra spaces), **Then** the change is refused and no second Binder has that name.
 4. **Given** Trade Binder, **When** they rename it to a unique name, **Then** the tile shows the new name, it still cannot be deleted, and Trade Filler / Confirm Trade still use that Binder as tradeable stock.
 5. **Given** Trade Binder, **When** they try to delete it, **Then** deletion is refused and Trade Binder remains on the grid (empty or not).
-6. **Given** Collection or a user-created Binder that still has cards, **When** they try to delete it, **Then** deletion is refused until they move or remove the cards.
-7. **Given** Collection or a user-created Binder with 0 cards, **When** they delete it, **Then** it leaves the grid and its cards are not in any other Binder (there were none).
+6. **Given** Collection or a user-created Binder that still has cards, **When** they choose Delete, **Then** they see a confirmation that those cards will leave the collection.
+7. **Given** they cancel that confirmation, **Then** the Binder and its cards stay. **Given** they confirm, **Then** the Binder leaves the grid, those cards are gone from the collection, and other Binders plus Want List are unchanged.
 8. **Given** they deleted Collection, **When** they view the grid, **Then** Trade Binder is still present and they can create a new Binder named Collection if they want that pile back and they are under their Binder-count limit.
 9. **Given** a free player who already has 4 Binders, **When** they try to create another, **Then** they see the Pro upgrade, no 5th Binder is created, and their existing Binders are unchanged.
 10. **Given** they renamed or created Binders on one surface while signed in, **When** they open Binder on the other peer surface after their Binders are available there, **Then** each Binder shows the same unique name.
@@ -127,7 +127,7 @@ Collection can be renamed or deleted (once empty). User-created Binders can be r
 - **Very long Binder names**: The tile remains identifiable (name is readable or truncates with a way to see the full name when opened).
 - **Many Binders**: The grid scrolls. The player can still reach Trade Binder, Collection (if it exists), Want List, and create/delete actions without hunting off-screen with no way back.
 - **Move and the shared distinct-card cap**: A move does not increase how many distinct cards the player owns, so it MUST NOT be refused for the shared card cap. Source and destination quantities still must stay valid.
-- **Free player at 4 Binders**: Creating another Binder opens the Pro upgrade. No 5th Binder is created unless they already have Pro. They can still open, rename, move cards, and delete empty Binders (except Trade Binder). Deleting an empty Binder frees a slot so they can create without Pro.
+- **Free player at 4 Binders**: Creating another Binder opens the Pro upgrade. No 5th Binder is created unless they already have Pro. They can still open, rename, move cards, and delete Binders (except Trade Binder) after confirmation. Deleting a Binder frees a slot so they can create without Pro.
 - **Pro player past 4 Binders**: Creating further Binders is allowed; the 4-Binder limit is free-tier only.
 - **Move of quantity 0 or more than the source holds**: Not allowed. Source quantity never goes negative.
 - **Same Printing, different condition**: Condition stays with the copies that move. Copies do not merge across different conditions.
@@ -154,7 +154,7 @@ Collection can be renamed or deleted (once empty). User-created Binders can be r
 - **FR-010**: The player MUST be able to create additional named Binders while under their Binder-count limit. New Binders start empty. A free player MUST NOT have more than **4 Binders** (Trade Binder and Collection count toward the 4). A Pro player is not limited to 4 Binders. Creating a Binder that would exceed the free limit MUST show the **Pro upgrade**, MUST NOT create a 5th Binder, and MUST NOT delete existing Binders or cards.
 - **FR-011**: The player MUST be able to rename any Binder, including Trade Binder. Binder names MUST be unique per player (letter case and extra spaces do not make a name distinct). Create or rename that would duplicate another Binder's name MUST be refused; the existing Binders MUST be unchanged. Renaming a Binder to its own current name MUST succeed. Renaming Trade Binder MUST NOT make it deletable and MUST NOT change which Binder is tradeable stock.
 - **FR-012**: Trade Binder MUST NOT be deletable, including when it is empty.
-- **FR-013**: Collection and user-created Binders MUST be deletable only when they contain zero copies. A delete attempt on a non-empty Binder MUST be refused and MUST tell the player to move or remove the cards first.
+- **FR-013**: Collection and user-created Binders MUST be deletable after a confirmation that names the Binder and, when it has copies, says those cards will leave the collection. Confirming MUST delete the Binder and remove its owned cards from the collection. Canceling MUST leave the Binder and its cards unchanged. Want List and other Binders MUST be unchanged. Trade Binder remains non-deletable.
 - **FR-014**: Existing tradeable-stock cards from before this feature MUST appear in Trade Binder. Want List entries MUST remain Want List entries. Collection MUST start empty for those players.
 - **FR-015**: Trade Filler and Confirm Trade MUST use Trade Binder as the only tradeable stock. Received cards enter Trade Binder. Given cards leave Trade Binder. Other Binders MUST NOT be silently edited by Confirm Trade.
 - **FR-016**: Adding a card while a Binder is open MUST add it to that Binder. Adding a tradeable card from the Binder grid (no Binder open) MUST add it to Trade Binder.
@@ -169,7 +169,7 @@ Collection can be renamed or deleted (once empty). User-created Binders can be r
 
 - **Binder**: A named pile of owned Printings that belong to the player. A player can have several Binders. Display names MUST be unique per player. This is the type; **Collection** is a Binder's default display name, not a different product noun.
 - **Trade Binder**: The default Binder that is **tradeable stock**. Always present. Not deletable. Used by Trade Filler and Confirm Trade. Existing pre-feature Binder cards live here.
-- **Collection**: The default Binder for owned cards the player is **not offering for trade**. Present for new and migrating players. Can be renamed or deleted once empty.
+- **Collection**: The default Binder for owned cards the player is **not offering for trade**. Present for new and migrating players. Can be renamed or deleted (delete also removes its cards from the collection).
 - **Binder tile**: Grid thumbnail for one Binder, showing name, card count, value, and a cover image of the highest-value Printing (no cover when empty).
 - **Want List**: Cards the player wants to acquire. Not a Binder. Unchanged in purpose; still accessible from the Binder area of the app.
 - **Binder value**: Quantity-weighted total of a Binder's copies using the player's chosen price source (the same figure the green total already shows for a single Binder).

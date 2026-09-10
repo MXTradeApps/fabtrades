@@ -76,6 +76,27 @@ export function distinctOwnedCount(entries) {
 }
 
 /**
+ * Whether a free account may apply a batch of incoming owned printings.
+ * Pro always allowed. Already-owned ids consume no extra slot.
+ *
+ * @param {Iterable<string>} existingOwnedIds
+ * @param {Iterable<string>} incomingIds
+ * @param {{ isPro?: boolean }} [opts]
+ * @returns {boolean}
+ */
+export function canImportDistinctPrintings(existingOwnedIds, incomingIds, { isPro = false } = {}) {
+    if (isPro) return true;
+    const resulting = new Set();
+    for (const id of existingOwnedIds || []) {
+        if (id) resulting.add(id);
+    }
+    for (const id of incomingIds || []) {
+        if (id) resulting.add(id);
+    }
+    return resulting.size <= FreeLimits.binderCards;
+}
+
+/**
  * How many of the oldest trades have to roll off to fit inside the free window.
  *
  * Saving a trade is never refused, on either client. Refusing would lose the

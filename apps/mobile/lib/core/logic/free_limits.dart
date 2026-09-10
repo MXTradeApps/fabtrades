@@ -53,6 +53,21 @@ class FreeLimits {
     if (isPro) return true;
     return liveBinderCount < binders;
   }
+
+  /// Whether a free account may apply a batch of incoming owned printings.
+  /// Pro always allowed. Already-owned ids consume no extra slot.
+  static bool canImportDistinctPrintings(
+    Iterable<String> existingOwnedIds,
+    Iterable<String> incomingIds, {
+    required bool isPro,
+  }) {
+    if (isPro) return true;
+    final resulting = <String>{
+      ...existingOwnedIds.where((id) => id.isNotEmpty),
+      ...incomingIds.where((id) => id.isNotEmpty),
+    };
+    return resulting.length <= binderCards;
+  }
 }
 
 /// How much of the free tier is currently in use, for upsell copy.

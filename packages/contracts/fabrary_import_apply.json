@@ -1,0 +1,641 @@
+{
+  "description": "Fabrary import plan: Have → Collection, Want in trade / Want to buy → Want List, Extra for trade / Extra to sell → Trade Binder. Add-on-top. Import is not capped.",
+  "requiredHeaders": [
+    "Identifier",
+    "Name",
+    "Pitch",
+    "Set",
+    "Set number",
+    "Edition",
+    "Foiling",
+    "Treatment",
+    "Have"
+  ],
+  "cases": [
+    {
+      "name": "Have goes to Collection; Want columns go to Want List",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have", "Want in trade"],
+      "rows": [
+        {
+          "Identifier": "owned",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "2",
+          "Want in trade": "9"
+        },
+        {
+          "Identifier": "blank",
+          "Name": "Command and Conquer",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR000",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "",
+          "Want in trade": "4"
+        },
+        {
+          "Identifier": "zero",
+          "Name": "Alpha",
+          "Pitch": "",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR001",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "0",
+          "Want in trade": "1"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr000-reg",
+          "name": "Command and Conquer",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr001-reg",
+          "name": "Enlightened Strike",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 3,
+        "matchedCount": 4,
+        "copiesToAdd": 16,
+        "unmatched": [],
+        "adds": [
+          { "printingId": "wtr101-normal", "quantity": 2, "destination": "collection" },
+          { "printingId": "wtr101-normal", "quantity": 9, "destination": "want" },
+          { "printingId": "wtr000-reg", "quantity": 4, "destination": "want" },
+          { "printingId": "wtr001-reg", "quantity": 1, "destination": "want" }
+        ]
+      }
+    },
+    {
+      "name": "Want and Extra columns write Want List and Trade Binder",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have", "Want in trade", "Want to buy", "Extra for trade", "Extra to sell"],
+      "rows": [
+        {
+          "Identifier": "owned",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "1",
+          "Want in trade": "5",
+          "Want to buy": "3",
+          "Extra for trade": "2",
+          "Extra to sell": "4"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [
+        {
+          "printingId": "want-card",
+          "cardId": "want-card",
+          "binderId": null,
+          "isWanted": true,
+          "quantity": 1,
+          "condition": "NM"
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 1,
+        "matchedCount": 3,
+        "copiesToAdd": 15,
+        "unmatched": [],
+        "adds": [
+          { "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" },
+          { "printingId": "wtr101-normal", "quantity": 8, "destination": "want" },
+          { "printingId": "wtr101-normal", "quantity": 6, "destination": "trade" }
+        ]
+      }
+    },
+    {
+      "name": "two file rows for the same Printing sum into one add",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "sink-a",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "2"
+        },
+        {
+          "Identifier": "sink-b",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "3"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 2,
+        "matchedCount": 1,
+        "copiesToAdd": 5,
+        "unmatched": [],
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 5, "destination": "collection" }]
+      }
+    },
+    {
+      "name": "existing NM qty 2 plus Have 3 plans an add of 3 (apply combines to 5); LP untouched",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "sink",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "3"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [
+        {
+          "printingId": "wtr101-normal",
+          "cardId": "wtr101-normal",
+          "binderId": "system:collection",
+          "isWanted": false,
+          "quantity": 2,
+          "condition": "NM"
+        },
+        {
+          "printingId": "wtr101-normal",
+          "cardId": "wtr101-normal",
+          "binderId": "system:collection",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "LP"
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 1,
+        "matchedCount": 1,
+        "copiesToAdd": 3,
+        "unmatched": [],
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 3, "destination": "collection" }]
+      }
+    },
+    {
+      "name": "existing cards in this Binder remain in the plan (add-on-top, not replace)",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "sink",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "1"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [
+        {
+          "printingId": "keep-me",
+          "cardId": "keep-me",
+          "binderId": "system:collection",
+          "isWanted": false,
+          "quantity": 4,
+          "condition": "NM"
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 1,
+        "matchedCount": 1,
+        "copiesToAdd": 1,
+        "unmatched": [],
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" }]
+      }
+    },
+    {
+      "name": "other Binder entries are not written as adds",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "sink",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "1"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [
+        {
+          "printingId": "trade-only",
+          "cardId": "trade-only",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 7,
+          "condition": "NM"
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 1,
+        "matchedCount": 1,
+        "copiesToAdd": 1,
+        "unmatched": [],
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" }]
+      }
+    },
+    {
+      "name": "a large incoming set is allowed even when many printings are already owned",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "new-a",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "1"
+        },
+        {
+          "Identifier": "new-b",
+          "Name": "Command and Conquer",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR000",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "1"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr000-reg",
+          "name": "Command and Conquer",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [
+        {
+          "printingId": "owned-0",
+          "cardId": "owned-0",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "NM"
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 2,
+        "matchedCount": 2,
+        "copiesToAdd": 2,
+        "unmatched": [],
+        "adds": [
+          { "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" },
+          { "printingId": "wtr000-reg", "quantity": 1, "destination": "collection" }
+        ]
+      }
+    },
+    {
+      "name": "importing already-owned printings is allowed",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "sink",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "2"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [
+        {
+          "printingId": "wtr101-normal",
+          "cardId": "wtr101-normal",
+          "binderId": "system:trade",
+          "isWanted": false,
+          "quantity": 1,
+          "condition": "NM"
+        }
+      ],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 1,
+        "matchedCount": 1,
+        "copiesToAdd": 2,
+        "unmatched": [],
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 2, "destination": "collection" }]
+      }
+    },
+    {
+      "name": "owned but zero catalog matches refuses with no_matched",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "junk",
+          "Name": "Not In Catalog",
+          "Pitch": "",
+          "Set": "Nowhere",
+          "Set number": "ZZZ999",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "1"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [],
+      "expected": {
+        "ok": false,
+        "refuseReason": "no_matched",
+        "ownedCount": 1,
+        "matchedCount": 0,
+        "copiesToAdd": 0,
+        "unmatched": [
+          {
+            "name": "Not In Catalog",
+            "setNumber": "ZZZ999",
+            "foiling": "",
+            "treatment": "",
+            "edition": ""
+          }
+        ],
+        "adds": []
+      }
+    },
+    {
+      "name": "no Have/Want/Extra quantities refuses with no_owned",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "blank",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": ""
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [],
+      "expected": {
+        "ok": false,
+        "refuseReason": "no_owned",
+        "ownedCount": 0,
+        "matchedCount": 0,
+        "copiesToAdd": 0,
+        "unmatched": [],
+        "adds": []
+      }
+    },
+    {
+      "name": "missing required headers is not_fabrary",
+      "headers": ["Name", "Count"],
+      "rows": [{ "Name": "Sink Below", "Count": "1" }],
+      "catalog": [],
+      "binderId": "system:collection",
+      "existingEntries": [],
+      "expected": {
+        "ok": false,
+        "refuseReason": "not_fabrary",
+        "ownedCount": 0,
+        "matchedCount": 0,
+        "copiesToAdd": 0,
+        "unmatched": [],
+        "adds": []
+      }
+    },
+    {
+      "name": "unmatched owned names are listed before confirm; confirm stays planned",
+      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
+      "rows": [
+        {
+          "Identifier": "sink",
+          "Name": "Sink Below",
+          "Pitch": "Red",
+          "Set": "Welcome to Rathe",
+          "Set number": "WTR101",
+          "Edition": "",
+          "Foiling": "",
+          "Treatment": "",
+          "Have": "1"
+        },
+        {
+          "Identifier": "junk",
+          "Name": "Ghost Card",
+          "Pitch": "Yellow",
+          "Set": "Nowhere",
+          "Set number": "ZZZ001",
+          "Edition": "First",
+          "Foiling": "Rainbow",
+          "Treatment": "Extended Art",
+          "Have": "2"
+        }
+      ],
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "binderId": "system:collection",
+      "existingEntries": [],
+      "expected": {
+        "ok": true,
+        "refuseReason": null,
+        "ownedCount": 2,
+        "matchedCount": 1,
+        "copiesToAdd": 1,
+        "unmatched": [
+          {
+            "name": "Ghost Card",
+            "setNumber": "ZZZ001",
+            "foiling": "Rainbow",
+            "treatment": "Extended Art",
+            "edition": "First"
+          }
+        ],
+        "adds": [{ "printingId": "wtr101-normal", "quantity": 1, "destination": "collection" }]
+      }
+    }
+  ]
+}

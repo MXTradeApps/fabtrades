@@ -2,7 +2,7 @@ import { Box, ButtonBase, Typography } from '@mui/material';
 import { CardThumbnail } from '../ui/CardImagePreview.jsx';
 import { formatCurrency } from '../../utils/helpers.js';
 
-export const formatMoverMoney = (amount, priceSource) => {
+const formatMoverMoney = (amount, priceSource) => {
     if (priceSource === 'cardmarket') {
         return new Intl.NumberFormat('de-DE', {
             style: 'currency',
@@ -14,7 +14,7 @@ export const formatMoverMoney = (amount, priceSource) => {
     return formatCurrency(amount);
 };
 
-export const formatMoverPercent = (ratio) => {
+const formatMoverPercent = (ratio) => {
     const pct = ratio * 100;
     const digits = Math.abs(pct) >= 10 ? 0 : 1;
     return `${pct >= 0 ? '+' : ''}${pct.toFixed(digits)}%`;
@@ -125,17 +125,6 @@ const MoverBox = ({
             </Box>
         </ButtonBase>
     );
-};
-
-export const moverBoxGridSx = {
-    display: 'grid',
-    gridTemplateColumns: {
-        xs: '1fr',
-        sm: 'repeat(2, minmax(0, 1fr))',
-        md: 'repeat(3, minmax(0, 1fr))',
-        lg: 'repeat(4, minmax(0, 1fr))',
-    },
-    gap: 1.25,
 };
 
 export default MoverBox;

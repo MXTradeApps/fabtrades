@@ -59,6 +59,8 @@ with what the product should do — in which case change it and update both.
 | `binder_names.json` | `apps/web/src/utils/binderNames.js` | `apps/mobile/lib/core/logic/binder_names.dart` |
 | `recent_movers.json` | `apps/web/src/utils/recentMovers.js` | `apps/mobile/lib/core/logic/recent_movers.dart` |
 | `printing_recent_changes.json` | `apps/web/src/utils/recentMovers.js` | `apps/mobile/lib/core/logic/recent_movers.dart` |
+| `fabrary_printing_match.json` | `apps/web/src/utils/fabraryMatch.js` | `apps/mobile/lib/core/logic/fabrary_match.dart` |
+| `fabrary_import_apply.json` | `apps/web/src/utils/fabraryImportApply.js` | `apps/mobile/lib/core/logic/fabrary_import_apply.dart` |
 
 Collection Stats reuses `binder_value_snapshot.json` and `recent_movers.json`. Do not add a Collection-Stats ranking golden.
 
@@ -68,4 +70,5 @@ the oldest rows, so if web kept twelve trades and mobile ten, mobile would delet
 two trades every time it synced — indistinguishable, from the customer's side, from
 the app losing their history. Binder and want-list cases use `refuse` (never trim
 existing rows); web and mobile both enforce those via `canAddDistinctCard` /
-`_canAddNewCard`. Loaned-card cases remain mobile-only.
+`_canAddNewCard`. Fabrary CSV import does not use `canImportDistinctPrintings`
+and is not capped. Loaned-card cases remain mobile-only.

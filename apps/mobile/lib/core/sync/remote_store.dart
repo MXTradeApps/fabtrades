@@ -34,10 +34,28 @@ class SupabaseRemoteCollection implements RemoteCollection {
   /// Columns forming the unique constraint an upsert conflicts on.
   final String conflictTarget;
 
+  /// PostgREST caps a single response at 1000 rows. Page until drained so a
+  /// Fabrary-sized binder is not silently truncated around letter I.
+  static const int _pageSize = 1000;
+
   @override
   Future<List<Map<String, dynamic>>> fetchAll(String userId) async {
-    final rows = await client.from(table).select().eq('user_id', userId);
-    return rows.cast<Map<String, dynamic>>();
+    final all = <Map<String, dynamic>>[];
+    var from = 0;
+    while (true) {
+      final rows = await client
+          .from(table)
+          .select()
+          .eq('user_id', userId)
+          .order('updated_at')
+          .order('client_id')
+          .range(from, from + _pageSize - 1);
+      final page = (rows as List).cast<Map<String, dynamic>>();
+      all.addAll(page);
+      if (page.length < _pageSize) break;
+      from += _pageSize;
+    }
+    return all;
   }
 
   @override
