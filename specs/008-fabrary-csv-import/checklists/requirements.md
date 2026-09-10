@@ -31,9 +31,9 @@
 
 ## Notes
 
-- Reviewed 2026-09-10 against `spec.md`. No `[NEEDS CLARIFICATION]` markers.
+- Reviewed 2026-09-10 against `spec.md` after `/speckit-clarify`. No `[NEEDS CLARIFICATION]` markers.
 - Format source is the attached Fabrary collection export (September 2026): full catalog rows, **Have** as owned quantity, identifier reused across set / finish / treatment / edition.
 - Import is **per Binder**, from that Binder's settings — not app-wide Settings, not Want List.
-- v1 writes **Have** only, **replaces** the target Binder after preview, defaults condition to Near Mint, and refuses a free-tier import that would exceed the shared distinct-card cap (no silent partial fill).
-- Want / extra-for-trade columns, merge-on-top, auto-split across Binders, and other vendors' files are out of scope.
-- Ready for `/speckit-clarify` (optional) or `/speckit-plan`.
+- v1 writes **Have** only, **adds** copies on top of this Binder after preview (Near Mint quantities combine), lists unmatched names before confirm, picks one Printing on ambiguous match (regular first), and refuses a free-tier import that would exceed the shared distinct-card cap (no silent partial fill).
+- Want / extra-for-trade columns, replacing this Binder, auto-split across Binders, and other vendors' files are out of scope.
+- Ready for `/speckit-plan`.
