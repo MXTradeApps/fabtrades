@@ -7,7 +7,7 @@ Manual check that Binder Settings, preview, and add-on-top match [spec.md](./spe
 - A Fabrary collection export (the attached September 2026 file, or a trimmed fixture with Have on a few printings plus unmatched junk).
 - Mobile: `apps/mobile` with catalog cached; Binders on device (signed out is fine).
 - Web: signed-in owner on `/binder`; catalog snapshot loaded.
-- Pro vs free: try both. A real Fabrary dump (~3,800 owned printings) should refuse on free.
+- Pro vs free: import is not capped. A real Fabrary dump (~3,800 owned printings) should preview and confirm with no Upgrade to Pro.
 - No new migration.
 
 ## Automated
@@ -17,7 +17,7 @@ cd apps/web && npm test
 cd apps/mobile && flutter test
 ```
 
-Expect: `fabrary_printing_match.json` and `fabrary_import_apply.json` pass on both sides; `free_limits.json` batch-import cases pass; Binder Settings entry/preview/cancel/confirm tests pass.
+Expect: `fabrary_printing_match.json` and `fabrary_import_apply.json` pass on both sides; Binder Settings entry/preview/cancel/confirm tests pass. Import suites must not expect Upgrade to Pro.
 
 ## Manual — entry
 
@@ -36,16 +36,16 @@ Expect: `fabrary_printing_match.json` and `fabrary_import_apply.json` pass on bo
 
 ## Manual — confirm
 
-1. Empty Collection, Pro (or a tiny fixture under the free cap). Confirm. Collection gains matched Have copies; Trade Binder unchanged; Want List unchanged.
+1. Empty Collection. Confirm. Collection gains matched Have copies; Trade Binder unchanged; Want List unchanged.
 2. Same file again. NM quantities increase by the same Have totals (SC-012).
 3. A Printing you already had as LP only: LP row stays; a new NM row appears (or NM qty increases if NM existed).
 4. Collection Stats / tile count match previous copies + imported Have.
 5. Web ↔ mobile (signed in): after sync, the same Binder shows the same printings and quantities.
 
-## Manual — cap
+## Manual — no paywall
 
-1. Free account, fixture that would add a 51st distinct Printing. Confirm refused, Pro upgrade shown, Binder unchanged.
-2. Free account, import only of printings already owned. Allowed (no extra slot).
+1. Account with 50+ distinct owned printings. Pick a valid Fabrary file. Preview appears; Upgrade to Pro is not shown; confirm adds copies.
+2. Import of printings already owned. Allowed (quantities add on top).
 
 ## Expected outcomes
 
@@ -55,7 +55,7 @@ Expect: `fabrary_printing_match.json` and `fabrary_import_apply.json` pass on bo
 | SC-002 / SC-003 | Copy count = previous + matched Have; blank Have adds nothing |
 | SC-004 / SC-005 | Want/Extra unused; other Binders + Want List unchanged |
 | SC-006 | Testers find Collection Settings, not app Settings |
-| SC-007 / SC-008 | Bad file and free-cap refuse with no writes |
+| SC-007 / SC-008 | Bad file refuses with no writes; valid large import has no Upgrade to Pro |
 | SC-009 | Unmatched names on preview |
 | SC-010 | Mobile signed-out import works |
 | SC-011 | Cancel leaves existing cards |

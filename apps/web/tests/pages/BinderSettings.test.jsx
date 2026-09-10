@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import BinderSettings from '../../src/pages/BinderSettings.jsx';
@@ -305,9 +305,10 @@ describe('BinderSettings', () => {
         expect(await screen.findByTestId('fabrary-refuse')).toHaveTextContent(
             'None of the owned cards were found in the catalog',
         );
+        expect(mockUpsertEntries).not.toHaveBeenCalled();
+    });
 
-        cleanup();
-        mockIsPro = false;
+    test('a large existing Binder still previews with no Upgrade to Pro', async () => {
         mockGetBinderEntries.mockResolvedValue({
             data: {
                 binder: Array.from({ length: 50 }, (_, i) => ({
@@ -325,10 +326,10 @@ describe('BinderSettings', () => {
         fireEvent.change(screen.getByTestId('fabrary-file'), {
             target: { files: [makeFile(ownedCsv)] },
         });
-        expect(await screen.findByTestId('fabrary-refuse')).toHaveTextContent(
-            'exceed the free Binder card cap',
-        );
-        expect(screen.getByTestId('fabrary-upgrade')).toBeInTheDocument();
+        expect(await screen.findByTestId('fabrary-preview')).toBeInTheDocument();
+        expect(screen.getByText(/Copies to add: 2/)).toBeInTheDocument();
+        expect(screen.queryByText(/Upgrade to Pro/i)).not.toBeInTheDocument();
+        expect(screen.queryByTestId('fabrary-upgrade')).not.toBeInTheDocument();
         expect(mockUpsertEntries).not.toHaveBeenCalled();
     });
 });

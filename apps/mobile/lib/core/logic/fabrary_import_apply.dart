@@ -1,8 +1,6 @@
 import '../models/binder.dart';
-import '../models/binder_entry.dart';
 import 'fabrary_csv.dart';
 import 'fabrary_match.dart';
-import 'free_limits.dart';
 
 class FabraryAdd {
   const FabraryAdd({required this.printingId, required this.quantity});
@@ -67,24 +65,6 @@ _HaveParse parseHave(dynamic raw) {
   return _HaveParse.owned(n.toInt());
 }
 
-List<String> ownedIdsFromEntries(Iterable<dynamic> entries) {
-  final ids = <String>{};
-  for (final entry in entries) {
-    if (entry is BinderEntry) {
-      if (entry.isWanted) continue;
-      final id = entry.card.id;
-      if (id.isNotEmpty) ids.add(id);
-      continue;
-    }
-    if (entry is Map) {
-      if (entry['isWanted'] == true) continue;
-      final id = '${entry['printingId'] ?? entry['cardId'] ?? ''}';
-      if (id.isNotEmpty) ids.add(id);
-    }
-  }
-  return ids.toList();
-}
-
 FabraryImportPlan _empty(String reason) => FabraryImportPlan(
       ok: false,
       refuseReason: reason,
@@ -102,8 +82,6 @@ FabraryImportPlan planFabraryImport({
   required List<dynamic> catalog,
   required String binderId,
   List<dynamic> existingEntries = const [],
-  List<String>? existingOwnedIds,
-  bool isPro = false,
   bool notFabrary = false,
 }) {
   var resolvedHeaders = headers;
@@ -163,25 +141,6 @@ FabraryImportPlan planFabraryImport({
       refuseReason: 'no_matched',
       ownedCount: ownedCount,
       matchedCount: 0,
-      copiesToAdd: 0,
-      unmatched: unmatched,
-      adds: const [],
-      binderId: binderId,
-    );
-  }
-
-  final existingIds = existingOwnedIds ?? ownedIdsFromEntries(existingEntries);
-  final incomingIds = [for (final add in adds) add.printingId];
-  if (!FreeLimits.canImportDistinctPrintings(
-    existingIds,
-    incomingIds,
-    isPro: isPro,
-  )) {
-    return FabraryImportPlan(
-      ok: false,
-      refuseReason: 'free_cap',
-      ownedCount: ownedCount,
-      matchedCount: matchedCount,
       copiesToAdd: 0,
       unmatched: unmatched,
       adds: const [],

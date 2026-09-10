@@ -46,8 +46,6 @@ Future<ProviderContainer> _pumpSettings(
   WidgetTester tester, {
   required String binderId,
   Future<String?> Function()? pickCsv,
-  Future<bool> Function()? presentPaywall,
-  bool isPro = true,
   List<CardModel>? catalog,
 }) async {
   return pumpApp(
@@ -55,14 +53,9 @@ Future<ProviderContainer> _pumpSettings(
     BinderSettingsScreen(
       binderId: binderId,
       pickCsv: pickCsv,
-      presentPaywall: presentPaywall,
     ),
     catalog: catalog ?? [_lightning],
     seed: _onboarded(),
-    isPro: isPro,
-    extraOverrides: [
-      isProProvider.overrideWith((ref) => isPro),
-    ],
   );
 }
 
@@ -271,9 +264,8 @@ void main() {
     );
   });
 
-  testWidgets('refuses bad file, empty Have, no match, and free cap',
+  testWidgets('refuses bad file and no match; large Binder still previews',
       (tester) async {
-    var paywall = 0;
     final owned = [
       for (var i = 0; i < 50; i++)
         buildCard(id: 'owned-$i', name: 'Owned $i', collectorNumber: 'X$i'),
@@ -281,12 +273,7 @@ void main() {
     final container = await _pumpSettings(
       tester,
       binderId: BinderIds.collection,
-      isPro: false,
       catalog: [_lightning, ...owned],
-      presentPaywall: () async {
-        paywall += 1;
-        return false;
-      },
       pickCsv: () async => 'not,a,fabrary\n1,2,3\n',
     );
     for (var i = 0; i < 50; i++) {
@@ -305,11 +292,9 @@ void main() {
     await _pumpSettings(
       tester,
       binderId: BinderIds.collection,
-      isPro: false,
       pickCsv: () async => _csv([
         '1,Unknown Junk,,Nowhere,ZZZ999,,,,1,,',
       ]),
-      presentPaywall: () async => false,
     );
     await tester.tap(find.byKey(const Key('importFabrary')));
     await tester.pumpAndSettle();
@@ -318,19 +303,14 @@ void main() {
       findsOneWidget,
     );
 
-    final capContainer = await _pumpSettings(
+    final largeContainer = await _pumpSettings(
       tester,
       binderId: BinderIds.collection,
-      isPro: false,
       catalog: [_lightning, ...owned],
-      presentPaywall: () async {
-        paywall += 1;
-        return false;
-      },
       pickCsv: () async => _ownedCsv,
     );
     for (var i = 0; i < 50; i++) {
-      capContainer.read(binderProvider.notifier).add(
+      largeContainer.read(binderProvider.notifier).add(
             owned[i],
             binderId: BinderIds.trade,
           );
@@ -338,11 +318,12 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const Key('importFabrary')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('exceed the free Binder card cap'), findsOneWidget);
-    expect(find.byKey(const Key('fabraryUpgrade')), findsOneWidget);
-    expect(paywall, greaterThan(0));
+    expect(find.byKey(const Key('fabraryPreview')), findsOneWidget);
+    expect(find.textContaining('Copies to add: 2'), findsOneWidget);
+    expect(find.text('Upgrade to Pro'), findsNothing);
+    expect(find.byKey(const Key('fabraryUpgrade')), findsNothing);
     expect(
-      capContainer
+      largeContainer
           .read(binderProvider)
           .where((e) => e.card.id == _lightning.id && !e.isWanted),
       isEmpty,

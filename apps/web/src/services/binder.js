@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { canAddDistinctCard, canCreateBinder, canImportDistinctPrintings } from '../utils/freeLimits';
+import { canAddDistinctCard, canCreateBinder } from '../utils/freeLimits';
 import { validateBinderName } from '../utils/binderNames';
 import { moveBinderCopies as planMove } from '../utils/binderMove';
 import { unlockAllFeatures } from '../utils/featureAccess.js';
@@ -399,14 +399,12 @@ const UPSERT_CHUNK = 400;
 
 /**
  * Batch upsert owned Near Mint rows for a Fabrary import.
- * Re-checks the free distinct-card cap before any request. Callers must not
- * apply a half-import to local UI when this returns an error.
+ * Callers must not apply a half-import to local UI when this returns an error.
  *
  * @param {Array<{ cardId: string, quantity: number, binderId: string, card: Object }>} rows
- * @param {{ existingOwnedIds?: string[], isPro?: boolean }} [opts]
  * @returns {Promise<{ data: { rows: Object[] }|null, error: Object|null }>}
  */
-export async function upsertEntries(rows, { existingOwnedIds, isPro } = {}) {
+export async function upsertEntries(rows) {
     try {
         const { user, error: authError } = await requireAuthenticatedUser(
             'You must be logged in to update your binder',
@@ -416,33 +414,6 @@ export async function upsertEntries(rows, { existingOwnedIds, isPro } = {}) {
         }
 
         const list = Array.isArray(rows) ? rows : [];
-        const incomingIds = [...new Set(list.map((row) => row.cardId).filter(Boolean))];
-        let ownedIds = existingOwnedIds;
-        if (!ownedIds) {
-            const current = await getBinderEntries();
-            ownedIds = (current.data?.binder || [])
-                .map((entry) => entry.cardId || entry.printingId)
-                .filter(Boolean);
-        }
-
-        let pro = Boolean(isPro);
-        if (unlockAllFeatures) {
-            pro = true;
-        } else {
-            const { entitlement } = await fetchEntitlement(user.id);
-            pro = entitlement.isPro;
-        }
-
-        if (!canImportDistinctPrintings(ownedIds, incomingIds, { isPro: pro })) {
-            return {
-                data: null,
-                error: {
-                    reason: 'free_cap',
-                    message: 'This import would exceed the free Binder card cap',
-                },
-            };
-        }
-
         const now = new Date().toISOString();
         const payload = list.map((row) => {
             const cardId = row.cardId;

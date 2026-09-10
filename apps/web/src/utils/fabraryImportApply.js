@@ -1,10 +1,9 @@
 /**
- * Plan a Fabrary Binder import: Have-only, add-on-top, refuse-all on cap.
+ * Plan a Fabrary Binder import: Have-only, add-on-top. No free-tier cap.
  */
 
 import { parseFabraryCsv, hasFabraryHeaders } from './fabraryCsv.js';
 import { matchFabraryRow } from './fabraryMatch.js';
-import { canImportDistinctPrintings } from './freeLimits.js';
 
 export function parseHave(raw) {
     const text = String(raw ?? '').trim();
@@ -23,16 +22,6 @@ function unmatchedFromRow(row) {
         treatment: String(row?.Treatment ?? ''),
         edition: String(row?.Edition ?? ''),
     };
-}
-
-function ownedIdsFromEntries(entries) {
-    const ids = new Set();
-    for (const entry of entries || []) {
-        if (entry?.isWanted) continue;
-        const id = entry.printingId || entry.cardId;
-        if (id) ids.add(id);
-    }
-    return [...ids];
 }
 
 function emptyPlan(refuseReason, extras = {}) {
@@ -56,8 +45,6 @@ function emptyPlan(refuseReason, extras = {}) {
  * @param {Object[]} input.catalog
  * @param {string} input.binderId
  * @param {Object[]} [input.existingEntries]
- * @param {string[]} [input.existingOwnedIds]
- * @param {boolean} [input.isPro]
  */
 export function planFabraryImport(input = {}) {
     let headers = input.headers;
@@ -112,21 +99,6 @@ export function planFabraryImport(input = {}) {
             refuseReason: 'no_matched',
             ownedCount,
             matchedCount: 0,
-            copiesToAdd: 0,
-            unmatched,
-            adds: [],
-        };
-    }
-
-    const existingOwnedIds = input.existingOwnedIds
-        || ownedIdsFromEntries(input.existingEntries);
-    const incomingIds = adds.map((add) => add.printingId);
-    if (!canImportDistinctPrintings(existingOwnedIds, incomingIds, { isPro: Boolean(input.isPro) })) {
-        return {
-            ok: false,
-            refuseReason: 'free_cap',
-            ownedCount,
-            matchedCount,
             copiesToAdd: 0,
             unmatched,
             adds: [],

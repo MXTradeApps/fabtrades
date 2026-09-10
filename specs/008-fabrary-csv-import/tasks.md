@@ -9,7 +9,7 @@ description: "Task list for Fabrary CSV Binder import implementation"
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
 
-**Tests**: Included. [plan.md](./plan.md) and constitution IV require shared goldens plus widget/page tests for Settings entry, preview (owned counts + unmatched **names** before confirm), cancel, confirm add-on-top, second-import doubling, and refuse (bad file / empty Have / free cap). Suites: `cd apps/web && npm test`; `cd apps/mobile && flutter test`.
+**Tests**: Included. [plan.md](./plan.md) and constitution IV require shared goldens plus widget/page tests for Settings entry, preview (owned counts + unmatched **names** before confirm), cancel, confirm add-on-top, second-import doubling, and refuse (bad file / empty Have / no match). Suites: `cd apps/web && npm test`; `cd apps/mobile && flutter test`.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -33,7 +33,7 @@ description: "Task list for Fabrary CSV Binder import implementation"
 
 ## Constitution
 
-Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Edge Function, no import table, no relocate of rename/delete; one batch write instead of 3,800 `add()` calls), **II** (`fabraryMatch` vs `fabraryImportApply` vs persist stay separate; Printing id is catalog id, not Fabrary Identifier), **III** (bad file / no owned / no matched / free cap refuse; unmatched named before confirm; no partial batch), **IV** (new `fabrary_printing_match.json` + `fabrary_import_apply.json`; extend `free_limits.json`; both suites assert the same JSON), **V** (pipeline unchanged; unmatched ≠ invented card). Also: table is the deadline (import off Trade), no gate before value (mobile signed-out; web keeps `/binder` gate), one brand two peer surfaces, vocabulary (Binder; Collection is a name; Want List not written), real prices or nothing, local reads (parse/match on device), server-owned Pro (read entitlement only), dual-client DRY (shared fixtures).
+Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Edge Function, no import table, no relocate of rename/delete; one batch write instead of 3,800 `add()` calls), **II** (`fabraryMatch` vs `fabraryImportApply` vs persist stay separate; Printing id is catalog id, not Fabrary Identifier), **III** (bad file / no owned / no matched refuse; unmatched named before confirm; no partial batch; import is not capped), **IV** (new `fabrary_printing_match.json` + `fabrary_import_apply.json`; both suites assert the same JSON), **V** (pipeline unchanged; unmatched ≠ invented card). Also: table is the deadline (import off Trade), no gate before value (mobile signed-out; web keeps `/binder` gate), one brand two peer surfaces, vocabulary (Binder; Collection is a name; Want List not written), real prices or nothing, local reads (parse/match on device), dual-client DRY (shared fixtures).
 
 ---
 
@@ -146,22 +146,22 @@ Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Ed
 
 ---
 
-## Phase 6: User Story 4 - Clear refusal when the file or account cannot import (Priority: P2)
+## Phase 6: User Story 4 - Clear refusal when the file cannot import (Priority: P2)
 
-**Goal**: Not-Fabrary, empty Have, zero matched, and free-tier over-cap all refuse with plain copy. Binder unchanged. Free cap shows the Pro upgrade. Dismiss lets them pick another file.
+**Goal**: Not-Fabrary, empty Have, and zero matched all refuse with plain copy. Binder unchanged. Dismiss lets them pick another file. Fabrary import is not capped and MUST NOT show Upgrade to Pro.
 
-**Independent Test**: Random non-Fabrary file, Fabrary with all Have empty, and a large owned set on a free account: Binder unchanged, message says what to do next, Pro upgrade on cap.
+**Independent Test**: Random non-Fabrary file and Fabrary with all Have empty: Binder unchanged, message says what to do next. A large owned set previews with no Pro upgrade.
 
 ### Tests for User Story 4 ⚠️
 
-- [X] T042 [P] [US4] Extend `apps/mobile/test/widgets/binder_settings_test.dart`: wrong headers → not-Fabrary copy, no write; all Have empty → no-owned copy; owned but zero matches → no-matched copy; free player over cap → Pro upgrade path (`presentProPaywall` / existing upsell), Binder unchanged; dismiss returns to Settings with no partial adds
-- [X] T043 [P] [US4] Extend `apps/web/tests/pages/BinderSettings.test.jsx` with the same refuse reasons (`not_fabrary`, `no_owned`, `no_matched`, `free_cap`) and no `upsertEntries` call
+- [X] T042 [P] [US4] Extend `apps/mobile/test/widgets/binder_settings_test.dart`: wrong headers → not-Fabrary copy, no write; all Have empty → no-owned copy; owned but zero matches → no-matched copy; large existing Binder still previews (no Upgrade to Pro)
+- [X] T043 [P] [US4] Extend `apps/web/tests/pages/BinderSettings.test.jsx` with refuse reasons (`not_fabrary`, `no_owned`, `no_matched`) and no `upsertEntries` call; large Binder still previews with no Upgrade to Pro
 
 ### Implementation for User Story 4
 
 - [X] T044 [P] [US4] Surface `plan.refuseReason` on `apps/mobile/lib/features/binder/binder_settings_screen.dart` with the player-facing lines in [contracts/binder-settings.md](./contracts/binder-settings.md). Do not apply adds when `!plan.ok`
-- [X] T045 [P] [US4] Surface the same refuse reasons on `apps/web/src/pages/BinderSettings.jsx`. `free_cap` uses the existing Pro upgrade pattern from `apps/web/src/pages/BinderCollection.jsx` / entitlement (show upgrade, write nothing)
-- [X] T046 [US4] On mobile `free_cap`, call the existing paywall helper used by `apps/mobile/lib/features/paywall/pro_limits.dart` (`presentProPaywall`); on success, re-run the plan (Pro now allows) but do not silently import 50 of 3,800. Until T042 and T043 pass: every refuse leaves Binders and Want List unchanged
+- [X] T045 [P] [US4] Surface the same refuse reasons on `apps/web/src/pages/BinderSettings.jsx`. Do not show Upgrade to Pro.
+- [X] T046 [US4] Fabrary import is uncapped on mobile (no `presentProPaywall` on this screen). Until T042 and T043 pass: every refuse leaves Binders and Want List unchanged
 
 **Checkpoint**: All four user stories are independently functional
 

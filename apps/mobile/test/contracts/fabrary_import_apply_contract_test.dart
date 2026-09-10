@@ -29,17 +29,12 @@ void main() {
         final existing = (testCase['existingEntries'] as List? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
-        final existingOwnedIds = (testCase['existingOwnedIds'] as List?)
-            ?.map((e) => '$e')
-            .toList();
         final result = planFabraryImport(
           headers: (testCase['headers'] as List).map((e) => '$e').toList(),
           rows: rows,
           catalog: catalog,
           binderId: testCase['binderId'] as String,
           existingEntries: existing,
-          existingOwnedIds: existingOwnedIds,
-          isPro: testCase['isPro'] as bool? ?? false,
         );
         final expected = Map<String, dynamic>.from(testCase['expected'] as Map);
         expect(result.ok, expected['ok']);

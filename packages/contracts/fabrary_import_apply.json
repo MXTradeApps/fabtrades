@@ -1,5 +1,5 @@
 {
-  "description": "Fabrary import plan: Have-only owned rows, add-on-top preview, refuse-all on cap. Want/Extra never write Binder or Want List.",
+  "description": "Fabrary import plan: Have-only owned rows, add-on-top preview. Want/Extra never write Binder or Want List. Import is not capped.",
   "requiredHeaders": [
     "Identifier",
     "Name",
@@ -84,7 +84,6 @@
       ],
       "binderId": "system:collection",
       "existingEntries": [],
-      "isPro": true,
       "expected": {
         "ok": true,
         "refuseReason": null,
@@ -137,7 +136,6 @@
           "condition": "NM"
         }
       ],
-      "isPro": true,
       "expected": {
         "ok": true,
         "refuseReason": null,
@@ -188,7 +186,6 @@
       ],
       "binderId": "system:collection",
       "existingEntries": [],
-      "isPro": true,
       "expected": {
         "ok": true,
         "refuseReason": null,
@@ -245,7 +242,6 @@
           "condition": "LP"
         }
       ],
-      "isPro": true,
       "expected": {
         "ok": true,
         "refuseReason": null,
@@ -294,7 +290,6 @@
           "condition": "NM"
         }
       ],
-      "isPro": true,
       "expected": {
         "ok": true,
         "refuseReason": null,
@@ -343,7 +338,6 @@
           "condition": "NM"
         }
       ],
-      "isPro": true,
       "expected": {
         "ok": true,
         "refuseReason": null,
@@ -355,7 +349,7 @@
       }
     },
     {
-      "name": "free player over the distinct cap refuses the entire import",
+      "name": "a large incoming set is allowed even when many printings are already owned",
       "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
       "rows": [
         {
@@ -412,31 +406,21 @@
           "condition": "NM"
         }
       ],
-      "existingOwnedIds": [
-        "owned-0", "owned-1", "owned-2", "owned-3", "owned-4",
-        "owned-5", "owned-6", "owned-7", "owned-8", "owned-9",
-        "owned-10", "owned-11", "owned-12", "owned-13", "owned-14",
-        "owned-15", "owned-16", "owned-17", "owned-18", "owned-19",
-        "owned-20", "owned-21", "owned-22", "owned-23", "owned-24",
-        "owned-25", "owned-26", "owned-27", "owned-28", "owned-29",
-        "owned-30", "owned-31", "owned-32", "owned-33", "owned-34",
-        "owned-35", "owned-36", "owned-37", "owned-38", "owned-39",
-        "owned-40", "owned-41", "owned-42", "owned-43", "owned-44",
-        "owned-45", "owned-46", "owned-47", "owned-48", "owned-49"
-      ],
-      "isPro": false,
       "expected": {
-        "ok": false,
-        "refuseReason": "free_cap",
+        "ok": true,
+        "refuseReason": null,
         "ownedCount": 2,
         "matchedCount": 2,
-        "copiesToAdd": 0,
+        "copiesToAdd": 2,
         "unmatched": [],
-        "adds": []
+        "adds": [
+          { "printingId": "wtr101-normal", "quantity": 1 },
+          { "printingId": "wtr000-reg", "quantity": 1 }
+        ]
       }
     },
     {
-      "name": "free player importing already-owned printings is allowed",
+      "name": "importing already-owned printings is allowed",
       "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
       "rows": [
         {
@@ -473,19 +457,6 @@
           "condition": "NM"
         }
       ],
-      "existingOwnedIds": [
-        "wtr101-normal", "owned-1", "owned-2", "owned-3", "owned-4",
-        "owned-5", "owned-6", "owned-7", "owned-8", "owned-9",
-        "owned-10", "owned-11", "owned-12", "owned-13", "owned-14",
-        "owned-15", "owned-16", "owned-17", "owned-18", "owned-19",
-        "owned-20", "owned-21", "owned-22", "owned-23", "owned-24",
-        "owned-25", "owned-26", "owned-27", "owned-28", "owned-29",
-        "owned-30", "owned-31", "owned-32", "owned-33", "owned-34",
-        "owned-35", "owned-36", "owned-37", "owned-38", "owned-39",
-        "owned-40", "owned-41", "owned-42", "owned-43", "owned-44",
-        "owned-45", "owned-46", "owned-47", "owned-48", "owned-49"
-      ],
-      "isPro": false,
       "expected": {
         "ok": true,
         "refuseReason": null,
@@ -494,81 +465,6 @@
         "copiesToAdd": 2,
         "unmatched": [],
         "adds": [{ "printingId": "wtr101-normal", "quantity": 2 }]
-      }
-    },
-    {
-      "name": "Pro may import a large incoming set",
-      "headers": ["Identifier", "Name", "Pitch", "Set", "Set number", "Edition", "Foiling", "Treatment", "Have"],
-      "rows": [
-        {
-          "Identifier": "sink",
-          "Name": "Sink Below",
-          "Pitch": "Red",
-          "Set": "Welcome to Rathe",
-          "Set number": "WTR101",
-          "Edition": "",
-          "Foiling": "",
-          "Treatment": "",
-          "Have": "1"
-        },
-        {
-          "Identifier": "cmd",
-          "Name": "Command and Conquer",
-          "Pitch": "Red",
-          "Set": "Welcome to Rathe",
-          "Set number": "WTR000",
-          "Edition": "",
-          "Foiling": "",
-          "Treatment": "",
-          "Have": "1"
-        }
-      ],
-      "catalog": [
-        {
-          "id": "wtr101-normal",
-          "name": "Sink Below (Red)",
-          "collectorNumber": "WTR101",
-          "extNumber": "WTR101",
-          "subTypeName": "Normal",
-          "pitch": "1",
-          "setName": "Welcome to Rathe"
-        },
-        {
-          "id": "wtr000-reg",
-          "name": "Command and Conquer",
-          "collectorNumber": "WTR000",
-          "extNumber": "WTR000",
-          "subTypeName": "Normal",
-          "pitch": "1",
-          "setName": "Welcome to Rathe"
-        }
-      ],
-      "binderId": "system:collection",
-      "existingEntries": [],
-      "existingOwnedIds": [
-        "owned-0", "owned-1", "owned-2", "owned-3", "owned-4",
-        "owned-5", "owned-6", "owned-7", "owned-8", "owned-9",
-        "owned-10", "owned-11", "owned-12", "owned-13", "owned-14",
-        "owned-15", "owned-16", "owned-17", "owned-18", "owned-19",
-        "owned-20", "owned-21", "owned-22", "owned-23", "owned-24",
-        "owned-25", "owned-26", "owned-27", "owned-28", "owned-29",
-        "owned-30", "owned-31", "owned-32", "owned-33", "owned-34",
-        "owned-35", "owned-36", "owned-37", "owned-38", "owned-39",
-        "owned-40", "owned-41", "owned-42", "owned-43", "owned-44",
-        "owned-45", "owned-46", "owned-47", "owned-48", "owned-49"
-      ],
-      "isPro": true,
-      "expected": {
-        "ok": true,
-        "refuseReason": null,
-        "ownedCount": 2,
-        "matchedCount": 2,
-        "copiesToAdd": 2,
-        "unmatched": [],
-        "adds": [
-          { "printingId": "wtr101-normal", "quantity": 1 },
-          { "printingId": "wtr000-reg", "quantity": 1 }
-        ]
       }
     },
     {
@@ -600,7 +496,6 @@
       ],
       "binderId": "system:collection",
       "existingEntries": [],
-      "isPro": true,
       "expected": {
         "ok": false,
         "refuseReason": "no_matched",
@@ -648,7 +543,6 @@
       ],
       "binderId": "system:collection",
       "existingEntries": [],
-      "isPro": true,
       "expected": {
         "ok": false,
         "refuseReason": "no_owned",
@@ -666,7 +560,6 @@
       "catalog": [],
       "binderId": "system:collection",
       "existingEntries": [],
-      "isPro": true,
       "expected": {
         "ok": false,
         "refuseReason": "not_fabrary",
@@ -717,7 +610,6 @@
       ],
       "binderId": "system:collection",
       "existingEntries": [],
-      "isPro": true,
       "expected": {
         "ok": true,
         "refuseReason": null,

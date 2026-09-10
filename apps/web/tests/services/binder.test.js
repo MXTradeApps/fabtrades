@@ -231,7 +231,7 @@ describe('upsertEntry / removeEntry', () => {
         expect(updatedAt).toBeLessThanOrEqual(after);
     });
 
-    test('upsertEntries writes one batch and refuses a free-tier over-cap', async () => {
+    test('upsertEntries writes one batch', async () => {
         asUser('user-7');
         const saved = [{
             card_id: '12345-foil',
@@ -253,7 +253,7 @@ describe('upsertEntry / removeEntry', () => {
                 binderId: 'system:collection',
                 card: webCard,
             },
-        ], { existingOwnedIds: [], isPro: true });
+        ]);
 
         expect(error).toBeNull();
         expect(data.rows).toHaveLength(1);

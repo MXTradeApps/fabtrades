@@ -79,27 +79,27 @@ Web signed-out `/binder` keeps today’s sign-in gate (004: do not invent a loca
 
 ## Decision: Preview + apply are one pure function; writes are one batch
 
-**Rationale**: `planFabraryImport({ rows, catalog, binderId, existingEntries, isPro })` returns:
+**Rationale**: `planFabraryImport({ rows, catalog, binderId, existingEntries })` returns:
 
-- `ok` / `refuseReason` (`not_fabrary` | `no_owned` | `no_matched` | `free_cap`)
+- `ok` / `refuseReason` (`not_fabrary` | `no_owned` | `no_matched`)
 - preview: owned count, matched count, unmatched rows (name + set number + finish + treatment + edition), copies to add
 - `adds`: `{ printingId, quantity }[]` already combined by Printing (Have sums)
 
 Confirm maps `adds` onto existing NM rows in **this** Binder (qty += Have) or new NM rows. Other conditions unchanged. Other Binders unchanged.
 
-**Cap**: `canImportDistinctPrintings(existingOwnedIds, incomingIds, isPro)` — resulting distinct owned count across **all** Binders. Incoming ids already owned anywhere do not consume a slot. Over cap → `free_cap`, **no writes**. Add cases to `free_limits.json` (same refuse behaviour as a single add). Pro always allowed.
+**Cap**: none for Fabrary import. A large owned set is allowed. Binder Settings MUST NOT show Upgrade to Pro.
 
 **Write path** (do not call `add()` / `upsertEntry()` 3,800 times):
 
 - Mobile: `BinderNotifier.applyImportAdds(binderId, adds)` — one state replace, one `save`, one `syncAfterBinderMutation`.
-- Web: `upsertEntries(rows)` — one (or chunked) Supabase `.upsert([...])` on `user_id,client_id`. Enforce the batch cap **before** the upsert (today’s single-add UI still skips `checkCanAddBinderCard`; do not expand that fix unless it is one call site away).
+- Web: `upsertEntries(rows)` — one (or chunked) Supabase `.upsert([...])` on `user_id,client_id`.
 
 Failed confirm: Binder unchanged (no partial batch). Show retry.
 
 **Alternatives considered**:
 
 - Loop existing `add()` — 3,800 persists and syncs; looks stuck (spec large-file edge).
-- Per-row cap (import first 50) — forbidden by FR-015.
+- Per-row cap (import first 50) — forbidden by FR-015 (import is uncapped).
 - Server transaction — web already upserts; batch upsert is enough. Mobile is local-first.
 
 ## Decision: file_picker on mobile; file input on web

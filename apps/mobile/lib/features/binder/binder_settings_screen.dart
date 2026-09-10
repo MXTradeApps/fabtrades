@@ -7,14 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/logic/fabrary_import_apply.dart';
 import '../../core/models/binder.dart';
 import '../../core/providers.dart';
-import '../paywall/pro_paywall.dart';
 
 const fabraryRefuseCopy = {
   'not_fabrary': 'This is not a Fabrary collection export',
   'no_owned': 'No owned cards (Have) were found',
   'no_matched': 'None of the owned cards were found in the catalog',
-  'free_cap':
-      'This import would exceed the free Binder card cap — show Pro upgrade',
 };
 
 /// Settings for one Binder. Import from Fabrary lives here, not in app Settings.
@@ -23,16 +20,12 @@ class BinderSettingsScreen extends ConsumerStatefulWidget {
     super.key,
     required this.binderId,
     this.pickCsv,
-    this.presentPaywall,
   });
 
   final String binderId;
 
   /// Test hook. Production uses the device file picker.
   final Future<String?> Function()? pickCsv;
-
-  /// Test hook. Production uses [presentProPaywall].
-  final Future<bool> Function()? presentPaywall;
 
   @override
   ConsumerState<BinderSettingsScreen> createState() =>
@@ -88,16 +81,12 @@ class _BinderSettingsScreenState extends ConsumerState<BinderSettingsScreen> {
         catalog: catalog,
         binderId: widget.binderId,
         existingEntries: ref.read(binderProvider),
-        isPro: ref.read(isProProvider),
       );
       if (!mounted) return;
       setState(() {
         _plan = plan;
         _working = false;
       });
-      if (plan.refuseReason == 'free_cap') {
-        await _offerUpgrade(csv);
-      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -113,28 +102,6 @@ class _BinderSettingsScreenState extends ConsumerState<BinderSettingsScreen> {
         );
       });
     }
-  }
-
-  Future<void> _offerUpgrade(String csv) async {
-    final upgraded = widget.presentPaywall != null
-        ? await widget.presentPaywall!()
-        : await presentProPaywall(
-            context,
-            ref,
-            trigger: 'fabrary_import_cap',
-          );
-    if (!mounted) return;
-    if (!upgraded && !ref.read(isProProvider)) return;
-    final catalog = await ref.read(catalogProvider.future);
-    if (!mounted) return;
-    final plan = planFabraryImport(
-      csv: csv,
-      catalog: catalog,
-      binderId: widget.binderId,
-      existingEntries: ref.read(binderProvider),
-      isPro: true,
-    );
-    setState(() => _plan = plan);
   }
 
   Future<void> _confirm() async {
@@ -194,20 +161,6 @@ class _BinderSettingsScreenState extends ConsumerState<BinderSettingsScreen> {
                   'This file cannot be imported',
               key: const Key('fabraryRefuse'),
             ),
-            if (plan.refuseReason == 'free_cap')
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: FilledButton(
-                  key: const Key('fabraryUpgrade'),
-                  onPressed: _working
-                      ? null
-                      : () async {
-                          final csv = await _pickCsvText();
-                          if (csv != null) await _offerUpgrade(csv);
-                        },
-                  child: const Text('Upgrade to Pro'),
-                ),
-              ),
           ],
           if (plan != null && plan.ok)
             _FabraryPreview(

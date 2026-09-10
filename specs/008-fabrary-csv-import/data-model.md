@@ -73,9 +73,9 @@ Pure function. Input: parsed rows, catalog, target `binderId`, existing Binder e
 | `matchedCount` / `unmatched` | After match |
 | `copiesToAdd` | Sum of Have on matched rows (after combining duplicate file rows) |
 | `adds[]` | `{ printingId, quantity }` per Printing |
-| `refuseReason` | `not_fabrary` \| `no_owned` \| `no_matched` \| `free_cap` |
+| `refuseReason` | `not_fabrary` \| `no_owned` \| `no_matched` |
 
-Cap: distinct(`existing owned ids ∪ add.printingId`) ≤ 50 unless Pro.
+Import is not capped. Binder Settings MUST NOT show Upgrade to Pro.
 
 See [fabrary-import-apply.md](./contracts/fabrary-import-apply.md).
 
@@ -89,7 +89,7 @@ See [fabrary-import-apply.md](./contracts/fabrary-import-apply.md).
 | File picker | Preview (or refuse) | File read + plan |
 | Preview | Same Binder Settings, Binder unchanged | Cancel / back |
 | Preview | Open Binder list, cards added | Confirm (ok plan) |
-| Preview | Refuse, Binder unchanged | Confirm when `free_cap` (or plan already refused) |
+| Preview | Refuse, Binder unchanged | Plan already refused (`not_fabrary` / `no_owned` / `no_matched`) |
 | Want List | *(no settings import)* | Hidden |
 | App-wide Settings | *(no Fabrary import)* | Hidden |
 | Shared `/b/:token` | *(no import)* | Hidden |

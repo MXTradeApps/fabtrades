@@ -97,18 +97,18 @@ Afterward they are back on this Binder's list (or a clear one-step return to it)
 
 If the file is not a Fabrary collection export, is unreadable, or contains no owned cards, the player is told so in plain language and the Binder does not change.
 
-If they are on the free tier and the import would put them over the shared distinct-card cap across all Binders, the import is refused entirely (no silent first-fifty). They see that they need Pro to hold a collection this large, and the Binder is unchanged.
+A large owned set (including a real Fabrary dump of thousands of printings) is allowed. Import MUST NOT refuse for a free-tier card cap and MUST NOT show Upgrade to Pro.
 
-**Why this priority**: A bad file or a 3,800-printing Fabrary dump against a 50-card free cap must not corrupt the Binder or quietly import a sliver. Refusal is still a complete, testable slice.
+**Why this priority**: A bad file must not corrupt the Binder or quietly import a sliver. Refusal is still a complete, testable slice. Size of the owned set is not a refusal reason.
 
-**Independent Test**: Feed a random non-Fabrary file, a Fabrary file with every Have empty, and a large owned set while over the free cap. In every case the Binder is unchanged and the message says what to do next.
+**Independent Test**: Feed a random non-Fabrary file, a Fabrary file with every Have empty, and a large owned set. Bad files leave the Binder unchanged. The large owned set previews and can confirm with no Pro upgrade.
 
 **Acceptance Scenarios**:
 
 1. **Given** a file that is not a Fabrary collection export (wrong columns or not a collection table), **When** they select it, **Then** they see that this is not a Fabrary collection file and no Binder changes.
 2. **Given** a Fabrary collection file where every Have is empty or zero, **When** they select it, **Then** they see that no owned cards were found and no Binder changes.
-3. **Given** a free player whose Binders would exceed the shared distinct-card cap if this import added its new distinct printings, **When** they confirm, **Then** the import is refused, they see the Pro upgrade, and every Binder is unchanged.
-4. **Given** a Pro player (or a free player whose resulting distinct-card count stays at or under the cap), **When** they confirm a valid preview, **Then** the import proceeds as in User Story 3.
+3. **Given** a player whose Binders already hold many distinct printings, **When** they preview a valid Fabrary file, **Then** they see the preview (not Upgrade to Pro) and confirming adds the matched Have copies.
+4. **Given** a valid preview, **When** they confirm, **Then** the import proceeds as in User Story 3 regardless of account tier.
 5. **Given** a refusal, **When** they dismiss it, **Then** they can pick a different file or leave settings without a partial write.
 
 ---
@@ -123,13 +123,13 @@ If they are on the free tier and the import would put them over the shared disti
 - **More than one catalog Printing fits**: The product MUST pick exactly one. Prefer the regular printing (no special treatment) when it is a candidate. Otherwise pick the first in a fixed catalog order (name, then set number, then finish) so the same file against the same catalog always chooses the same Printing. That row is matched, not unmatched.
 - **Blank finish**: A blank Foiling is the regular (non-foil) printing, not "any foil."
 - **Blank treatment / edition**: Matches the ordinary printing of that set number, not an extended-art, full-art, or First/Unlimited/Alpha variant.
-- **Unmatched owned rows**: Listed by name on the preview before confirm. They are not added. Matched rows still import when the player confirms (unless a cap or file refusal applies). Confirm is not blocked by unmatched rows.
+- **Unmatched owned rows**: Listed by name on the preview before confirm. They are not added. Matched rows still import when the player confirms (unless a file refusal applies). Confirm is not blocked by unmatched rows.
 - **Zero matched owned rows**: Even if Have is filled, if nothing matches the catalog, import is refused and the Binder is unchanged.
 - **Add to a non-empty Binder**: Previous cards in *this* Binder stay, including quantity, finish, treatment, edition, and condition. Cards in other Binders stay.
 - **Same Printing already in this Binder (Near Mint)**: Have is added to that Near Mint quantity.
 - **Same Printing already in this Binder (only a worn condition)**: Existing worn-condition row is unchanged. Import adds a separate Near Mint row for that Printing with the Have quantity.
-- **Add and the free cap**: The cap is evaluated on the *resulting* set of distinct owned printings across all Binders after the add. A Printing already owned in any Binder does not consume an extra slot. Only printings the player does not yet own anywhere count as new. If that result would exceed the cap, the whole import is refused.
-- **Same Printing already in another Binder**: Import still adds the copies into *this* Binder. The product does not steal copies from the other Binder. Distinct-card cap counts that Printing once across Binders (existing rule).
+- **Import is not capped**: A large owned set imports in full. Binder Settings MUST NOT show Upgrade to Pro.
+- **Same Printing already in another Binder**: Import still adds the copies into *this* Binder. The product does not steal copies from the other Binder.
 - **Trade Binder import**: Allowed. Confirm Trade and Trade Filler then see Trade Binder stock including the added copies. Collection is not auto-filled.
 - **Lent copies in this Binder**: They stay. Import does not remove or move lends. If the lent Printing is also in the file, Have is added to the Near Mint row as usual.
 - **Very large owned sets**: A collection on the order of several thousand owned printings (the attached export has thousands of Have rows) MUST complete without appearing stuck; the player sees progress or a clear "working" state until preview or finish.
@@ -154,10 +154,10 @@ If they are on the free tier and the import would put them over the shared disti
 - **FR-012**: Unmatched owned rows MUST be listed on the preview **before** confirm (enough identity to find the card: name, set number, finish, treatment, edition). Those rows MUST NOT be added to the Binder. After a successful add, the same unmatched list MUST still be available so the player can fix those cards by hand.
 - **FR-013**: If the file is readable as a Fabrary export but no owned row matches the catalog, the product MUST refuse the write and say that none of the owned cards were found.
 - **FR-014**: If the file is a Fabrary export but no row is owned, the product MUST refuse the write and say that no owned cards were found.
-- **FR-015**: Free-tier distinct-card limits MUST use the existing **shared cap across all Binders**. The product MUST evaluate the cap on the collection that would exist *after* the add. Printings already owned in any Binder MUST NOT consume an extra slot. If the result would exceed the cap, the import MUST be refused in full, the player MUST see the Pro upgrade, and no Binder MUST change. Pro MUST NOT be blocked by that cap.
+- **FR-015**: Fabrary import MUST NOT apply a free-tier distinct-card cap and MUST NOT show Upgrade to Pro. A valid matched import MUST proceed for any account, including files whose distinct printings exceed the former Binder card cap.
 - **FR-016**: Import MUST work without an account when Binders are already on the device. For a signed-in player, this Binder MUST appear the same on the other peer surface once that Binder is available there.
 - **FR-017**: After a successful import, this Binder's list, tile card count, tile value, cover, and Collection Stats MUST match previous copies plus the added copies.
-- **FR-018**: The same import rules (Have-only, add-to-this-Binder, matching, cap, unmatched reporting) MUST hold on web and mobile.
+- **FR-018**: The same import rules (Have-only, add-to-this-Binder, matching, unmatched reporting) MUST hold on web and mobile.
 
 ### Key Entities
 
@@ -180,7 +180,7 @@ If they are on the free tier and the import would put them over the shared disti
 - **SC-005**: After import into Binder A, Binder B's list and Want List match their pre-import snapshot in 100% of checks.
 - **SC-006**: At least 90% of first-time testers asked "where do I load my Fabrary collection into Collection?" open Collection's settings (not app-wide Settings, not Trade, not Want List) on the first try.
 - **SC-007**: 100% of non-Fabrary files and empty-Have Fabrary files leave every Binder unchanged and show a message the tester can act on (get a Fabrary collection export, or export after marking Have).
-- **SC-008**: 100% of free-tier imports that would exceed the shared distinct-card cap leave every Binder unchanged and show the Pro upgrade.
+- **SC-008**: 100% of valid Fabrary imports complete without an Upgrade to Pro prompt, including files whose distinct printings exceed the former free Binder card cap.
 - **SC-009**: When a valid file includes unmatched owned rows, 100% of those skipped cards are visible by name (and set/finish when present) on the preview **before** confirm, and still available after a successful add.
 - **SC-012**: Importing the same Fabrary file twice against the same catalog adds the same Printings each time (the stable pick for an ambiguous row does not change between runs).
 - **SC-010**: A signed-out player can complete import into an on-device Binder without creating an account.
@@ -193,7 +193,7 @@ If they are on the free tier and the import would put them over the shared disti
 - **Near Mint default.** The file has no condition column. Condition stays descriptive-only and is not priced. Imported copies combine only with an existing Near Mint row of the same Printing.
 - **Both peer surfaces.** Players export from Fabrary on a computer or phone; both web and mobile must accept the file.
 - **No account gate** to import into Binders already on the device, matching existing Binder organization.
-- **Shared free-tier card cap still applies.** A real Fabrary collection is often thousands of distinct printings (the attached export is). Free players will be refused and pointed at Pro rather than receiving a silent partial Binder. The 4-Binder count limit is unrelated (import does not create Binders).
+- **Fabrary import is not paywalled.** A real Fabrary collection is often thousands of distinct printings (the attached export is). That file imports in full with no Upgrade to Pro. The 4-Binder count limit is unrelated (import does not create Binders).
 - **Matching uses the live catalog.** Cards Fabrary lists that are not in the catalog yet are unmatched, not invented, and never priced as zero.
 - **Binder settings is the entry.** Today rename/delete live on the Binder tile menu. This feature needs a settings place *for that Binder*. It may be a new settings screen for the open Binder or an expansion of that Binder's existing management; either way it is not global Settings.
 - **Lent copies stay.** Import does not clear lends or rewrite worn-condition rows.

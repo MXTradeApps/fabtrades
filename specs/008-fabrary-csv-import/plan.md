@@ -36,7 +36,7 @@ Players open **a Binder’s settings** (not app-wide Settings) and **Import from
 | --- | --- | --- |
 | I. Good Enough Ships | Pass | Reuse Binder write + catalog. No Edge Function, no import table, no relocate of rename/delete. Batch write instead of 3,800 `add()` calls because that *is* the failure mode. |
 | II. Code That Reveals Intent | Pass | `fabraryMatch` vs `fabraryImportApply` vs Binder persist stay separate. Printing id is catalog id, not Fabrary Identifier. Preview is derived, not a stored job. |
-| III. Fail Fast, Never Silent | Pass | Bad file / no owned / no matched / free cap refuse with a clear reason. Unmatched named before confirm. Ambiguous rows pick by a documented rule, not a random first hash. Partial batch does not commit. |
+| III. Fail Fast, Never Silent | Pass | Bad file / no owned / no matched refuse with a clear reason. Unmatched named before confirm. Ambiguous rows pick by a documented rule, not a random first hash. Partial batch does not commit. Import is not capped. |
 | IV. Honest Tests, Shared Contracts | Pass | New `fabrary_printing_match.json` and `fabrary_import_apply.json`. Both suites assert the same JSON. Cap cases extend `free_limits.json`. Catalog-shaped fixtures, not dummy ids that skip the matcher. |
 | V. Reproducible Ingest | Pass | Pipeline unchanged. Apps only read the catalog they already have. Unmatched ≠ invented card. |
 | Table is the deadline | Pass | Import is off the Trade tab. Settings is one tap from the Binder they are stocking. |

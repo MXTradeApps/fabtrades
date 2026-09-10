@@ -13,7 +13,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import { useAuth } from '../contexts/AuthContext';
-import { useEntitlement } from '../contexts/EntitlementContext.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useDocumentHead } from '../utils/seo.js';
@@ -31,7 +30,6 @@ export const FABRARY_REFUSE_COPY = {
     not_fabrary: 'This is not a Fabrary collection export',
     no_owned: 'No owned cards (Have) were found',
     no_matched: 'None of the owned cards were found in the catalog',
-    free_cap: 'This import would exceed the free Binder card cap — show Pro upgrade',
 };
 
 async function readPickedFile(file) {
@@ -48,11 +46,9 @@ const BinderSettings = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { user } = useAuth();
-    const { isPro } = useEntitlement();
     const { isDark } = useThemeMode();
     const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
     const fileInputRef = useRef(null);
-    const lastCsvRef = useRef('');
     const [signInOpen, setSignInOpen] = useState(false);
     const [binders, setBinders] = useState([]);
     const [entries, setEntries] = useState([]);
@@ -107,16 +103,6 @@ const BinderSettings = () => {
         return undefined;
     }, [user, load]);
 
-    const runPlan = useCallback((csv, pro) => (
-        planFabraryImport({
-            csv,
-            catalog: cards || [],
-            binderId,
-            existingEntries: entries,
-            isPro: Boolean(pro),
-        })
-    ), [cards, binderId, entries]);
-
     const onPickFile = async (event) => {
         const file = event.target.files?.[0];
         event.target.value = '';
@@ -127,7 +113,6 @@ const BinderSettings = () => {
         setError('');
         try {
             const csv = await readPickedFile(file);
-            lastCsvRef.current = csv;
             const entryRes = await getBinderEntries();
             const latest = entryRes.data?.binder || entries;
             if (entryRes.data?.binder) setEntries(entryRes.data.binder);
@@ -136,7 +121,6 @@ const BinderSettings = () => {
                 catalog: cards || [],
                 binderId,
                 existingEntries: latest,
-                isPro: Boolean(isPro),
             });
             setPlan(next);
         } catch {
@@ -176,13 +160,7 @@ const BinderSettings = () => {
                 card: catalogById.get(add.printingId),
             };
         }).filter((row) => row.card);
-        const existingOwnedIds = [...new Set(
-            entries.filter((e) => !e.isWanted).map((e) => e.cardId || e.printingId).filter(Boolean),
-        )];
-        const { error: upsertError } = await upsertEntries(rows, {
-            existingOwnedIds,
-            isPro,
-        });
+        const { error: upsertError } = await upsertEntries(rows);
         if (upsertError) {
             setError(upsertError.message || 'Could not import');
             setApplying(false);
@@ -317,19 +295,6 @@ const BinderSettings = () => {
                             <Alert severity="warning" data-testid="fabrary-refuse">
                                 {FABRARY_REFUSE_COPY[plan.refuseReason] || 'This file cannot be imported'}
                             </Alert>
-                            {plan.refuseReason === 'free_cap' && (
-                                <Button
-                                    data-testid="fabrary-upgrade"
-                                    sx={{ mt: 1.5 }}
-                                    variant="outlined"
-                                    onClick={() => {
-                                        if (!lastCsvRef.current) return;
-                                        setPlan(runPlan(lastCsvRef.current, true));
-                                    }}
-                                >
-                                    Upgrade to Pro
-                                </Button>
-                            )}
                         </Box>
                     )}
                     {plan?.ok && (

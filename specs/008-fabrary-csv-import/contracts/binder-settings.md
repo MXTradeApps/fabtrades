@@ -42,7 +42,8 @@ Confirm stays enabled when unmatched rows exist (not option C). Cancel / back: B
 | `not_fabrary` | This is not a Fabrary collection export |
 | `no_owned` | No owned cards (Have) were found |
 | `no_matched` | None of the owned cards were found in the catalog |
-| `free_cap` | This import would exceed the free Binder card cap — show Pro upgrade |
+
+Refuse MUST NOT include a free-tier cap or an Upgrade to Pro control.
 
 ## Working state
 

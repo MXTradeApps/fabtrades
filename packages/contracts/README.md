@@ -70,6 +70,5 @@ the oldest rows, so if web kept twelve trades and mobile ten, mobile would delet
 two trades every time it synced — indistinguishable, from the customer's side, from
 the app losing their history. Binder and want-list cases use `refuse` (never trim
 existing rows); web and mobile both enforce those via `canAddDistinctCard` /
-`_canAddNewCard`. Batch Fabrary import reuses the same `binderCards` number through
-`canImportDistinctPrintings` (resulting distinct = existing ∪ incoming). Do not
-fork a second binder-card cap. Loaned-card cases remain mobile-only.
+`_canAddNewCard`. Fabrary CSV import does not use `canImportDistinctPrintings`
+and is not capped. Loaned-card cases remain mobile-only.

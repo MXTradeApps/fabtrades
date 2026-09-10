@@ -16,8 +16,6 @@ describe('fabrary import apply contract', () => {
                 catalog: testCase.catalog,
                 binderId: testCase.binderId,
                 existingEntries: testCase.existingEntries,
-                existingOwnedIds: testCase.existingOwnedIds,
-                isPro: testCase.isPro,
             });
             expect(result.ok).toBe(testCase.expected.ok);
             expect(result.refuseReason).toBe(testCase.expected.refuseReason);
