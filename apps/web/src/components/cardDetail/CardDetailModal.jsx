@@ -19,6 +19,7 @@ import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 import { CardImageModal, CardThumbnail } from '../ui/CardImagePreview.jsx';
 import SignInDialog from '../auth/SignInDialog.jsx';
 import CardDetailPrices from './CardDetailPrices.jsx';
+import PriceHistorySection from './PriceHistorySection.jsx';
 import { printingsForCard } from '../../utils/printingsForCard.js';
 import { upsertEntry, getBinderEntries } from '../../services/binder.js';
 import { targetOwnedBinderId } from '../../utils/openBinder.js';
@@ -345,6 +346,13 @@ export function CardDetailModal({
                         pricesUpdatedAt={pricesUpdatedAt}
                         isDark={isDark}
                     />
+
+                    {shown?._uniqueId && (
+                        <PriceHistorySection
+                            printingId={shown._uniqueId}
+                            isDark={isDark}
+                        />
+                    )}
 
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2.5 }}>
                         {showAddToTrade && (

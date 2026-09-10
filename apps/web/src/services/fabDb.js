@@ -21,7 +21,7 @@ import { requireSupabaseConfig } from '../config/env.js';
 
 const PAGE_SIZE = 1000; // PostgREST caps a single response at 1000 rows.
 
-const restFetch = async (pathAndQuery, headers = {}, { method = 'GET', body } = {}) => {
+const restFetch = async (pathAndQuery, headers = {}, { method = 'GET', body, signal } = {}) => {
     // Resolved per request rather than at import, so a misconfigured deploy reports
     // the missing variable instead of failing to load the module.
     const { url, key } = requireSupabaseConfig();
@@ -33,7 +33,8 @@ const restFetch = async (pathAndQuery, headers = {}, { method = 'GET', body } = 
             ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
             ...headers
         },
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        ...(signal ? { signal } : {}),
     });
     if (!response.ok) {
         throw new Error(`FAB database request failed (${response.status}): ${pathAndQuery}`);
@@ -41,7 +42,8 @@ const restFetch = async (pathAndQuery, headers = {}, { method = 'GET', body } = 
     return response;
 };
 
-const restGet = async (pathAndQuery) => (await restFetch(pathAndQuery)).json();
+const restGet = async (pathAndQuery, options = {}) =>
+    (await restFetch(pathAndQuery, {}, options)).json();
 
 // Only the columns the web app actually consumes. Note the absences: the view
 // also exposes clean_name, tcgplayer_url and modified_on, but nothing renders
@@ -172,6 +174,22 @@ export const recentMovers = async (source, cardIds) => {
     }
     const response = await restFetch('rpc/fab_recent_movers', {}, { method: 'POST', body });
     return response.json();
+};
+
+/**
+ * Daily catalog snapshots for one Printing (`fab_price_history`). Empty list
+ * is success (no snapshots yet), not an error. Window clipping is client-side.
+ *
+ * @param {string} printingId fab_cards.id (`<product_id>-<subtype>`)
+ * @param {{ signal?: AbortSignal }} [opts]
+ */
+export const priceHistory = async (printingId, { signal } = {}) => {
+    const id = encodeURIComponent(printingId);
+    return restGet(
+        `fab_price_history?select=card_id,captured_on,tcg_low,tcg_market,cm_low,cm_trend`
+            + `&card_id=eq.${id}&order=captured_on.asc`,
+        { signal },
+    );
 };
 
 /**
