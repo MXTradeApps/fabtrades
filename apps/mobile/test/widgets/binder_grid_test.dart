@@ -31,13 +31,15 @@ Future<ProviderContainer> pumpGrid(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('grid shows two default tiles', (tester) async {
+  testWidgets('grid shows default tiles including undeletable Want List',
+      (tester) async {
     await pumpGrid(tester);
 
     expect(find.byKey(const Key('binderGrid')), findsOneWidget);
     expect(find.byKey(const Key('binderTile-system:trade')), findsOneWidget);
+    expect(find.byKey(const Key('binderTile-system:want')), findsOneWidget);
     expect(find.byKey(const Key('binderTile-system:collection')), findsOneWidget);
-    expect(find.text('Want List'), findsNothing);
+    expect(find.byKey(const Key('binderTileName-system:want')), findsOneWidget);
     expect(find.widgetWithText(Tab, 'Want List (0)'), findsOneWidget);
     expect(find.widgetWithText(Tab, 'Binder (0)'), findsOneWidget);
   });
@@ -113,7 +115,12 @@ void main() {
           .data,
       '—',
     );
-    expect(find.text('\$0.00'), findsNothing);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('binderTileValue-system:want')))
+          .data,
+      '\$0.00',
+    );
     expect(find.text('€0.00'), findsNothing);
     expect(
       find.byKey(const Key('binderTileCover-system:collection')),
@@ -150,6 +157,57 @@ void main() {
     expect(find.text('Alpha'), findsNothing);
     expect(find.text('My Binders'), findsOneWidget);
     expect(find.widgetWithText(Tab, 'Want List (0)'), findsOneWidget);
+  });
+
+  testWidgets('Clear Binder confirms then empties the open Binder',
+      (tester) async {
+    final container = await pumpGrid(tester);
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'a-Normal', name: 'Alpha', tcgMarket: 12.5),
+          quantity: 3,
+          binderId: BinderIds.trade,
+        );
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'keep-Normal', name: 'Keep'),
+          binderId: BinderIds.collection,
+        );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
+    expect(find.text('Alpha'), findsOneWidget);
+    expect(find.byKey(const Key('clearBinder')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('clearBinder')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('binderClearConfirm')), findsOneWidget);
+    expect(find.textContaining('remove 3 cards from Trade Binder'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('binderClearCancel')));
+    await tester.pumpAndSettle();
+    expect(find.text('Alpha'), findsOneWidget);
+    expect(
+      container.read(binderProvider).where((e) =>
+          !e.isWanted && e.resolvedBinderId == BinderIds.trade),
+      isNotEmpty,
+    );
+
+    await tester.tap(find.byKey(const Key('clearBinder')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('binderClearConfirmButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('Alpha'), findsNothing);
+    expect(
+      container.read(binderProvider).where((e) =>
+          !e.isWanted && e.resolvedBinderId == BinderIds.trade),
+      isEmpty,
+    );
+    expect(
+      container.read(binderProvider).where((e) =>
+          !e.isWanted && e.resolvedBinderId == BinderIds.collection),
+      isNotEmpty,
+    );
+    expect(find.text('Trade Binder'), findsOneWidget);
   });
 
   testWidgets('open Binder title is the Binder name; rename updates it',
@@ -212,7 +270,7 @@ void main() {
     expect(find.text('Legacy Card'), findsOneWidget);
   });
 
-  testWidgets('Want List is a sibling tab, not a tile, and does not change tiles',
+  testWidgets('Want List tile shows wants and does not change owned tiles',
       (tester) async {
     final container = await pumpGrid(tester);
     container.read(binderProvider.notifier).add(
@@ -222,7 +280,13 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('binderGrid')), findsOneWidget);
-    expect(find.text('Want List'), findsNothing);
+    expect(find.byKey(const Key('binderTile-system:want')), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('binderTileCount-system:want')))
+          .data,
+      '1',
+    );
     expect(
       tester
           .widget<Text>(find.byKey(const Key('binderTileCount-system:trade')))
@@ -235,6 +299,22 @@ void main() {
           .data,
       '\$0.00',
     );
+
+    await tester.tap(find.byKey(const Key('binderTileMenu-system:want')));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete'), findsNothing);
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('binderTile-system:want')));
+    await tester.pumpAndSettle();
+    expect(find.text('Wanted Card'), findsOneWidget);
+    expect(find.byKey(const Key('binderGrid')), findsNothing);
+    expect(find.text('Add want'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('binderBackToGrid')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('binderGrid')), findsOneWidget);
 
     await tester.tap(find.widgetWithText(Tab, 'Want List (1)'));
     await tester.pumpAndSettle();
@@ -262,7 +342,7 @@ void main() {
     await tester.tap(find.byKey(const Key('moveBinder-alpha-Normal')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('moveDest-system:collection')), findsOneWidget);
-    expect(find.text('Want List'), findsNothing);
+    expect(find.byKey(const Key('moveDest-system:want')), findsNothing);
     await tester.tap(find.byKey(const Key('moveDest-system:collection')));
     await tester.pumpAndSettle();
     await tester.tap(find.descendant(
@@ -341,10 +421,11 @@ void main() {
 
     expect(binders.create('Third', isPro: false).ok, isTrue);
     await tester.pump();
-    expect(binders.live, hasLength(4));
+    expect(Binder.countableLiveCount(binders.live), 4);
+    expect(binders.live, hasLength(5));
     expect(binders.create('Fifth', isPro: true).ok, isTrue);
     await tester.pump();
-    expect(binders.live, hasLength(5));
+    expect(binders.live, hasLength(6));
     expect(find.textContaining('Subscriptions are unavailable'), findsNothing);
   });
 

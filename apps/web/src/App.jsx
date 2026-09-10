@@ -1,9 +1,8 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home.jsx';
 import TradeHistory from './pages/TradeHistory.jsx';
 import BinderCollection from './pages/BinderCollection.jsx';
 import CollectionStats from './pages/CollectionStats.jsx';
-import BinderSettings from './pages/BinderSettings.jsx';
 import SharedBinder from './pages/SharedBinder.jsx';
 import SetList from './pages/SetList.jsx';
 import Trends from './pages/Trends.jsx';
@@ -27,8 +26,8 @@ function App() {
                             <Route path="/" element={<Home />} />
                             <Route path="/history" element={<TradeHistory />} />
                             <Route path="/binder" element={<BinderCollection isWanted={false} />} />
-                            <Route path="/binder/import" element={<BinderSettings />} />
-                            <Route path="/binder/settings" element={<BinderSettings />} />
+                            <Route path="/binder/import" element={<Navigate to="/binder" replace />} />
+                            <Route path="/binder/settings" element={<Navigate to="/binder" replace />} />
                             <Route path="/binder/stats" element={<CollectionStats />} />
                             <Route path="/wants" element={<BinderCollection isWanted={true} />} />
                             <Route path="/b/:token" element={<SharedBinder />} />

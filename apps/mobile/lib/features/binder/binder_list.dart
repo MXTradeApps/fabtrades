@@ -372,7 +372,7 @@ class _EntryRow extends ConsumerWidget {
 
   Future<void> _move(BuildContext context, WidgetRef ref) async {
     final dests = Binder.gridOrder(liveBinders)
-        .where((b) => b.isLive && b.clientId != binderId)
+        .where((b) => b.isLive && !b.isWant && b.clientId != binderId)
         .toList();
     if (dests.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -430,7 +430,7 @@ class _EntryRow extends ConsumerWidget {
     final lineValue = (pricing.value(card) ?? 0) * entry.quantity;
     final catalog = ref.watch(catalogProvider).asData?.value ?? const [];
     final dests = Binder.gridOrder(liveBinders)
-        .where((b) => b.isLive && b.clientId != binderId)
+        .where((b) => b.isLive && !b.isWant && b.clientId != binderId)
         .toList();
 
     return Dismissible(

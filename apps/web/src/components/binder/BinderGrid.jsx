@@ -3,7 +3,7 @@ import { MoreVert as MoreVertIcon } from '@mui/icons-material';
 import { useEffect, useState } from 'react';
 import { pickBinderCover } from '../../utils/binderCover.js';
 import { isPricedField } from '../../utils/binderValueSnapshot.js';
-import { gridOrderBinders, TRADE_BINDER_ID } from '../../services/binder.js';
+import { gridOrderBinders, isProtectedBinder, TRADE_BINDER_ID, WANT_BINDER_ID } from '../../services/binder.js';
 
 function formatTileUsd(amount) {
     return new Intl.NumberFormat('en-US', {
@@ -33,6 +33,9 @@ function formatBinderTileValue(ownedRows) {
 }
 
 function ownedInBinder(entries, binderId) {
+    if (binderId === WANT_BINDER_ID) {
+        return (entries || []).filter((e) => e.isWanted && (e.quantity || 0) > 0);
+    }
     return (entries || []).filter((e) =>
         !e.isWanted && (e.binderId || TRADE_BINDER_ID) === binderId && (e.quantity || 0) > 0,
     );
@@ -90,6 +93,7 @@ export default function BinderGrid({
     onOpen,
     onRename,
     onDelete,
+    onClear,
     onSettings,
     mutedColor,
     accentColor,
@@ -115,7 +119,8 @@ export default function BinderGrid({
                     resolveCard={resolveCard}
                     onOpen={onOpen}
                     onRename={onRename}
-                    onDelete={binder.role === 'trade' ? undefined : onDelete}
+                    onDelete={isProtectedBinder(binder) ? undefined : onDelete}
+                    onClear={onClear}
                     onSettings={onSettings}
                     mutedColor={mutedColor}
                     accentColor={accentColor}
@@ -134,6 +139,7 @@ function BinderTile({
     onOpen,
     onRename,
     onDelete,
+    onClear,
     onSettings,
     mutedColor,
     accentColor,
@@ -208,7 +214,7 @@ function BinderTile({
                     {value}
                 </Typography>
             </CardActionArea>
-            {(onRename || onDelete || onSettings) && (
+            {(onRename || onDelete || onClear || onSettings) && (
                 <Box sx={{ position: 'absolute', top: 4, right: 4 }}>
                     <IconButton
                         size="small"
@@ -246,6 +252,17 @@ function BinderTile({
                         }}
                     >
                         Rename
+                    </MenuItem>
+                )}
+                {onClear && copies > 0 && (
+                    <MenuItem
+                        data-testid={`binder-clear-${id}`}
+                        onClick={() => {
+                            setMenuEl(null);
+                            onClear(binder);
+                        }}
+                    >
+                        Clear
                     </MenuItem>
                 )}
                 {onDelete && (

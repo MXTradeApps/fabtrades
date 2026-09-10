@@ -376,11 +376,9 @@ class _AppMenuDrawer extends ConsumerWidget {
             title: const Text('Import from Fabrary'),
             onTap: () {
               Navigator.of(context).pop();
-              Navigator.of(parentContext).push(
-                MaterialPageRoute(
-                  builder: (_) => const BinderSettingsScreen(),
-                  settings: const RouteSettings(name: 'Import from Fabrary'),
-                ),
+              showDialog<void>(
+                context: parentContext,
+                builder: (_) => const BinderSettingsScreen(),
               );
             },
           ),

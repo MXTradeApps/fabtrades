@@ -101,8 +101,9 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
     final wanted = entries.where((e) => e.isWanted).toList();
     final owned = entries.where((e) => !e.isWanted).toList();
     final onBinderTab = _tab.index == 0;
+    final viewingWants = !onBinderTab || openId == BinderIds.want;
     final inBinder = onBinderTab && openId != null;
-    final openRows = openId == null
+    final openRows = openId == null || openId == BinderIds.want
         ? const <BinderEntry>[]
         : ownedInBinder(owned, openId);
     final title = _appBarTitle(
@@ -132,6 +133,13 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
               onPressed: () => _createBinder(context),
               icon: const Icon(Icons.add_box_outlined),
               label: const Text('New'),
+            ),
+          if ((inBinder || viewingWants) &&
+              (viewingWants ? _count(wanted) : openRows.length) > 0)
+            TextButton(
+              key: const Key('clearBinder'),
+              onPressed: () => _clearBinder(context),
+              child: Text(viewingWants ? 'Clear Want List' : 'Clear Binder'),
             ),
           const AppMenuAction(),
         ],
@@ -165,8 +173,13 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
                   },
                   onRename: (id) => _renameBinder(context, id),
                   onDelete: (id) => _deleteBinder(context, id),
+                  onClear: (id) => _clearBinder(context, clientId: id),
                 )
-              : BinderList(binderId: openId, pricing: pricing),
+              : openId == BinderIds.want
+                  ? WantListPane(
+                      onAdd: () => _addBySearch(isWanted: true),
+                    )
+                  : BinderList(binderId: openId, pricing: pricing),
           WantListPane(
             onAdd: () => _addBySearch(isWanted: true),
           ),
@@ -181,7 +194,10 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (onBinderTab && openId != null && openRows.isNotEmpty) ...[
+            if (onBinderTab &&
+                openId != null &&
+                openId != BinderIds.want &&
+                openRows.isNotEmpty) ...[
               Flexible(
                 child: Align(
                   alignment: Alignment.centerLeft,
@@ -212,11 +228,11 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
               description: TourCopy.binderFabBody,
               child: FloatingActionButton.extended(
                 heroTag: 'binderFab',
-                onPressed: () => onBinderTab
-                    ? _showBinderAddOptions(context)
-                    : _addBySearch(isWanted: true),
+                onPressed: () => viewingWants
+                    ? _addBySearch(isWanted: true)
+                    : _showBinderAddOptions(context),
                 icon: const Icon(Icons.add),
-                label: Text(onBinderTab ? 'Add card' : 'Add want'),
+                label: Text(viewingWants ? 'Add want' : 'Add card'),
               ),
             ),
           ],
@@ -234,8 +250,8 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   }) {
     if (!onBinderTab) return 'Want List';
     if (openId == null) return 'My Binders';
-    for (final binder in binders) {
-      if (binder.clientId == openId && binder.isLive) return binder.name;
+    for (final binder in Binder.gridOrder(binders)) {
+      if (binder.clientId == openId) return binder.name;
     }
     return 'Binder';
   }
@@ -243,7 +259,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   Future<void> _createBinder(BuildContext context) async {
     final isPro = ref.read(isProProvider);
     if (!FreeLimits.canCreateBinder(
-        ref.read(bindersProvider.notifier).live.length,
+        Binder.countableLiveCount(ref.read(bindersProvider)),
         isPro: isPro)) {
       await presentProPaywall(
         context,
@@ -317,9 +333,52 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
     if (err == null || !context.mounted) return;
     final message = switch (err) {
       'trade' => 'Trade Binder cannot be deleted',
+      'want' => 'Want List cannot be deleted',
       _ => 'Could not delete Binder',
     };
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _clearBinder(BuildContext context, {String? clientId}) async {
+    final openId = ref.read(openBinderIdProvider);
+    final targetId = clientId ??
+        (openId ?? (_tab.index == 1 ? BinderIds.want : null));
+    if (targetId == null) return;
+    final isWant = targetId == BinderIds.want;
+    final binder = ref.read(bindersProvider.notifier).byId(targetId);
+    final name = isWant ? (binder?.name ?? 'Want List') : (binder?.name ?? 'Binder');
+    final copies = ref.read(binderProvider).fold<int>(0, (sum, e) {
+      if (e.quantity < 1) return sum;
+      if (isWant) return e.isWanted ? sum + e.quantity : sum;
+      if (e.isWanted || e.resolvedBinderId != targetId) return sum;
+      return sum + e.quantity;
+    });
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const Key('binderClearConfirm'),
+        title: Text('Clear $name?'),
+        content: Text(
+          copies > 0
+              ? 'This will remove $copies ${copies == 1 ? 'card' : 'cards'} from $name. The binder stays. This cannot be undone.'
+              : 'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('binderClearCancel'),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('binderClearConfirmButton'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    ref.read(binderProvider.notifier).clearInBinder(targetId);
   }
 
   void _showNameError(BuildContext context, BinderNameResult result) {

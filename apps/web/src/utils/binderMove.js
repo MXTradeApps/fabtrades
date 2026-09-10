@@ -28,7 +28,9 @@ export function moveBinderCopies({
     const qty = Number(quantity);
     if (!Number.isFinite(qty) || qty < 1) return refuse('invalid-quantity');
     if (fromBinderId === toBinderId) return refuse('same-binder');
-    if (!toBinderId || toBinderId === 'want') return refuse('invalid-destination');
+    if (!toBinderId || toBinderId === 'want' || toBinderId === 'system:want') {
+        return refuse('invalid-destination');
+    }
 
     const dest = (binders || []).find((b) => b.clientId === toBinderId);
     if (!dest || dest.deletedAt) return refuse('invalid-destination');

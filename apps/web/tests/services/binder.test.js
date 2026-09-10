@@ -25,7 +25,9 @@ import {
     upsertEntry,
     upsertEntries,
     deleteBinder,
+    clearBinder,
     TRADE_BINDER_ID,
+    WANT_BINDER_ID,
     COLLECTION_BINDER_ID,
 } from '../../src/services/binder.js';
 
@@ -46,6 +48,7 @@ const makeChain = (result) => {
         'update',
         'delete',
         'upsert',
+        'or',
     ];
     for (const method of methods) {
         chain[method] = jest.fn(() => chain);
@@ -582,6 +585,14 @@ describe('deleteBinder', () => {
         expect(supabase.from).not.toHaveBeenCalled();
     });
 
+    test('refuses Want List without writing', async () => {
+        asUser();
+        const { data, error } = await deleteBinder({ clientId: WANT_BINDER_ID });
+        expect(data).toBeNull();
+        expect(error.reason).toBe('want');
+        expect(supabase.from).not.toHaveBeenCalled();
+    });
+
     test('tombstones binder cards then the binder', async () => {
         asUser('user-1');
         const entriesChain = makeChain({ error: null });
@@ -607,5 +618,44 @@ describe('deleteBinder', () => {
             deleted_at: expect.any(String),
         }));
         expect(bindersChain.eq).toHaveBeenCalledWith('client_id', COLLECTION_BINDER_ID);
+    });
+});
+
+describe('clearBinder', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('tombstones owned cards and leaves the Binder', async () => {
+        asUser('user-1');
+        const entriesChain = makeChain({ error: null });
+        supabase.from.mockReturnValueOnce(entriesChain);
+
+        const { data, error } = await clearBinder({ clientId: COLLECTION_BINDER_ID });
+        expect(error).toBeNull();
+        expect(data.success).toBe(true);
+        expect(supabase.from).toHaveBeenCalledWith('binder_entries');
+        expect(entriesChain.update).toHaveBeenCalledWith(expect.objectContaining({
+            deleted_at: expect.any(String),
+            updated_at: expect.any(String),
+        }));
+        expect(entriesChain.eq).toHaveBeenCalledWith('user_id', 'user-1');
+        expect(entriesChain.eq).toHaveBeenCalledWith('binder_id', COLLECTION_BINDER_ID);
+        expect(entriesChain.eq).toHaveBeenCalledWith('is_wanted', false);
+        expect(entriesChain.is).toHaveBeenCalledWith('deleted_at', null);
+        expect(supabase.from).not.toHaveBeenCalledWith('binders');
+    });
+
+    test('tombstones Want List rows', async () => {
+        asUser('user-1');
+        const entriesChain = makeChain({ error: null });
+        supabase.from.mockReturnValueOnce(entriesChain);
+
+        const { data, error } = await clearBinder({ clientId: WANT_BINDER_ID });
+        expect(error).toBeNull();
+        expect(data.success).toBe(true);
+        expect(entriesChain.eq).toHaveBeenCalledWith('is_wanted', true);
+        expect(entriesChain.eq).not.toHaveBeenCalledWith('binder_id', WANT_BINDER_ID);
+        expect(supabase.from).not.toHaveBeenCalledWith('binders');
     });
 });

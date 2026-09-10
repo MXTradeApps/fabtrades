@@ -19,9 +19,9 @@ class BindersRepository extends CachedCollection<Binder> {
   @override
   Binder decode(Map<String, dynamic> json) => Binder.fromJson(json);
 
-  /// First run (no storage key) seeds Trade Binder + Collection in memory so
-  /// every load on this instance returns the same pair. After a write, Trade
-  /// Binder is kept if missing; Collection is not resurrected.
+  /// First run (no storage key) seeds Trade Binder, Want List, and Collection
+  /// in memory so every load on this instance returns the same set. After a
+  /// write, Trade Binder is kept if missing; Collection is not resurrected.
   @override
   List<Binder> load() {
     if (!hasStorageKey) {
@@ -31,13 +31,15 @@ class BindersRepository extends CachedCollection<Binder> {
     return super.load();
   }
 
-  /// Persist first-run defaults so they journal and sync.
+  /// Persist first-run defaults so they journal and sync. Existing installs
+  /// also get Want List if it is missing and the name is free.
   List<Binder> loadAndPersistSeed() {
     final loaded = load();
-    if (!hasStorageKey) {
-      save(loaded);
+    final next = Binder.ensureWant(loaded);
+    if (!hasStorageKey || next.length != loaded.length) {
+      save(next);
     }
-    return loaded;
+    return next;
   }
 }
 

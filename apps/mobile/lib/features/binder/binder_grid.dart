@@ -10,15 +10,21 @@ import '../../core/models/binder.dart';
 import '../../core/models/binder_entry.dart';
 import '../../core/providers.dart';
 
-/// Owned rows in one Binder (Want List excluded).
+/// Owned rows in one Binder, or Want List rows for the Want List tile.
 List<BinderEntry> ownedInBinder(
   Iterable<BinderEntry> entries,
   String binderId,
-) =>
-    entries
-        .where((e) =>
-            !e.isWanted && e.resolvedBinderId == binderId && e.quantity > 0)
+) {
+  if (binderId == BinderIds.want) {
+    return entries
+        .where((e) => e.isWanted && e.quantity > 0)
         .toList(growable: false);
+  }
+  return entries
+      .where((e) =>
+          !e.isWanted && e.resolvedBinderId == binderId && e.quantity > 0)
+      .toList(growable: false);
+}
 
 int binderCopyCount(Iterable<BinderEntry> entries, String binderId) =>
     ownedInBinder(entries, binderId).fold<int>(0, (s, e) => s + e.quantity);
@@ -42,7 +48,7 @@ String binderTileValueLabel(
   return pricing.formatValue(amount);
 }
 
-/// Grid of live Binders. Want List is not a tile.
+/// Grid of live Binders, including the undeletable Want List tile.
 class BinderGrid extends ConsumerWidget {
   const BinderGrid({
     super.key,
@@ -50,6 +56,7 @@ class BinderGrid extends ConsumerWidget {
     this.onCreate,
     this.onRename,
     this.onDelete,
+    this.onClear,
     this.onSettings,
   });
 
@@ -57,6 +64,7 @@ class BinderGrid extends ConsumerWidget {
   final VoidCallback? onCreate;
   final ValueChanged<String>? onRename;
   final ValueChanged<String>? onDelete;
+  final ValueChanged<String>? onClear;
   final ValueChanged<String>? onSettings;
 
   @override
@@ -89,9 +97,12 @@ class BinderGrid extends ConsumerWidget {
                   onRename: onRename == null
                       ? null
                       : () => onRename!(binder.clientId),
-                  onDelete: binder.isTrade || onDelete == null
+                  onDelete: binder.isProtected || onDelete == null
                       ? null
                       : () => onDelete!(binder.clientId),
+                  onClear: onClear == null
+                      ? null
+                      : () => onClear!(binder.clientId),
                   onSettings: onSettings == null
                       ? null
                       : () => onSettings!(binder.clientId),
@@ -115,6 +126,7 @@ class BinderTile extends StatelessWidget {
     this.onOpen,
     this.onRename,
     this.onDelete,
+    this.onClear,
     this.onSettings,
   });
 
@@ -124,6 +136,7 @@ class BinderTile extends StatelessWidget {
   final VoidCallback? onOpen;
   final VoidCallback? onRename;
   final VoidCallback? onDelete;
+  final VoidCallback? onClear;
   final VoidCallback? onSettings;
 
   @override
@@ -186,12 +199,16 @@ class BinderTile extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                   ),
-                  if (onRename != null || onDelete != null || onSettings != null)
+                  if (onRename != null ||
+                      onDelete != null ||
+                      onClear != null ||
+                      onSettings != null)
                     PopupMenuButton<String>(
                       key: Key('binderTileMenu-$id'),
                       onSelected: (action) {
                         if (action == 'settings') onSettings?.call();
                         if (action == 'rename') onRename?.call();
+                        if (action == 'clear') onClear?.call();
                         if (action == 'delete') onDelete?.call();
                       },
                       itemBuilder: (_) => [
@@ -207,6 +224,14 @@ class BinderTile extends StatelessWidget {
                           const PopupMenuItem(
                             value: 'rename',
                             child: Text('Rename'),
+                          ),
+                        if (onClear != null && copies > 0)
+                          PopupMenuItem(
+                            value: 'clear',
+                            child: Text(
+                              'Clear',
+                              key: Key('clearBinder-$id'),
+                            ),
                           ),
                         if (onDelete != null)
                           PopupMenuItem(

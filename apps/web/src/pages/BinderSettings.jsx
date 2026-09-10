@@ -1,21 +1,19 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     Box,
     Button,
     CircularProgress,
-    Container,
-    Paper,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    IconButton,
     Typography,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import Header from '../components/elements/Header.jsx';
-import SignInDialog from '../components/auth/SignInDialog.jsx';
-import { useAuth } from '../contexts/AuthContext';
+import { Close as CloseIcon } from '@mui/icons-material';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
-import { useDocumentHead } from '../utils/seo.js';
 import {
     applyImportAddsToEntries,
     copiesForDestination,
@@ -36,6 +34,9 @@ const FABRARY_REFUSE_COPY = {
     no_matched: 'None of those cards were found in the catalog',
 };
 
+export const UNMATCHED_EXPLAIN =
+    "These printings from your Fabrary export aren't in the FAB Trades catalog. Confirming still adds everything we could match; these copies will be skipped.";
+
 async function readPickedFile(file) {
     if (file && typeof file.text === 'function') return file.text();
     return new Promise((resolve, reject) => {
@@ -52,32 +53,25 @@ function destinationBinderId(destination) {
     return COLLECTION_BINDER_ID;
 }
 
-const BinderSettings = () => {
-    const navigate = useNavigate();
-    const { user } = useAuth();
+function unmatchedLabel(row) {
+    return [row.name, row.setNumber, row.foiling, row.treatment, row.edition]
+        .filter(Boolean)
+        .join(' · ');
+}
+
+const FabraryImportDialog = ({ open, onClose, onImported }) => {
     const { isDark } = useThemeMode();
-    const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
+    const { cards } = useCardData();
     const fileInputRef = useRef(null);
-    const [signInOpen, setSignInOpen] = useState(false);
     const [working, setWorking] = useState(false);
     const [applying, setApplying] = useState(false);
     const [plan, setPlan] = useState(null);
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
 
-    useDocumentHead({
-        title: 'Import from Fabrary',
-        description: 'Import a Fabrary collection CSV into Collection, Want List, and Trade Binder.',
-        canonicalPath: '/binder/import',
-    });
-
-    const bgGradient = isDark
-        ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
-        : 'linear-gradient(135deg, #f5f1ed 0%, #e8dfd6 50%, #f0e6dc 100%)';
     const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
     const accentColor = isDark ? '#e4c09c' : '#8b4513';
-    const paperBg = isDark ? 'rgba(44, 24, 16, 0.6)' : '#ffffff';
-    const paperBorder = isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.15)';
+    const textColor = isDark ? '#f5f1ed' : '#2c1810';
 
     const catalogById = useMemo(() => {
         const map = new Map();
@@ -86,6 +80,21 @@ const BinderSettings = () => {
         }
         return map;
     }, [cards]);
+
+    useEffect(() => {
+        if (open) return undefined;
+        setWorking(false);
+        setApplying(false);
+        setPlan(null);
+        setSuccess('');
+        setError('');
+        return undefined;
+    }, [open]);
+
+    const handleClose = () => {
+        if (applying) return;
+        onClose?.();
+    };
 
     const onPickFile = async (event) => {
         const file = event.target.files?.[0];
@@ -168,183 +177,182 @@ const BinderSettings = () => {
         }
         setSuccess(`Added ${plan.copiesToAdd} Near Mint copies`);
         setApplying(false);
+        await onImported?.();
     };
 
-    const handleCancel = () => {
-        setPlan(null);
-        setSuccess('');
-        setError('');
-    };
-
-    const goBack = () => {
-        navigate('/binder');
-    };
-
-    if (!user) {
-        return (
-            <Box
+    return (
+        <Dialog
+            open={open}
+            onClose={handleClose}
+            maxWidth="sm"
+            fullWidth
+            aria-labelledby="fabrary-import-title"
+            PaperProps={{
+                sx: {
+                    maxHeight: '85vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    backgroundColor: isDark ? '#1a0f0a' : '#f5f1ed',
+                    backgroundImage: 'none',
+                    border: isDark
+                        ? '1px solid rgba(212, 165, 116, 0.25)'
+                        : '1px solid rgba(139, 69, 19, 0.18)',
+                },
+            }}
+        >
+            <DialogTitle
+                id="fabrary-import-title"
+                sx={{
+                    color: accentColor,
+                    fontWeight: 700,
+                    pr: 6,
+                    flexShrink: 0,
+                }}
+            >
+                Import from Fabrary
+                <IconButton
+                    aria-label="close"
+                    onClick={handleClose}
+                    disabled={applying}
+                    sx={{ position: 'absolute', right: 8, top: 8, color: mutedColor }}
+                >
+                    <CloseIcon />
+                </IconButton>
+            </DialogTitle>
+            <DialogContent
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    minHeight: '100vh',
-                    background: bgGradient,
-                    backgroundAttachment: 'fixed',
+                    gap: 1.5,
+                    minHeight: 0,
+                    overflow: 'hidden',
+                    color: textColor,
                 }}
             >
-                <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
-                <Container maxWidth="sm" sx={{ mt: 8 }}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            p: 4,
-                            textAlign: 'center',
-                            backgroundColor: paperBg,
-                            border: `1px solid ${paperBorder}`,
-                            borderRadius: 3,
-                        }}
-                    >
-                        <Typography variant="h5" sx={{ mb: 2, color: accentColor, fontWeight: 700 }}>
-                            Sign In Required
-                        </Typography>
-                        <Typography variant="body1" sx={{ mb: 3, color: mutedColor }}>
-                            Sign in to sync your binder across devices.
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <Button variant="contained" onClick={() => setSignInOpen(true)}>
-                                Sign in
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                startIcon={<ArrowBackIcon />}
-                                onClick={() => navigate('/')}
-                            >
-                                Back
-                            </Button>
-                        </Box>
-                    </Paper>
-                </Container>
-                <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
-            </Box>
-        );
-    }
-
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: '100vh',
-                background: bgGradient,
-                backgroundAttachment: 'fixed',
-            }}
-        >
-            <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
-            <Container maxWidth="md" sx={{ flexGrow: 1, py: { xs: 1.5, sm: 2 } }}>
-                <Paper
-                    elevation={0}
-                    sx={{
-                        p: { xs: 2, sm: 3 },
-                        borderRadius: 1.5,
-                        backgroundColor: paperBg,
-                        border: `1px solid ${paperBorder}`,
-                    }}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, minWidth: 0 }}>
-                        <Button
-                            data-testid="binder-settings-back"
-                            startIcon={<ArrowBackIcon />}
-                            onClick={goBack}
-                            sx={{ color: accentColor, textTransform: 'none', flexShrink: 0 }}
-                        >
-                            Back
-                        </Button>
-                        <Typography variant="h5" sx={{ color: accentColor, fontWeight: 700 }}>
-                            Import from Fabrary
-                        </Typography>
-                    </Box>
-                    <input
-                        ref={fileInputRef}
-                        data-testid="fabrary-file"
-                        type="file"
-                        accept=".csv,text/csv,.txt"
-                        hidden
-                        onChange={onPickFile}
-                    />
+                <input
+                    ref={fileInputRef}
+                    data-testid="fabrary-file"
+                    type="file"
+                    accept=".csv,text/csv,.txt"
+                    hidden
+                    onChange={onPickFile}
+                />
+                <Box sx={{ flexShrink: 0 }}>
                     <Button
                         variant="contained"
-                        data-testid="import-fabrary"
+                        data-testid="fabrary-choose"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={working || applying}
                     >
                         Choose CSV
                     </Button>
-                    {working && (
-                        <Box data-testid="fabrary-working" sx={{ mt: 3, textAlign: 'center' }}>
-                            <CircularProgress size={28} sx={{ color: accentColor }} />
-                        </Box>
-                    )}
-                    {error && (
-                        <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
-                    )}
-                    {plan && !plan.ok && (
-                        <Box sx={{ mt: 2 }}>
-                            <Alert severity="warning" data-testid="fabrary-refuse">
-                                {FABRARY_REFUSE_COPY[plan.refuseReason] || 'This file cannot be imported'}
+                </Box>
+                {working && (
+                    <Box data-testid="fabrary-working" sx={{ textAlign: 'center', flexShrink: 0 }}>
+                        <CircularProgress size={28} sx={{ color: accentColor }} />
+                    </Box>
+                )}
+                {error && (
+                    <Alert severity="error" sx={{ flexShrink: 0 }}>{error}</Alert>
+                )}
+                {plan && !plan.ok && (
+                    <Alert severity="warning" data-testid="fabrary-refuse" sx={{ flexShrink: 0 }}>
+                        {FABRARY_REFUSE_COPY[plan.refuseReason] || 'This file cannot be imported'}
+                    </Alert>
+                )}
+                {plan?.ok && (
+                    <Box
+                        data-testid="fabrary-preview"
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.5,
+                            minHeight: 0,
+                            flex: '1 1 auto',
+                        }}
+                    >
+                        {success && (
+                            <Alert severity="success" data-testid="fabrary-success" sx={{ mb: 1, flexShrink: 0 }}>
+                                {success}
                             </Alert>
-                        </Box>
-                    )}
-                    {plan?.ok && (
-                        <Box data-testid="fabrary-preview" sx={{ mt: 3 }}>
-                            {success && (
-                                <Alert severity="success" data-testid="fabrary-success" sx={{ mb: 2 }}>
-                                    {success}
-                                </Alert>
-                            )}
-                            <Typography>Rows with quantities: {plan.ownedCount}</Typography>
-                            <Typography>Collection: {copiesForDestination(plan.adds, FABRARY_DESTINATION.collection)}</Typography>
-                            <Typography>Want List: {copiesForDestination(plan.adds, FABRARY_DESTINATION.want)}</Typography>
-                            <Typography>Trade Binder: {copiesForDestination(plan.adds, FABRARY_DESTINATION.trade)}</Typography>
-                            <Typography>Matched: {plan.matchedCount}</Typography>
-                            <Typography>Unmatched: {plan.unmatched.length}</Typography>
-                            <Typography>Copies to add: {plan.copiesToAdd}</Typography>
-                            <Typography sx={{ mt: 1.5, color: mutedColor }}>
-                                Confirming adds Have copies to Collection, Want in trade / Want to buy to Want List, and Extra for trade / Extra to sell to Trade Binder. Existing cards stay. A second import of the same file will add again.
-                            </Typography>
-                            {plan.unmatched.length > 0 && (
-                                <Box sx={{ mt: 2 }}>
-                                    <Typography sx={{ fontWeight: 700, mb: 1 }}>Unmatched cards</Typography>
+                        )}
+                        <Typography>Rows with quantities: {plan.ownedCount}</Typography>
+                        <Typography>Collection: {copiesForDestination(plan.adds, FABRARY_DESTINATION.collection)}</Typography>
+                        <Typography>Want List: {copiesForDestination(plan.adds, FABRARY_DESTINATION.want)}</Typography>
+                        <Typography>Trade Binder: {copiesForDestination(plan.adds, FABRARY_DESTINATION.trade)}</Typography>
+                        <Typography>Matched: {plan.matchedCount}</Typography>
+                        <Typography>Won&apos;t be imported: {plan.unmatched.length}</Typography>
+                        <Typography>Copies to add: {plan.copiesToAdd}</Typography>
+                        <Typography sx={{ mt: 1, color: mutedColor }}>
+                            Haves will be added to the Collection Binder
+                        </Typography>
+                        <Typography sx={{ mt: 1, color: mutedColor }}>
+                            Wants will be added to the Want List
+                        </Typography>
+                        <Typography sx={{ mt: 1, color: mutedColor }}>
+                            Trades will be added to the Trade Binder
+                        </Typography>
+                        {plan.unmatched.length > 0 && (
+                            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', minHeight: 0, flex: '1 1 auto' }}>
+                                <Typography sx={{ fontWeight: 700, mb: 0.5, flexShrink: 0 }}>
+                                    Cards we couldn&apos;t match
+                                </Typography>
+                                <Typography sx={{ color: mutedColor, mb: 1, flexShrink: 0 }}>
+                                    {UNMATCHED_EXPLAIN}
+                                </Typography>
+                                <Box
+                                    data-testid="fabrary-unmatched"
+                                    sx={{
+                                        overflowY: 'auto',
+                                        maxHeight: { xs: 140, sm: 220 },
+                                        pr: 0.5,
+                                        border: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.15)'}`,
+                                        borderRadius: 1,
+                                        px: 1.25,
+                                        py: 1,
+                                    }}
+                                >
                                     {plan.unmatched.map((row, index) => (
                                         <Typography key={`${row.name}-${index}`} sx={{ mb: 0.5 }}>
-                                            {[row.name, row.setNumber, row.foiling, row.treatment, row.edition]
-                                                .filter(Boolean)
-                                                .join(' · ')}
+                                            {unmatchedLabel(row)}
                                         </Typography>
                                     ))}
                                 </Box>
-                            )}
-                            <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                                <Button
-                                    variant="contained"
-                                    data-testid="fabrary-confirm"
-                                    onClick={handleConfirm}
-                                    disabled={applying}
-                                >
-                                    Confirm
-                                </Button>
-                                <Button
-                                    data-testid="fabrary-cancel"
-                                    onClick={handleCancel}
-                                    disabled={applying}
-                                >
-                                    Cancel
-                                </Button>
                             </Box>
-                        </Box>
-                    )}
-                </Paper>
-            </Container>
-        </Box>
+                        )}
+                    </Box>
+                )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2, flexShrink: 0, gap: 1 }}>
+                <Button
+                    data-testid="fabrary-cancel"
+                    onClick={handleClose}
+                    disabled={applying}
+                >
+                    Cancel
+                </Button>
+                {plan?.ok && (
+                    <Button
+                        variant="contained"
+                        data-testid="fabrary-confirm"
+                        onClick={handleConfirm}
+                        disabled={applying}
+                        aria-busy={applying}
+                    >
+                        {applying && (
+                            <CircularProgress
+                                size={16}
+                                color="inherit"
+                                data-testid="fabrary-confirm-spinner"
+                                sx={{ mr: 1 }}
+                            />
+                        )}
+                        Confirm
+                    </Button>
+                )}
+            </DialogActions>
+        </Dialog>
     );
 };
 
-export default BinderSettings;
+export default FabraryImportDialog;

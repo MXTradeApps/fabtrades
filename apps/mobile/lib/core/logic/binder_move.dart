@@ -49,7 +49,9 @@ BinderMoveResult moveBinderCopies({
 
   if (quantity < 1) return refuse('invalid-quantity');
   if (fromBinderId == toBinderId) return refuse('same-binder');
-  if (toBinderId == 'want' || toBinderId.trim().isEmpty) {
+  if (toBinderId == 'want' ||
+      toBinderId == BinderIds.want ||
+      toBinderId.trim().isEmpty) {
     return refuse('invalid-destination');
   }
 
@@ -60,7 +62,9 @@ BinderMoveResult moveBinderCopies({
       break;
     }
   }
-  if (dest == null || !dest.isLive) return refuse('invalid-destination');
+  if (dest == null || !dest.isLive || dest.isWant) {
+    return refuse('invalid-destination');
+  }
 
   final srcIdx = entries.indexWhere((e) =>
       !e.isWanted &&

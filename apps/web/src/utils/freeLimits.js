@@ -10,7 +10,8 @@
  * Binder and want-list caps refuse new distinct cards (never trim existing rows).
  * Raising quantity on a card that is already listed is never capped — same as
  * mobile's `_canAddNewCard`. Distinct owned cards are counted across all Binders.
- * Creating a 5th Binder is paywall (show Pro, create nothing).
+ * Creating a 5th Binder is paywall (show Pro, create nothing). Want List is
+ * not counted toward this cap.
  */
 export const FreeLimits = {
     binderCards: 50,

@@ -85,7 +85,9 @@ void main() {
     expect(find.text('Import from Fabrary'), findsOneWidget);
     await tester.tap(find.text('Import from Fabrary'));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(AppBar, 'Import from Fabrary'), findsOneWidget);
+    expect(find.text('Import from Fabrary'), findsOneWidget);
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Import from Fabrary'), findsNothing);
     expect(find.byKey(const Key('importFabrary')), findsOneWidget);
   });
 
@@ -153,10 +155,13 @@ void main() {
     expect(find.textContaining('Want List: 9'), findsOneWidget);
     expect(find.textContaining('Trade Binder: 8'), findsOneWidget);
     expect(find.textContaining('Matched: 3'), findsOneWidget);
-    expect(find.textContaining('Unmatched: 1'), findsOneWidget);
+    expect(find.textContaining("Won't be imported: 1"), findsOneWidget);
     expect(find.textContaining('Copies to add: 19'), findsOneWidget);
     expect(find.textContaining('Unknown Junk'), findsOneWidget);
-    expect(find.textContaining('adds Have copies to Collection'), findsOneWidget);
+    expect(find.textContaining("Cards we couldn't match"), findsOneWidget);
+    expect(find.textContaining("aren't in the FAB Trades catalog"), findsOneWidget);
+    expect(find.textContaining('Have copies go to Collection'), findsOneWidget);
+    expect(find.byKey(const Key('fabraryUnmatched')), findsOneWidget);
     expect(tester.widget<FilledButton>(find.byKey(const Key('fabraryConfirm'))).onPressed,
         isNotNull);
 

@@ -193,6 +193,7 @@ void main() {
       entries.add(buildCard(id: 'gone'), quantity: 2, binderId: BinderIds.collection);
       entries.add(buildCard(id: 'want'), isWanted: true);
       expect(binders.delete(BinderIds.trade), 'trade');
+      expect(binders.delete(BinderIds.want), 'want');
       expect(
         c.read(binderProvider).where((e) => e.resolvedBinderId == BinderIds.trade),
         isNotEmpty,

@@ -1,8 +1,9 @@
-/// Stable client-minted ids for the two default Binders. Both clients and the
+/// Stable client-minted ids for the default Binders. Both clients and the
 /// SQL backfill must converge on these so first sync does not duplicate them.
 abstract final class BinderIds {
   static const trade = 'system:trade';
   static const collection = 'system:collection';
+  static const want = 'system:want';
 }
 
 /// Whether a Binder is tradeable stock (`trade`) or a keep pile (`standard`).
@@ -16,7 +17,8 @@ enum BinderRole {
   String get wire => this == BinderRole.trade ? 'trade' : 'standard';
 }
 
-/// A named pile of owned Printings. Not Want List.
+/// A named pile. Want List is a protected system Binder that stores wants
+/// separately (`isWanted`), not as owned rows on this id.
 class Binder {
   const Binder({
     required this.clientId,
@@ -37,6 +39,10 @@ class Binder {
   bool get isLive => deletedAt == null;
 
   bool get isTrade => role == BinderRole.trade;
+
+  bool get isWant => clientId == BinderIds.want;
+
+  bool get isProtected => isTrade || isWant;
 
   bool get isDefaultCollection => clientId == BinderIds.collection;
 
@@ -102,11 +108,23 @@ class Binder {
     );
   }
 
-  /// First-run pair: Trade Binder + Collection.
+  static Binder wantDefault({DateTime? now}) {
+    final stamp = now ?? DateTime.now();
+    return Binder(
+      clientId: BinderIds.want,
+      name: 'Want List',
+      role: BinderRole.standard,
+      createdAt: stamp,
+      updatedAt: stamp,
+    );
+  }
+
+  /// First-run defaults: Trade Binder, Want List, Collection.
   static List<Binder> seedDefaults({DateTime? now}) {
     final stamp = now ?? DateTime.now();
     return [
       Binder.tradeDefault(now: stamp),
+      Binder.wantDefault(now: stamp),
       Binder.collectionDefault(now: stamp),
     ];
   }
@@ -128,6 +146,28 @@ class Binder {
     return next;
   }
 
+  /// Recreate or undelete Want List (`system:want`). Skips persist when a live
+  /// Binder already uses the name, so gridOrder can still inject a virtual tile.
+  static List<Binder> ensureWant(List<Binder> existing, {DateTime? now}) {
+    final stamp = now ?? DateTime.now();
+    final next = [...existing];
+    final index = next.indexWhere((b) => b.clientId == BinderIds.want);
+    if (index >= 0) {
+      if (next[index].deletedAt != null) {
+        next[index] = next[index].copyWith(
+          updatedAt: stamp,
+          clearDeletedAt: true,
+        );
+      }
+      return next;
+    }
+    final nameTaken = next.any((b) =>
+        b.isLive && b.name.trim().toLowerCase() == 'want list');
+    if (nameTaken) return next;
+    next.add(Binder.wantDefault(now: stamp));
+    return next;
+  }
+
   /// Recreate or undelete Collection (`system:collection`). Live Collection is
   /// left as-is, including a custom name.
   static List<Binder> ensureCollection(List<Binder> existing, {DateTime? now}) {
@@ -146,15 +186,22 @@ class Binder {
     return next;
   }
 
-  /// Grid order: Trade Binder, live Collection, then others by createdAt, clientId.
+  /// Live Binders that consume the free-tier Binder cap. Want List does not.
+  static int countableLiveCount(Iterable<Binder> binders) =>
+      gridOrder(binders).where((b) => !b.isWant).length;
+
+  /// Grid order: Trade Binder, Want List, live Collection, then others.
   static List<Binder> gridOrder(Iterable<Binder> binders) {
     final live = binders.where((b) => b.isLive).toList();
     Binder? trade;
+    Binder? want;
     Binder? collection;
     final rest = <Binder>[];
     for (final binder in live) {
       if (binder.role == BinderRole.trade) {
         trade = binder;
+      } else if (binder.clientId == BinderIds.want) {
+        want = binder;
       } else if (binder.clientId == BinderIds.collection) {
         collection = binder;
       } else {
@@ -168,6 +215,7 @@ class Binder {
     });
     return [
       ?trade,
+      want ?? Binder.wantDefault(),
       ?collection,
       ...rest,
     ];

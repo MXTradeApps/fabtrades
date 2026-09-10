@@ -15,7 +15,8 @@ class FreeLimits {
   static const wantListCards = 50;
 
   /// Live Binder records a free account may hold (Trade Binder and Collection
-  /// count). Creating a 5th presents the Pro upgrade and writes nothing.
+  /// count; Want List does not). Creating a 5th presents the Pro upgrade and
+  /// writes nothing.
   static const binders = 4;
 
   /// Cards currently lent out across all lend groups.

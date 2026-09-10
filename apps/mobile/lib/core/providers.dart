@@ -822,7 +822,9 @@ class BindersNotifier extends Notifier<List<Binder>> {
   BinderNameResult create(String name, {required bool isPro}) {
     final check = validateBinderName(proposedName: name, binders: state);
     if (!check.ok) return check;
-    if (!FreeLimits.canCreateBinder(live.length, isPro: isPro)) {
+    if (!FreeLimits.canCreateBinder(
+        Binder.countableLiveCount(state),
+        isPro: isPro)) {
       return BinderNameResult(
         ok: false,
         normalized: check.normalized,
@@ -864,12 +866,13 @@ class BindersNotifier extends Notifier<List<Binder>> {
     return check;
   }
 
-  /// Null on success. `trade` / `missing` on refusal.
-  /// Owned cards in this Binder leave the collection; Want List is unchanged.
+  /// Null on success. `trade` / `want` / `missing` on refusal.
+  /// Owned cards in this Binder leave the collection; Want List rows are unchanged.
   String? delete(String clientId) {
     final binder = byId(clientId);
     if (binder == null || !binder.isLive) return 'missing';
     if (binder.isTrade) return 'trade';
+    if (binder.isWant) return 'want';
     ref.read(binderProvider.notifier).removeOwnedInBinder(clientId);
     final stamp = DateTime.now();
     state = [
@@ -1052,6 +1055,18 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
     final next = state
         .where((e) => e.isWanted || e.resolvedBinderId != binderId)
         .toList();
+    if (next.length == state.length) return;
+    state = next;
+    _persist();
+  }
+
+  /// Empty a Binder or the Want List. The Binder record stays.
+  void clearInBinder(String binderId) {
+    final next = binderId == BinderIds.want
+        ? state.where((e) => !e.isWanted).toList()
+        : state
+            .where((e) => e.isWanted || e.resolvedBinderId != binderId)
+            .toList();
     if (next.length == state.length) return;
     state = next;
     _persist();

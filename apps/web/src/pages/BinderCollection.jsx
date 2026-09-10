@@ -39,6 +39,7 @@ import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import Header from '../components/elements/Header.jsx';
 import { SearchDialog } from '../components/search/index.js';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
+import FabraryImportDialog from './BinderSettings.jsx';
 import {
     ensureBinderShare,
     getBinderEntries,
@@ -50,8 +51,12 @@ import {
     createBinder,
     renameBinder,
     deleteBinder,
+    clearBinder,
     applyBinderMove,
+    countableLiveBinders,
+    isWantListBinder,
     TRADE_BINDER_ID,
+    WANT_BINDER_ID,
 } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
@@ -150,8 +155,12 @@ const BinderCollection = ({ isWanted = false }) => {
     const [share, setShare] = useState(null);
     const [shareBusy, setShareBusy] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null);
+    const [pendingClear, setPendingClear] = useState(null);
+    const [clearBusy, setClearBusy] = useState(false);
+    const [importOpen, setImportOpen] = useState(false);
 
-    const listLabel = isWanted ? 'Want List' : 'Binder';
+    const viewingWants = isWanted || openBinderId === WANT_BINDER_ID;
+    const listLabel = viewingWants ? 'Want List' : 'Binder';
     const pageTitle = isWanted ? 'Want List' : 'My Binders';
 
     const bgGradient = isDark
@@ -194,12 +203,12 @@ const BinderCollection = ({ isWanted = false }) => {
     }, [user, loadEntries, loadBinders]);
 
     const entries = useMemo(() => {
-        if (isWanted) return wants;
+        if (viewingWants) return wants;
         if (openBinderId) {
             return allOwned.filter((e) => (e.binderId || TRADE_BINDER_ID) === openBinderId);
         }
         return allOwned;
-    }, [isWanted, wants, allOwned, openBinderId]);
+    }, [viewingWants, wants, allOwned, openBinderId]);
 
     useEffect(() => {
         setOpenBinderId(isWanted ? null : openBinderId);
@@ -310,21 +319,24 @@ const BinderCollection = ({ isWanted = false }) => {
     );
 
     const showingGrid = !isWanted && !openBinderId;
-    const openBinder = binders.find((b) => b.clientId === openBinderId);
+    const openBinder = binders.find((b) => b.clientId === openBinderId)
+        || (openBinderId === WANT_BINDER_ID
+            ? { clientId: WANT_BINDER_ID, name: 'Want List' }
+            : undefined);
 
     const handleAddCard = async (option) => {
         const catalogCard = option?.card;
         if (!catalogCard?._uniqueId) return;
 
         const cardId = catalogCard._uniqueId;
-        const binderId = isWanted ? undefined : (openBinderId || TRADE_BINDER_ID);
+        const binderId = viewingWants ? undefined : (openBinderId || TRADE_BINDER_ID);
         const existing = entries.find((e) => e.cardId === cardId);
 
         setBusyCardId(cardId);
         const nextQty = existing ? existing.quantity + 1 : 1;
         const { data, error: upsertError } = await upsertEntry({
             cardId,
-            isWanted,
+            isWanted: viewingWants,
             quantity: nextQty,
             condition: existing?.condition || 'NM',
             binderId,
@@ -338,7 +350,7 @@ const BinderCollection = ({ isWanted = false }) => {
             return;
         }
 
-        if (isWanted) {
+        if (viewingWants) {
             setWants((prev) => {
                 const without = prev.filter((e) => e.cardId !== cardId);
                 return [data, ...without];
@@ -360,7 +372,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const updateQuantity = async (entry, quantity) => {
         setBusyCardId(entry.cardId);
         if (quantity <= 0) {
-            const { error: delError } = await removeEntry(entry.cardId, isWanted, {
+            const { error: delError } = await removeEntry(entry.cardId, viewingWants, {
                 binderId: entry.binderId,
                 condition: entry.condition,
             });
@@ -369,7 +381,7 @@ const BinderCollection = ({ isWanted = false }) => {
                 setToast(delError.message || 'Failed to remove card');
                 return;
             }
-            if (isWanted) {
+            if (viewingWants) {
                 setWants((prev) => prev.filter((e) => e.cardId !== entry.cardId));
             } else {
                 const key = ownedIdentity(entry);
@@ -380,7 +392,7 @@ const BinderCollection = ({ isWanted = false }) => {
 
         const { data, error: upsertError } = await upsertEntry({
             cardId: entry.cardId,
-            isWanted,
+            isWanted: viewingWants,
             quantity,
             condition: entry.condition,
             binderId: entry.binderId,
@@ -393,7 +405,7 @@ const BinderCollection = ({ isWanted = false }) => {
             setToast(upsertError.message || 'Failed to update quantity');
             return;
         }
-        if (isWanted) {
+        if (viewingWants) {
             setWants((prev) => prev.map((e) => (e.cardId === entry.cardId ? data : e)));
         } else {
             const key = ownedIdentity(entry);
@@ -421,10 +433,10 @@ const BinderCollection = ({ isWanted = false }) => {
 
         const { data: upserted, error: upsertError } = await upsertEntry({
             cardId: newCardId,
-            isWanted,
+            isWanted: viewingWants,
             quantity: mergeTarget ? mergeTarget.quantity + qty : qty,
             condition: mergeTarget?.condition || condition,
-            binderId: isWanted ? undefined : (openBinderId || TRADE_BINDER_ID),
+            binderId: viewingWants ? undefined : (openBinderId || TRADE_BINDER_ID),
             card: newCard,
             addedAt: mergeTarget?.addedAt || entry.addedAt,
         });
@@ -435,7 +447,7 @@ const BinderCollection = ({ isWanted = false }) => {
             return;
         }
 
-        const { error: delError } = await removeEntry(entry.cardId, isWanted, {
+        const { error: delError } = await removeEntry(entry.cardId, viewingWants, {
             binderId: entry.binderId,
             condition: entry.condition,
         });
@@ -447,7 +459,7 @@ const BinderCollection = ({ isWanted = false }) => {
             return;
         }
 
-        if (isWanted) {
+        if (viewingWants) {
             setWants((prev) => {
                 const withoutOld = prev.filter((e) => e.cardId !== entry.cardId);
                 const withoutTarget = withoutOld.filter((e) => e.cardId !== newCardId);
@@ -468,7 +480,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const handleRemove = async (entry) => {
         if (!entry) return;
         setBusyCardId(entry.cardId);
-        const { error: delError } = await removeEntry(entry.cardId, isWanted, {
+        const { error: delError } = await removeEntry(entry.cardId, viewingWants, {
             binderId: entry.binderId,
             condition: entry.condition,
         });
@@ -477,7 +489,7 @@ const BinderCollection = ({ isWanted = false }) => {
             setToast(delError.message || 'Failed to remove card');
             return;
         }
-        if (isWanted) {
+        if (viewingWants) {
             setWants((prev) => prev.filter((e) => e.cardId !== entry.cardId));
         } else {
             const key = ownedIdentity(entry);
@@ -496,7 +508,7 @@ const BinderCollection = ({ isWanted = false }) => {
         const { data, error: createError } = await createBinder({
             name,
             isPro,
-            liveCount: binders.length,
+            liveCount: countableLiveBinders(binders).length,
         });
         if (createError) {
             setToast(createError.reason === 'duplicate'
@@ -545,7 +557,9 @@ const BinderCollection = ({ isWanted = false }) => {
         if (deleteError) {
             const message = deleteError.reason === 'trade'
                 ? 'Trade Binder cannot be deleted'
-                : (deleteError.message || 'Could not delete Binder');
+                : deleteError.reason === 'want'
+                    ? 'Want List cannot be deleted'
+                    : (deleteError.message || 'Could not delete Binder');
             setToast(message);
             setPendingDelete(null);
             return;
@@ -557,8 +571,56 @@ const BinderCollection = ({ isWanted = false }) => {
         setPendingDelete(null);
     };
 
+    const handleClearBinder = (binder) => {
+        const clientId = binder?.clientId
+            || (viewingWants ? WANT_BINDER_ID : null);
+        if (!clientId) return;
+        setPendingClear({
+            clientId,
+            name: binder?.name
+                || (clientId === WANT_BINDER_ID ? 'Want List' : 'Binder'),
+        });
+    };
+
+    const pendingClearCopies = pendingClear
+        ? (isWantListBinder(pendingClear)
+            ? wants
+            : allOwned.filter((e) =>
+                !e.isWanted &&
+                (e.binderId || TRADE_BINDER_ID) === pendingClear.clientId,
+            ))
+            .reduce((sum, e) => sum + (Number(e.quantity) || 0), 0)
+        : 0;
+
+    const confirmClearBinder = async () => {
+        const binder = pendingClear;
+        if (!binder) return;
+        setClearBusy(true);
+        const { error: clearError } = await clearBinder({
+            clientId: binder.clientId,
+            isWanted: isWantListBinder(binder),
+        });
+        setClearBusy(false);
+        if (clearError) {
+            setToast(clearError.message || 'Could not clear Binder');
+            setPendingClear(null);
+            return;
+        }
+        if (isWantListBinder(binder)) {
+            setWants([]);
+        } else {
+            setAllOwned((prev) => prev.filter((e) =>
+                (e.binderId || TRADE_BINDER_ID) !== binder.clientId,
+            ));
+        }
+        setPendingClear(null);
+        setToast(`Cleared ${binder.name}`);
+    };
+
     const handleMove = async (entry) => {
-        const dests = binders.filter((b) => b.clientId !== (openBinderId || TRADE_BINDER_ID));
+        const dests = binders.filter((b) =>
+            b.clientId !== (openBinderId || TRADE_BINDER_ID) && !isWantListBinder(b),
+        );
         if (!dests.length) {
             setToast('No other Binder to move into');
             return;
@@ -796,21 +858,24 @@ const BinderCollection = ({ isWanted = false }) => {
                                     {openBinder.name}
                                 </Typography>
                             )}
-                            <Chip
-                                size="small"
-                                label={`${entries.length}`}
-                                sx={{
-                                    height: 20,
-                                    fontSize: '0.7rem',
-                                    color: mutedColor,
-                                    borderColor: paperBorder,
-                                    '& .MuiChip-label': { px: 0.75 },
-                                }}
-                                variant="outlined"
-                            />
+                            {isWanted && (
+                                <Chip
+                                    data-testid="binder-count-chip"
+                                    size="small"
+                                    label={`${entries.length}`}
+                                    sx={{
+                                        height: 20,
+                                        fontSize: '0.7rem',
+                                        color: mutedColor,
+                                        borderColor: paperBorder,
+                                        '& .MuiChip-label': { px: 0.75 },
+                                    }}
+                                    variant="outlined"
+                                />
+                            )}
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                            {!isWanted && !showingGrid && entries.length > 0 ? (
+                            {!viewingWants && !showingGrid && entries.length > 0 ? (
                                 <Button
                                     data-testid="collection-stats"
                                     onClick={() => {
@@ -828,13 +893,34 @@ const BinderCollection = ({ isWanted = false }) => {
                                 >
                                     Collection Stats
                                 </Button>
-                            ) : isWanted ? (
+                            ) : viewingWants ? (
                                 <Typography
                                     sx={{ color: mutedColor, fontWeight: 600, fontSize: '0.8rem' }}
                                 >
                                     {formatCurrency(totalValue.toFixed(2))}
                                 </Typography>
                             ) : null}
+                            {!showingGrid && entries.length > 0 && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    color="error"
+                                    data-testid="binder-clear"
+                                    onClick={() => handleClearBinder(
+                                        viewingWants
+                                            ? { clientId: WANT_BINDER_ID, name: 'Want List' }
+                                            : openBinder,
+                                    )}
+                                    sx={{
+                                        fontSize: '0.75rem',
+                                        minHeight: 28,
+                                        px: 0.75,
+                                        textTransform: 'none',
+                                    }}
+                                >
+                                    {viewingWants ? 'Clear Want List' : 'Clear Binder'}
+                                </Button>
+                            )}
                             {!isWanted && openBinderId === TRADE_BINDER_ID && (
                                 <Button
                                     variant="outlined"
@@ -864,7 +950,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                     variant="outlined"
                                     size="small"
                                     data-testid="import-fabrary"
-                                    onClick={() => navigate('/binder/import')}
+                                    onClick={() => setImportOpen(true)}
                                     sx={{
                                         color: accentColor,
                                         borderColor: paperBorder,
@@ -898,11 +984,12 @@ const BinderCollection = ({ isWanted = false }) => {
                     {showingGrid && (
                         <BinderGrid
                             binders={binders}
-                            entries={allOwned}
+                            entries={[...allOwned, ...wants]}
                             resolveCard={resolveCard}
                             onOpen={(binder) => setOpenBinder(binder.clientId)}
                             onRename={handleRenameBinder}
                             onDelete={handleDeleteBinder}
+                            onClear={handleClearBinder}
                             mutedColor={mutedColor}
                             accentColor={accentColor}
                             paperBg={paperBg}
@@ -927,10 +1014,10 @@ const BinderCollection = ({ isWanted = false }) => {
                             data-testid="collection-search"
                             size="small"
                             fullWidth
-                            placeholder={isWanted ? 'Search Want List…' : 'Search Binder…'}
+                            placeholder={viewingWants ? 'Search Want List…' : 'Search Binder…'}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            inputProps={{ 'aria-label': isWanted ? 'Search Want List' : 'Search Binder' }}
+                            inputProps={{ 'aria-label': viewingWants ? 'Search Want List' : 'Search Binder' }}
                             sx={{
                                 flexGrow: 1,
                                 minWidth: { xs: '100%', sm: 0 },
@@ -1076,12 +1163,12 @@ const BinderCollection = ({ isWanted = false }) => {
                             editionsByCardId={editionsByCardId}
                             busyCardId={busyCardId}
                             variant="owned"
-                            isWanted={isWanted}
+                            isWanted={viewingWants}
                             onOpenDetail={openEntryDetail}
                             onChangeVersion={changeVersion}
                             onUpdateQuantity={updateQuantity}
                             onRemove={handleRemove}
-                            onMove={isWanted ? undefined : handleMove}
+                            onMove={viewingWants ? undefined : handleMove}
                             mutedColor={mutedColor}
                             accentColor={accentColor}
                             textColor={textColor}
@@ -1094,10 +1181,19 @@ const BinderCollection = ({ isWanted = false }) => {
                 </Paper>
             </Container>
 
+            <FabraryImportDialog
+                open={importOpen}
+                onClose={() => setImportOpen(false)}
+                onImported={async () => {
+                    await loadBinders();
+                    await loadEntries();
+                }}
+            />
+
             <SearchDialog
                 open={addOpen}
                 onClose={() => setAddOpen(false)}
-                title={isWanted ? 'Add to Want List' : 'Add to Binder'}
+                title={viewingWants ? 'Add to Want List' : 'Add to Binder'}
                 items={cardOptions}
                 onSelect={handleAddCard}
                 keepOpenOnSelect
@@ -1164,6 +1260,42 @@ const BinderCollection = ({ isWanted = false }) => {
                     </Button>
                     <Button onClick={() => setShareOpen(false)} disabled={shareBusy}>
                         Done
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={Boolean(pendingClear?.clientId)}
+                onClose={() => {
+                    if (!clearBusy) setPendingClear(null);
+                }}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>Clear {pendingClear?.name}?</DialogTitle>
+                <DialogContent>
+                    <Typography data-testid="binder-clear-copy">
+                        {pendingClearCopies > 0
+                            ? `This will remove ${pendingClearCopies} ${pendingClearCopies === 1 ? 'card' : 'cards'} from ${pendingClear?.name}. The binder stays. This cannot be undone.`
+                            : 'This cannot be undone.'}
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        data-testid="binder-clear-cancel"
+                        onClick={() => setPendingClear(null)}
+                        disabled={clearBusy}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        data-testid="binder-clear-confirm"
+                        onClick={confirmClearBinder}
+                        color="error"
+                        variant="contained"
+                        disabled={clearBusy}
+                    >
+                        {clearBusy ? 'Clearing…' : 'Clear'}
                     </Button>
                 </DialogActions>
             </Dialog>

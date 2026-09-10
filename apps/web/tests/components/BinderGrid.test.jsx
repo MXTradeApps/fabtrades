@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import BinderCollection from '../../src/pages/BinderCollection.jsx';
 import { ThemeModeProvider } from '../../src/contexts/ThemeContext.jsx';
@@ -12,6 +12,7 @@ const mockUpsertEntry = jest.fn();
 const mockCreateBinder = jest.fn();
 const mockRenameBinder = jest.fn();
 const mockDeleteBinder = jest.fn();
+const mockClearBinder = jest.fn();
 const mockApplyBinderMove = jest.fn();
 
 let mockUser = { id: 'user-1' };
@@ -42,12 +43,31 @@ jest.mock('../../src/contexts/CardDetailContext.jsx', () => ({
 jest.mock('../../src/services/binder.js', () => ({
     TRADE_BINDER_ID: 'system:trade',
     COLLECTION_BINDER_ID: 'system:collection',
+    WANT_BINDER_ID: 'system:want',
+    isWantListBinder: (binderOrId) => {
+        const id = typeof binderOrId === 'string' ? binderOrId : binderOrId?.clientId;
+        return id === 'system:want';
+    },
+    isProtectedBinder: (binderOrId) => {
+        const id = typeof binderOrId === 'string' ? binderOrId : binderOrId?.clientId;
+        return id === 'system:want' || id === 'system:trade' || binderOrId?.role === 'trade';
+    },
+    countableLiveBinders: (binders) =>
+        (binders || []).filter((b) => !b.deletedAt && b.clientId !== 'system:want'),
     gridOrderBinders: (binders) => {
         const live = (binders || []).filter((b) => !b.deletedAt);
         const trade = live.find((b) => b.role === 'trade');
+        const want = live.find((b) => b.clientId === 'system:want') || {
+            clientId: 'system:want',
+            name: 'Want List',
+            role: 'standard',
+            deletedAt: null,
+        };
         const collection = live.find((b) => b.clientId === 'system:collection');
-        const rest = live.filter((b) => b !== trade && b !== collection);
-        return [...(trade ? [trade] : []), ...(collection ? [collection] : []), ...rest];
+        const rest = live.filter((b) =>
+            b !== trade && b !== want && b !== collection && b.clientId !== 'system:want',
+        );
+        return [...(trade ? [trade] : []), want, ...(collection ? [collection] : []), ...rest];
     },
     getBinderEntries: (...args) => mockGetBinderEntries(...args),
     getBinders: (...args) => mockGetBinders(...args),
@@ -59,8 +79,10 @@ jest.mock('../../src/services/binder.js', () => ({
     createBinder: (...args) => mockCreateBinder(...args),
     renameBinder: (...args) => mockRenameBinder(...args),
     deleteBinder: (...args) => mockDeleteBinder(...args),
+    clearBinder: (...args) => mockClearBinder(...args),
     applyBinderMove: (...args) => mockApplyBinderMove(...args),
     upsertEntries: jest.fn(),
+    ensureCollectionBinder: jest.fn(),
 }));
 
 jest.mock('../../src/components/search/index.js', () => ({
@@ -114,6 +136,7 @@ describe('BinderGrid', () => {
         });
         mockRenameBinder.mockResolvedValue({ data: {}, error: { reason: 'duplicate' } });
         mockDeleteBinder.mockResolvedValue({ data: { success: true }, error: null });
+        mockClearBinder.mockResolvedValue({ data: { success: true }, error: null });
         mockApplyBinderMove.mockResolvedValue({ data: {}, error: null });
     });
 
@@ -136,8 +159,9 @@ describe('BinderGrid', () => {
         renderCollection(false);
         expect(await screen.findByTestId('binder-grid')).toBeInTheDocument();
         expect(await screen.findByTestId('binder-tile-system:trade')).toBeInTheDocument();
+        expect(screen.getByTestId('binder-tile-system:want')).toBeInTheDocument();
         expect(screen.getByTestId('binder-tile-system:collection')).toBeInTheDocument();
-        expect(screen.queryByTestId('binder-tile-want')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('binder-count-chip')).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByTestId('binder-tile-system:trade'));
         expect(await screen.findByTestId('collection-stats')).toBeInTheDocument();
@@ -361,6 +385,8 @@ describe('BinderGrid', () => {
 
         fireEvent.click(screen.getByTestId('binder-tile-menu-system:trade'));
         expect(screen.queryByTestId('binder-delete-system:trade')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('binder-tile-menu-system:want'));
+        expect(screen.queryByTestId('binder-delete-system:want')).not.toBeInTheDocument();
         prompt.mockRestore();
     });
 
@@ -429,28 +455,14 @@ describe('BinderGrid', () => {
     });
 
     test('grid shows Import from Fabrary next to New Binder, not Binder Settings', async () => {
-        render(
-            <MemoryRouter initialEntries={['/binder']}>
-                <ThemeProvider theme={createTheme()}>
-                    <ThemeModeProvider>
-                        <Routes>
-                            <Route path="/binder" element={<BinderCollection isWanted={false} />} />
-                            <Route
-                                path="/binder/import"
-                                element={<div data-testid="binder-import-page">Import from Fabrary</div>}
-                            />
-                            <Route path="/wants" element={<BinderCollection isWanted />} />
-                        </Routes>
-                    </ThemeModeProvider>
-                </ThemeProvider>
-            </MemoryRouter>,
-        );
+        renderCollection(false);
         expect(await screen.findByTestId('import-fabrary')).toBeInTheDocument();
         expect(screen.getByTestId('binder-create')).toBeInTheDocument();
         fireEvent.click(screen.getByTestId('binder-tile-menu-system:collection'));
         expect(screen.queryByTestId('binder-tile-settings-system:collection')).not.toBeInTheDocument();
         fireEvent.click(screen.getByTestId('import-fabrary'));
-        expect(await screen.findByTestId('binder-import-page')).toBeInTheDocument();
+        expect(await screen.findByRole('dialog')).toBeInTheDocument();
+        expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
     });
 
     test('/wants has no Binder Settings control', async () => {
@@ -560,5 +572,90 @@ describe('BinderGrid', () => {
         expect(await screen.findByTestId('binder-entry-row-c050-Normal')).toBeInTheDocument();
         expect(screen.queryByTestId('binder-entry-row-c000-Normal')).not.toBeInTheDocument();
         expect(screen.getAllByTestId(/binder-entry-row-/)).toHaveLength(10);
+    });
+
+    test('Want List tile is undeletable and opens wants', async () => {
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [],
+                wants: [
+                    {
+                        cardId: pricedPrinting._uniqueId,
+                        quantity: 2,
+                        isWanted: true,
+                        card: pricedPrinting,
+                    },
+                ],
+            },
+            error: null,
+        });
+        renderCollection(false);
+        expect(await screen.findByTestId('binder-tile-name-system:want')).toHaveTextContent('Want List');
+        await waitFor(() => {
+            expect(screen.getByTestId('binder-tile-count-system:want')).toHaveTextContent('2');
+        });
+        expect(screen.queryByTestId('binder-count-chip')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByTestId('binder-tile-menu-system:want'));
+        expect(screen.queryByTestId('binder-delete-system:want')).not.toBeInTheDocument();
+        expect(screen.getByTestId('binder-clear-system:want')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByTestId('binder-tile-system:want'));
+        expect(await screen.findByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).toBeInTheDocument();
+        expect(screen.getByTestId('binder-open-name')).toHaveTextContent('Want List');
+        expect(screen.queryByTestId(`binder-move-${pricedPrinting._uniqueId}`)).not.toBeInTheDocument();
+        expect(screen.queryByTestId('collection-stats')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByTestId('add-card'));
+        expect(screen.getByTestId('add-card-dialog')).toHaveTextContent('Add to Want List');
+    });
+
+    test('Clear Binder asks to confirm then empties the open Binder', async () => {
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    {
+                        cardId: pricedPrinting._uniqueId,
+                        quantity: 3,
+                        isWanted: false,
+                        binderId: 'system:trade',
+                        card: pricedPrinting,
+                    },
+                    {
+                        cardId: unpricedPrinting._uniqueId,
+                        quantity: 1,
+                        isWanted: false,
+                        binderId: 'system:collection',
+                        card: unpricedPrinting,
+                    },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        renderCollection(false);
+        fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
+        expect(await screen.findByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByTestId('binder-clear'));
+        expect(await screen.findByText('Clear Trade Binder?')).toBeInTheDocument();
+        expect(screen.getByTestId('binder-clear-copy')).toHaveTextContent(
+            'This will remove 3 cards from Trade Binder. The binder stays. This cannot be undone.',
+        );
+
+        fireEvent.click(screen.getByTestId('binder-clear-cancel'));
+        expect(screen.queryByText('Clear Trade Binder?')).not.toBeInTheDocument();
+        expect(screen.getByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).toBeInTheDocument();
+        expect(mockClearBinder).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByTestId('binder-clear'));
+        fireEvent.click(await screen.findByTestId('binder-clear-confirm'));
+        await waitFor(() => expect(mockClearBinder).toHaveBeenCalledWith({
+            clientId: 'system:trade',
+            isWanted: false,
+        }));
+        expect(screen.queryByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).not.toBeInTheDocument();
+        expect(screen.getByTestId('binder-home-title')).toHaveTextContent('My Binders');
+        expect(screen.getByTestId('binder-open-name')).toHaveTextContent('Trade Binder');
     });
 });
