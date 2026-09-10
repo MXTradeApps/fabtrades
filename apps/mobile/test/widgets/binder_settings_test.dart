@@ -60,6 +60,9 @@ Future<ProviderContainer> _pumpSettings(
     catalog: catalog ?? [_lightning],
     seed: _onboarded(),
     isPro: isPro,
+    extraOverrides: [
+      isProProvider.overrideWith((ref) => isPro),
+    ],
   );
 }
 
