@@ -87,6 +87,7 @@ Afterward they are back on this Binder's list (or a clear one-step return to it)
 6. **Given** import just finished, **When** they look at another Binder and at Want List, **Then** those piles are unchanged.
 7. **Given** import just finished, **When** they look at this Binder's card count and Collection Stats, **Then** both reflect previous copies plus the imported Have totals on matched rows.
 8. **Given** they confirm on web or on mobile, **When** they open the same Binder on the other surface after the data is available there, **Then** that Binder shows the same printings and combined quantities.
+9. **Given** an owned row that fits more than one catalog Printing, including a regular printing, **When** import finishes, **Then** this Binder received the regular printing (not a treated variant), and a second run of the same file adds that same printing again.
 
 ---
 
