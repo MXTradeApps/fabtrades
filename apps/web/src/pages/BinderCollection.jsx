@@ -814,6 +814,25 @@ const BinderCollection = ({ isWanted = false }) => {
                             />
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            {!isWanted && openBinderId && (
+                                <Button
+                                    data-testid="binder-settings"
+                                    onClick={() => {
+                                        setOpenBinderId(openBinderId);
+                                        navigate(`/binder/settings?b=${encodeURIComponent(openBinderId)}`);
+                                    }}
+                                    sx={{
+                                        color: mutedColor,
+                                        fontWeight: 700,
+                                        fontSize: '0.8rem',
+                                        minHeight: 28,
+                                        px: 1,
+                                        textTransform: 'none',
+                                    }}
+                                >
+                                    Settings
+                                </Button>
+                            )}
                             {!isWanted && !showingGrid && entries.length > 0 ? (
                                 <Button
                                     data-testid="collection-stats"
@@ -911,6 +930,10 @@ const BinderCollection = ({ isWanted = false }) => {
                             onOpen={(binder) => setOpenBinder(binder.clientId)}
                             onRename={handleRenameBinder}
                             onDelete={handleDeleteBinder}
+                            onSettings={(binder) => {
+                                setOpenBinderId(binder.clientId);
+                                navigate(`/binder/settings?b=${encodeURIComponent(binder.clientId)}`);
+                            }}
                             mutedColor={mutedColor}
                             accentColor={accentColor}
                             paperBg={paperBg}

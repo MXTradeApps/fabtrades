@@ -23,6 +23,7 @@ import 'data/set_published_on.dart';
 import 'data/settings_repository.dart';
 import 'data/trade_repository.dart';
 import 'logic/confirm_trade.dart';
+import 'logic/fabrary_import_apply.dart';
 import 'logic/feature_access.dart';
 import 'logic/free_limits.dart';
 import 'logic/binder_move.dart';
@@ -1082,6 +1083,63 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
 
   bool isWanted(String cardId) =>
       state.any((e) => e.card.id == cardId && e.isWanted && e.quantity > 0);
+
+  /// Adds Have quantities as Near Mint copies in [binderId] only.
+  /// One state replace, one save, then a single sync. Failed persist restores
+  /// the previous entries. Does not write Want List or other Binders.
+  Future<bool> applyImportAdds(String binderId, List<FabraryAdd> adds) async {
+    if (adds.isEmpty) return true;
+    final prior = List<BinderEntry>.from(state);
+    final catalog = ref.read(catalogByIdProvider);
+    final next = List<BinderEntry>.from(state);
+    final now = DateTime.now();
+    for (final add in adds) {
+      final idx = next.indexWhere((e) =>
+          !e.isWanted &&
+          e.resolvedBinderId == binderId &&
+          e.condition == 'NM' &&
+          e.card.id == add.printingId);
+      if (idx >= 0) {
+        next[idx] =
+            next[idx].copyWith(quantity: next[idx].quantity + add.quantity);
+        continue;
+      }
+      CardModel? card = catalog[add.printingId];
+      if (card == null) {
+        for (final entry in prior) {
+          if (entry.card.id == add.printingId) {
+            card = entry.card;
+            break;
+          }
+        }
+      }
+      if (card == null) continue;
+      next.add(BinderEntry(
+        card: card,
+        quantity: add.quantity,
+        condition: 'NM',
+        isWanted: false,
+        binderId: binderId,
+        addedAt: now,
+      ));
+    }
+    state = next;
+    try {
+      _persist();
+    } catch (_) {
+      state = prior;
+      return false;
+    }
+    final account = ref.read(accountProvider).value;
+    if (account != null) {
+      try {
+        await ref.read(syncProvider.notifier).syncAfterBinderMutation(account.id);
+      } catch (_) {
+        // Local persist already succeeded; a sync miss must not roll back.
+      }
+    }
+    return true;
+  }
 
   /// Applies Confirm Trade binder side-effects (given leave / received enter /
   /// want-list clear). Does not touch trade history or the draft.

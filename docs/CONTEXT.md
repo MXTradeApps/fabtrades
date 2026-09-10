@@ -9,7 +9,8 @@ sharing one Supabase catalog.
 **Binder**:
 A named pile of owned Printings that belong to the player. This is the
 type. A player can have several Binders. Putting a card in a Binder is
-owning it in that pile.
+owning it in that pile. A Fabrary collection export can be imported from
+that Binder’s settings (Have adds Near Mint copies; Want List is not written).
 _Avoid_: inventory, “owned cards” as a product noun
 
 **Trade Binder**:

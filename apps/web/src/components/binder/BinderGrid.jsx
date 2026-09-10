@@ -91,6 +91,7 @@ export default function BinderGrid({
     onCreate,
     onRename,
     onDelete,
+    onSettings,
     mutedColor,
     accentColor,
     paperBg,
@@ -116,6 +117,7 @@ export default function BinderGrid({
                     onOpen={onOpen}
                     onRename={onRename}
                     onDelete={binder.role === 'trade' ? undefined : onDelete}
+                    onSettings={onSettings}
                     mutedColor={mutedColor}
                     accentColor={accentColor}
                     paperBg={paperBg}
@@ -133,6 +135,7 @@ function BinderTile({
     onOpen,
     onRename,
     onDelete,
+    onSettings,
     mutedColor,
     accentColor,
     paperBg,
@@ -206,7 +209,7 @@ function BinderTile({
                     {value}
                 </Typography>
             </CardActionArea>
-            {(onRename || onDelete) && (
+            {(onRename || onDelete || onSettings) && (
                 <Box sx={{ position: 'absolute', top: 4, right: 4 }}>
                     <IconButton
                         size="small"
@@ -225,6 +228,17 @@ function BinderTile({
                 open={Boolean(menuEl)}
                 onClose={() => setMenuEl(null)}
             >
+                {onSettings && (
+                    <MenuItem
+                        data-testid={`binder-tile-settings-${id}`}
+                        onClick={() => {
+                            setMenuEl(null);
+                            onSettings(binder);
+                        }}
+                    >
+                        Settings
+                    </MenuItem>
+                )}
                 {onRename && (
                     <MenuItem
                         onClick={() => {

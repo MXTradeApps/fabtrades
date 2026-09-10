@@ -9,6 +9,7 @@ import {
     FreeLimits,
     canAddDistinctCard,
     canCreateBinder,
+    canImportDistinctPrintings,
     cardsFor,
     tradesOverFreeLimit,
 } from '../../src/utils/freeLimits.js';
@@ -32,7 +33,8 @@ describe('free limits contract', () => {
     contract.cases
         .filter((testCase) =>
             (testCase.limit === 'binderCards' || testCase.limit === 'wantListCards') &&
-            testCase.action !== 'move',
+            testCase.action !== 'move' &&
+            testCase.action !== 'import',
         )
         .forEach((testCase) => {
             it(testCase.name, () => {
@@ -77,4 +79,16 @@ describe('free limits contract', () => {
         expect(tradesOverFreeLimit(0)).toBe(0);
         expect(tradesOverFreeLimit(FreeLimits.savedTrades)).toBe(0);
     });
+
+    contract.cases
+        .filter((testCase) => testCase.action === 'import')
+        .forEach((testCase) => {
+            it(testCase.name, () => {
+                expect(
+                    canImportDistinctPrintings(testCase.existingIds, testCase.incomingIds, {
+                        isPro: Boolean(testCase.isPro),
+                    }),
+                ).toBe(testCase.allowed);
+            });
+        });
 });

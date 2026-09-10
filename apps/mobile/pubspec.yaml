@@ -65,6 +65,8 @@ dependencies:
   wakelock_plus: ^1.7.0
   # Round countdown for Life Tracker (count-down mode, start/pause/reset).
   stop_watch_timer: ^3.2.2
+  # Local Fabrary collection export picker (Binder settings import).
+  file_picker: ^12.2.0
 
 dev_dependencies:
   flutter_test:

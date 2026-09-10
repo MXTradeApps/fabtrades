@@ -49,12 +49,14 @@ class BinderGrid extends ConsumerWidget {
     this.onCreate,
     this.onRename,
     this.onDelete,
+    this.onSettings,
   });
 
   final ValueChanged<String>? onOpen;
   final VoidCallback? onCreate;
   final ValueChanged<String>? onRename;
   final ValueChanged<String>? onDelete;
+  final ValueChanged<String>? onSettings;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,6 +91,9 @@ class BinderGrid extends ConsumerWidget {
                   onDelete: binder.isTrade || onDelete == null
                       ? null
                       : () => onDelete!(binder.clientId),
+                  onSettings: onSettings == null
+                      ? null
+                      : () => onSettings!(binder.clientId),
                 );
               },
               childCount: binders.length,
@@ -109,6 +114,7 @@ class BinderTile extends StatelessWidget {
     this.onOpen,
     this.onRename,
     this.onDelete,
+    this.onSettings,
   });
 
   final Binder binder;
@@ -117,6 +123,7 @@ class BinderTile extends StatelessWidget {
   final VoidCallback? onOpen;
   final VoidCallback? onRename;
   final VoidCallback? onDelete;
+  final VoidCallback? onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -178,14 +185,23 @@ class BinderTile extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                   ),
-                  if (onRename != null || onDelete != null)
+                  if (onRename != null || onDelete != null || onSettings != null)
                     PopupMenuButton<String>(
                       key: Key('binderTileMenu-$id'),
                       onSelected: (action) {
+                        if (action == 'settings') onSettings?.call();
                         if (action == 'rename') onRename?.call();
                         if (action == 'delete') onDelete?.call();
                       },
                       itemBuilder: (_) => [
+                        if (onSettings != null)
+                          PopupMenuItem(
+                            value: 'settings',
+                            child: Text(
+                              'Settings',
+                              key: Key('binderTileSettings-$id'),
+                            ),
+                          ),
                         if (onRename != null)
                           const PopupMenuItem(
                             value: 'rename',

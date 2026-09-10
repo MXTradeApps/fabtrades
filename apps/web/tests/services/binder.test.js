@@ -22,6 +22,7 @@ import {
     parseCardStub,
     removeEntry,
     upsertEntry,
+    upsertEntries,
 } from '../../src/services/binder.js';
 
 const makeChain = (result) => {
@@ -228,6 +229,48 @@ describe('upsertEntry / removeEntry', () => {
         const updatedAt = Date.parse(payload.updated_at);
         expect(updatedAt).toBeGreaterThanOrEqual(before);
         expect(updatedAt).toBeLessThanOrEqual(after);
+    });
+
+    test('upsertEntries writes one batch and refuses a free-tier over-cap', async () => {
+        asUser('user-7');
+        const saved = [{
+            card_id: '12345-foil',
+            is_wanted: false,
+            quantity: 2,
+            condition: 'NM',
+            binder_id: 'system:collection',
+            card: cardStub(webCard),
+            added_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+        }];
+        const chain = makeChain({ data: saved, error: null });
+        supabase.from.mockReturnValue(chain);
+
+        const { data, error } = await upsertEntries([
+            {
+                cardId: '12345-foil',
+                quantity: 2,
+                binderId: 'system:collection',
+                card: webCard,
+            },
+        ], { existingOwnedIds: [], isPro: true });
+
+        expect(error).toBeNull();
+        expect(data.rows).toHaveLength(1);
+        expect(chain.upsert).toHaveBeenCalledWith(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    user_id: 'user-7',
+                    card_id: '12345-foil',
+                    binder_id: 'system:collection',
+                    quantity: 2,
+                    condition: 'NM',
+                    is_wanted: false,
+                }),
+            ]),
+            { onConflict: 'user_id,client_id' },
+        );
+        expect(chain.upsert).toHaveBeenCalledTimes(1);
     });
 
     test('quantity <= 0 tombstones instead of upserting', async () => {

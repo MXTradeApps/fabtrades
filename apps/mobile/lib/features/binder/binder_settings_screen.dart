@@ -1,0 +1,300 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/logic/fabrary_import_apply.dart';
+import '../../core/models/binder.dart';
+import '../../core/providers.dart';
+import '../paywall/pro_paywall.dart';
+
+const fabraryRefuseCopy = {
+  'not_fabrary': 'This is not a Fabrary collection export',
+  'no_owned': 'No owned cards (Have) were found',
+  'no_matched': 'None of the owned cards were found in the catalog',
+  'free_cap':
+      'This import would exceed the free Binder card cap — show Pro upgrade',
+};
+
+/// Settings for one Binder. Import from Fabrary lives here, not in app Settings.
+class BinderSettingsScreen extends ConsumerStatefulWidget {
+  const BinderSettingsScreen({
+    super.key,
+    required this.binderId,
+    this.pickCsv,
+    this.presentPaywall,
+  });
+
+  final String binderId;
+
+  /// Test hook. Production uses the device file picker.
+  final Future<String?> Function()? pickCsv;
+
+  /// Test hook. Production uses [presentProPaywall].
+  final Future<bool> Function()? presentPaywall;
+
+  @override
+  ConsumerState<BinderSettingsScreen> createState() =>
+      _BinderSettingsScreenState();
+}
+
+class _BinderSettingsScreenState extends ConsumerState<BinderSettingsScreen> {
+  bool _working = false;
+  bool _applying = false;
+  FabraryImportPlan? _plan;
+  String? _success;
+
+  String get _binderName {
+    final binders = ref.watch(bindersProvider);
+    for (final binder in binders) {
+      if (binder.clientId == widget.binderId && binder.isLive) {
+        return binder.name;
+      }
+    }
+    if (widget.binderId == BinderIds.trade) return 'Trade Binder';
+    if (widget.binderId == BinderIds.collection) return 'Collection';
+    return 'Binder';
+  }
+
+  Future<String?> _pickCsvText() async {
+    if (widget.pickCsv != null) return widget.pickCsv!();
+    final file = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: const ['csv', 'txt'],
+    );
+    if (file == null) return null;
+    final bytes = await file.readAsBytes();
+    return utf8.decode(bytes);
+  }
+
+  Future<void> _import() async {
+    setState(() {
+      _working = true;
+      _plan = null;
+      _success = null;
+    });
+    try {
+      final csv = await _pickCsvText();
+      if (!mounted) return;
+      if (csv == null) {
+        setState(() => _working = false);
+        return;
+      }
+      final catalog = await ref.read(catalogProvider.future);
+      if (!mounted) return;
+      final plan = planFabraryImport(
+        csv: csv,
+        catalog: catalog,
+        binderId: widget.binderId,
+        existingEntries: ref.read(binderProvider),
+        isPro: ref.read(isProProvider),
+      );
+      if (!mounted) return;
+      setState(() {
+        _plan = plan;
+        _working = false;
+      });
+      if (plan.refuseReason == 'free_cap') {
+        await _offerUpgrade(csv);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _working = false;
+        _plan = const FabraryImportPlan(
+          ok: false,
+          refuseReason: 'not_fabrary',
+          ownedCount: 0,
+          matchedCount: 0,
+          copiesToAdd: 0,
+          unmatched: [],
+          adds: [],
+        );
+      });
+    }
+  }
+
+  Future<void> _offerUpgrade(String csv) async {
+    final upgraded = widget.presentPaywall != null
+        ? await widget.presentPaywall!()
+        : await presentProPaywall(
+            context,
+            ref,
+            trigger: 'fabrary_import_cap',
+          );
+    if (!mounted) return;
+    if (!upgraded && !ref.read(isProProvider)) return;
+    final catalog = await ref.read(catalogProvider.future);
+    if (!mounted) return;
+    final plan = planFabraryImport(
+      csv: csv,
+      catalog: catalog,
+      binderId: widget.binderId,
+      existingEntries: ref.read(binderProvider),
+      isPro: true,
+    );
+    setState(() => _plan = plan);
+  }
+
+  Future<void> _confirm() async {
+    final plan = _plan;
+    if (plan == null || !plan.ok || _applying) return;
+    setState(() => _applying = true);
+    final ok = await ref
+        .read(binderProvider.notifier)
+        .applyImportAdds(widget.binderId, plan.adds);
+    if (!mounted) return;
+    setState(() {
+      _applying = false;
+      if (ok) {
+        _success = 'Added ${plan.copiesToAdd} Near Mint copies';
+      }
+    });
+  }
+
+  void _cancel() {
+    setState(() {
+      _plan = null;
+      _success = null;
+      _working = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = _plan;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            _binderName,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            key: const Key('importFabrary'),
+            onPressed: _working || _applying ? null : _import,
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Import from Fabrary'),
+          ),
+          if (_working)
+            const Padding(
+              padding: EdgeInsets.only(top: 24),
+              child: Center(
+                child: CircularProgressIndicator(key: Key('fabraryWorking')),
+              ),
+            ),
+          if (plan != null && !plan.ok) ...[
+            const SizedBox(height: 16),
+            Text(
+              fabraryRefuseCopy[plan.refuseReason] ??
+                  'This file cannot be imported',
+              key: const Key('fabraryRefuse'),
+            ),
+            if (plan.refuseReason == 'free_cap')
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: FilledButton(
+                  key: const Key('fabraryUpgrade'),
+                  onPressed: _working
+                      ? null
+                      : () async {
+                          final csv = await _pickCsvText();
+                          if (csv != null) await _offerUpgrade(csv);
+                        },
+                  child: const Text('Upgrade to Pro'),
+                ),
+              ),
+          ],
+          if (plan != null && plan.ok)
+            _FabraryPreview(
+              plan: plan,
+              applying: _applying,
+              success: _success,
+              onConfirm: _confirm,
+              onCancel: _cancel,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FabraryPreview extends StatelessWidget {
+  const _FabraryPreview({
+    required this.plan,
+    required this.applying,
+    required this.success,
+    required this.onConfirm,
+    required this.onCancel,
+  });
+
+  final FabraryImportPlan plan;
+  final bool applying;
+  final String? success;
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const Key('fabraryPreview'),
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (success != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(success!, key: const Key('fabrarySuccess')),
+            ),
+          Text('Owned cards: ${plan.ownedCount}'),
+          Text('Matched: ${plan.matchedCount}'),
+          Text('Unmatched: ${plan.unmatched.length}'),
+          Text('Copies to add: ${plan.copiesToAdd}'),
+          const SizedBox(height: 12),
+          const Text(
+            'Confirming adds Near Mint copies to this Binder. Existing cards stay. A second import of the same file will add again.',
+          ),
+          if (plan.unmatched.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text('Unmatched owned cards'),
+            const SizedBox(height: 8),
+            for (final row in plan.unmatched)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  [
+                    row.name,
+                    if (row.setNumber.isNotEmpty) row.setNumber,
+                    if (row.foiling.isNotEmpty) row.foiling,
+                    if (row.treatment.isNotEmpty) row.treatment,
+                    if (row.edition.isNotEmpty) row.edition,
+                  ].join(' · '),
+                ),
+              ),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              FilledButton(
+                key: const Key('fabraryConfirm'),
+                onPressed: applying ? null : onConfirm,
+                child: const Text('Confirm'),
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                key: const Key('fabraryCancel'),
+                onPressed: applying ? null : onCancel,
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import BinderCollection from '../../src/pages/BinderCollection.jsx';
 import { ThemeModeProvider } from '../../src/contexts/ThemeContext.jsx';
@@ -60,6 +60,7 @@ jest.mock('../../src/services/binder.js', () => ({
     renameBinder: (...args) => mockRenameBinder(...args),
     deleteBinder: (...args) => mockDeleteBinder(...args),
     applyBinderMove: (...args) => mockApplyBinderMove(...args),
+    upsertEntries: jest.fn(),
 }));
 
 jest.mock('../../src/components/search/index.js', () => ({
@@ -340,5 +341,34 @@ describe('BinderGrid', () => {
         await waitFor(() => expect(mockCreateBinder).toHaveBeenCalled());
         expect(screen.queryByText(/Subscribe in the FABTrades app/)).not.toBeInTheDocument();
         prompt.mockRestore();
+    });
+
+    test('open Binder and tile menu expose Settings for that Binder', async () => {
+        render(
+            <MemoryRouter initialEntries={['/binder']}>
+                <ThemeProvider theme={createTheme()}>
+                    <ThemeModeProvider>
+                        <Routes>
+                            <Route path="/binder" element={<BinderCollection isWanted={false} />} />
+                            <Route
+                                path="/binder/settings"
+                                element={<div data-testid="binder-settings-page">Settings</div>}
+                            />
+                            <Route path="/wants" element={<BinderCollection isWanted />} />
+                        </Routes>
+                    </ThemeModeProvider>
+                </ThemeProvider>
+            </MemoryRouter>,
+        );
+        fireEvent.click(await screen.findByTestId('binder-tile-menu-system:collection'));
+        fireEvent.click(screen.getByTestId('binder-tile-settings-system:collection'));
+        expect(await screen.findByTestId('binder-settings-page')).toBeInTheDocument();
+    });
+
+    test('/wants has no Binder Settings control', async () => {
+        renderCollection(true, { path: '/wants' });
+        await waitFor(() => screen.getByText('Want List'));
+        expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
     });
 });

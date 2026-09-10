@@ -106,6 +106,7 @@ Future<ProviderContainer> pumpApp(
       accountProvider.overrideWith((ref) => Stream.value(account)),
       syncProvider.overrideWith(StubSyncNotifier.new),
       if (isPro) subscriptionProvider.overrideWith(_ProSubscription.new),
+      isProProvider.overrideWith((ref) => isPro),
       ...extraOverrides,
     ],
   );

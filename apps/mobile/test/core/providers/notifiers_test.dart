@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:fabtrades/core/data/card_repository.dart';
+import 'package:fabtrades/core/logic/fabrary_import_apply.dart';
 import 'package:fabtrades/core/models/app_settings.dart';
+import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/models/card_model.dart';
 import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/providers.dart';
@@ -82,6 +84,45 @@ void main() {
   });
 
   group('BinderNotifier', () {
+    test('applyImportAdds combines NM in one Binder and leaves others', () async {
+      final c = await makeContainer();
+      final n = c.read(binderProvider.notifier);
+      final card = buildCard(id: 'k');
+      n.add(card, quantity: 2, condition: 'NM', binderId: BinderIds.collection);
+      n.add(card, quantity: 1, condition: 'LP', binderId: BinderIds.collection);
+      n.add(buildCard(id: 'other'), binderId: BinderIds.trade);
+      n.add(card, isWanted: true);
+      final ok = await n.applyImportAdds(BinderIds.collection, [
+        const FabraryAdd(printingId: 'k', quantity: 3),
+      ]);
+      expect(ok, isTrue);
+      final entries = c.read(binderProvider);
+      expect(
+        entries
+            .where((e) =>
+                !e.isWanted &&
+                e.resolvedBinderId == BinderIds.collection &&
+                e.condition == 'NM' &&
+                e.card.id == 'k')
+            .single
+            .quantity,
+        5,
+      );
+      expect(
+        entries
+            .where((e) =>
+                e.resolvedBinderId == BinderIds.collection && e.condition == 'LP')
+            .single
+            .quantity,
+        1,
+      );
+      expect(
+        entries.where((e) => e.resolvedBinderId == BinderIds.trade).single.card.id,
+        'other',
+      );
+      expect(entries.where((e) => e.isWanted).single.quantity, 1);
+    });
+
     test('add merges quantity for a duplicate printing+list', () async {
       final c = await makeContainer();
       final n = c.read(binderProvider.notifier);

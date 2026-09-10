@@ -24,6 +24,7 @@ import '../search/card_picker.dart';
 import '../want_list/want_list_screen.dart';
 import 'binder_grid.dart';
 import 'binder_list.dart';
+import 'binder_settings_screen.dart';
 import 'collection_stats_screen.dart';
 
 class BinderScreen extends ConsumerStatefulWidget {
@@ -133,6 +134,13 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
               icon: const Icon(Icons.add_box_outlined),
               label: const Text('New'),
             ),
+          if (inBinder)
+            IconButton(
+              key: const Key('binderSettings'),
+              tooltip: 'Settings',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => _openSettings(context, openId),
+            ),
           const AppMenuAction(),
         ],
         bottom: inBinder
@@ -165,6 +173,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
                   },
                   onRename: (id) => _renameBinder(context, id),
                   onDelete: (id) => _deleteBinder(context, id),
+                  onSettings: (id) => _openSettings(context, id),
                 )
               : BinderList(binderId: openId, pricing: pricing),
           WantListPane(
@@ -238,6 +247,15 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
       if (binder.clientId == openId && binder.isLive) return binder.name;
     }
     return 'Binder';
+  }
+
+  Future<void> _openSettings(BuildContext context, String binderId) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: 'Settings'),
+        builder: (_) => BinderSettingsScreen(binderId: binderId),
+      ),
+    );
   }
 
   Future<void> _createBinder(BuildContext context) async {

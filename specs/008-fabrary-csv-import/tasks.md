@@ -41,9 +41,9 @@ Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Ed
 
 **Purpose**: Register the new goldens and the mobile file picker. No Binder UI yet.
 
-- [ ] T001 Register `fabrary_printing_match.json` and `fabrary_import_apply.json` in `packages/contracts/README.md` (web `apps/web/src/utils/fabraryMatch.js` + `apps/web/src/utils/fabraryImportApply.js`; mobile `apps/mobile/lib/core/logic/fabrary_match.dart` + `apps/mobile/lib/core/logic/fabrary_import_apply.dart`). Note that import reuses `free_limits.json` for the batch cap and MUST NOT fork a second binder-card number
-- [ ] T002 Add `file_picker` to `apps/mobile/pubspec.yaml` (version compatible with SDK ^3.12) and run `flutter pub get` from `apps/mobile`
-- [ ] T003 [P] Add any iOS document-picker usage description `file_picker` requires to `apps/mobile/ios/Runner/Info.plist` (skip if the plugin does not need a new key)
+- [X] T001 Register `fabrary_printing_match.json` and `fabrary_import_apply.json` in `packages/contracts/README.md` (web `apps/web/src/utils/fabraryMatch.js` + `apps/web/src/utils/fabraryImportApply.js`; mobile `apps/mobile/lib/core/logic/fabrary_match.dart` + `apps/mobile/lib/core/logic/fabrary_import_apply.dart`). Note that import reuses `free_limits.json` for the batch cap and MUST NOT fork a second binder-card number
+- [X] T002 Add `file_picker` to `apps/mobile/pubspec.yaml` (version compatible with SDK ^3.12) and run `flutter pub get` from `apps/mobile`
+- [X] T003 [P] Add any iOS document-picker usage description `file_picker` requires to `apps/mobile/ios/Runner/Info.plist` (skip if the plugin does not need a new key)
 
 ---
 
@@ -53,24 +53,24 @@ Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Ed
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create `packages/contracts/fabrary_printing_match.json` with the cases in [contracts/fabrary-printing-match.md](./contracts/fabrary-printing-match.md) (regular vs foil, treatment blank vs set, First/Unlimited/Alpha, pitch, ambiguous regular-wins, ambiguous sort, SC-012 same id twice, quoted comma name). Catalog rows MUST be catalog-shaped (`collectorNumber`/`extNumber`, `subTypeName`, `name`, `pitch`, `id`)
-- [ ] T005 [P] Create `packages/contracts/fabrary_import_apply.json` with the cases in [contracts/fabrary-import-apply.md](./contracts/fabrary-import-apply.md) (Have-only counts, Want/Extra ignored, qty sum, NM combine + LP untouched, other Binder unchanged, `free_cap`, already-owned allowed, Pro allowed, `no_matched`, `no_owned`, `not_fabrary`)
-- [ ] T006 [P] Add batch-import cases to `packages/contracts/free_limits.json` for `canImportDistinctPrintings` (resulting distinct = existing ∪ incoming; already-owned ids consume no slot; Pro always allowed; over 50 refuses)
-- [ ] T007 [P] Write failing contract tests in `apps/web/tests/contracts/fabraryPrintingMatch.contract.test.js` that import `packages/contracts/fabrary_printing_match.json` and call `matchFabraryRow` from `apps/web/src/utils/fabraryMatch.js`
-- [ ] T008 [P] Write failing contract tests in `apps/mobile/test/contracts/fabrary_printing_match_contract_test.dart` that load the same JSON via `apps/mobile/test/contracts/contract_fixtures.dart` and call `matchFabraryRow` from `apps/mobile/lib/core/logic/fabrary_match.dart`
-- [ ] T009 [P] Write failing contract tests in `apps/web/tests/contracts/fabraryImportApply.contract.test.js` that import `packages/contracts/fabrary_import_apply.json` and call `planFabraryImport` from `apps/web/src/utils/fabraryImportApply.js`
-- [ ] T010 [P] Write failing contract tests in `apps/mobile/test/contracts/fabrary_import_apply_contract_test.dart` that call `planFabraryImport` from `apps/mobile/lib/core/logic/fabrary_import_apply.dart`
-- [ ] T011 [P] Extend `apps/web/tests/contracts/freeLimits.contract.test.js` so new `free_limits.json` batch-import cases call `canImportDistinctPrintings` from `apps/web/src/utils/freeLimits.js`
-- [ ] T012 [P] Extend `apps/mobile/test/contracts/free_limits_contract_test.dart` the same way against `apps/mobile/lib/core/logic/free_limits.dart`
-- [ ] T013 [P] Implement RFC4180 parse + required-header check in `apps/web/src/utils/fabraryCsv.js` (`parseFabraryCsv`). Missing Identifier/Name/Pitch/Set/Set number/Edition/Foiling/Treatment/Have → not Fabrary. Quoted `"10,000 Year Reunion"` MUST survive as one Name
-- [ ] T014 [P] Implement the same parser in `apps/mobile/lib/core/logic/fabrary_csv.dart`
-- [ ] T015 [P] Implement `matchFabraryRow` in `apps/web/src/utils/fabraryMatch.js` (set-code index + pitch + foil + treatment + edition; FR-010 stable pick). Do not match on Identifier alone
-- [ ] T016 [P] Implement `matchFabraryRow` in `apps/mobile/lib/core/logic/fabrary_match.dart` (reuse `collectorNumberKey` / `buildSetCodeIndex` / `nameQualifier` from `apps/mobile/lib/core/data/card_repository.dart` where they already exist)
-- [ ] T017 Implement `planFabraryImport` in `apps/web/src/utils/fabraryImportApply.js` using T013, T015, and T019 (`canImportDistinctPrintings`). Want/Extra MUST NOT appear in `adds`
-- [ ] T018 [P] Implement `planFabraryImport` in `apps/mobile/lib/core/logic/fabrary_import_apply.dart` using T014, T016, and T020
-- [ ] T019 [P] Add `canImportDistinctPrintings(existingOwnedIds, incomingIds, { isPro })` to `apps/web/src/utils/freeLimits.js` (Pro allow; else `|existing ∪ incoming| ≤ FreeLimits.binderCards`)
-- [ ] T020 [P] Add `canImportDistinctPrintings` to `apps/mobile/lib/core/logic/free_limits.dart` with the same rule
-- [ ] T021 Run `cd apps/web && npm test` and `cd apps/mobile && flutter test` until T007–T012 pass. If JS and Dart disagree, fix the implementation that drifted, not the fixture, unless the product rule in [spec.md](./spec.md) changed
+- [X] T004 Create `packages/contracts/fabrary_printing_match.json` with the cases in [contracts/fabrary-printing-match.md](./contracts/fabrary-printing-match.md) (regular vs foil, treatment blank vs set, First/Unlimited/Alpha, pitch, ambiguous regular-wins, ambiguous sort, SC-012 same id twice, quoted comma name). Catalog rows MUST be catalog-shaped (`collectorNumber`/`extNumber`, `subTypeName`, `name`, `pitch`, `id`)
+- [X] T005 [P] Create `packages/contracts/fabrary_import_apply.json` with the cases in [contracts/fabrary-import-apply.md](./contracts/fabrary-import-apply.md) (Have-only counts, Want/Extra ignored, qty sum, NM combine + LP untouched, other Binder unchanged, `free_cap`, already-owned allowed, Pro allowed, `no_matched`, `no_owned`, `not_fabrary`)
+- [X] T006 [P] Add batch-import cases to `packages/contracts/free_limits.json` for `canImportDistinctPrintings` (resulting distinct = existing ∪ incoming; already-owned ids consume no slot; Pro always allowed; over 50 refuses)
+- [X] T007 [P] Write failing contract tests in `apps/web/tests/contracts/fabraryPrintingMatch.contract.test.js` that import `packages/contracts/fabrary_printing_match.json` and call `matchFabraryRow` from `apps/web/src/utils/fabraryMatch.js`
+- [X] T008 [P] Write failing contract tests in `apps/mobile/test/contracts/fabrary_printing_match_contract_test.dart` that load the same JSON via `apps/mobile/test/contracts/contract_fixtures.dart` and call `matchFabraryRow` from `apps/mobile/lib/core/logic/fabrary_match.dart`
+- [X] T009 [P] Write failing contract tests in `apps/web/tests/contracts/fabraryImportApply.contract.test.js` that import `packages/contracts/fabrary_import_apply.json` and call `planFabraryImport` from `apps/web/src/utils/fabraryImportApply.js`
+- [X] T010 [P] Write failing contract tests in `apps/mobile/test/contracts/fabrary_import_apply_contract_test.dart` that call `planFabraryImport` from `apps/mobile/lib/core/logic/fabrary_import_apply.dart`
+- [X] T011 [P] Extend `apps/web/tests/contracts/freeLimits.contract.test.js` so new `free_limits.json` batch-import cases call `canImportDistinctPrintings` from `apps/web/src/utils/freeLimits.js`
+- [X] T012 [P] Extend `apps/mobile/test/contracts/free_limits_contract_test.dart` the same way against `apps/mobile/lib/core/logic/free_limits.dart`
+- [X] T013 [P] Implement RFC4180 parse + required-header check in `apps/web/src/utils/fabraryCsv.js` (`parseFabraryCsv`). Missing Identifier/Name/Pitch/Set/Set number/Edition/Foiling/Treatment/Have → not Fabrary. Quoted `"10,000 Year Reunion"` MUST survive as one Name
+- [X] T014 [P] Implement the same parser in `apps/mobile/lib/core/logic/fabrary_csv.dart`
+- [X] T015 [P] Implement `matchFabraryRow` in `apps/web/src/utils/fabraryMatch.js` (set-code index + pitch + foil + treatment + edition; FR-010 stable pick). Do not match on Identifier alone
+- [X] T016 [P] Implement `matchFabraryRow` in `apps/mobile/lib/core/logic/fabrary_match.dart` (reuse `collectorNumberKey` / `buildSetCodeIndex` / `nameQualifier` from `apps/mobile/lib/core/data/card_repository.dart` where they already exist)
+- [X] T017 Implement `planFabraryImport` in `apps/web/src/utils/fabraryImportApply.js` using T013, T015, and T019 (`canImportDistinctPrintings`). Want/Extra MUST NOT appear in `adds`
+- [X] T018 [P] Implement `planFabraryImport` in `apps/mobile/lib/core/logic/fabrary_import_apply.dart` using T014, T016, and T020
+- [X] T019 [P] Add `canImportDistinctPrintings(existingOwnedIds, incomingIds, { isPro })` to `apps/web/src/utils/freeLimits.js` (Pro allow; else `|existing ∪ incoming| ≤ FreeLimits.binderCards`)
+- [X] T020 [P] Add `canImportDistinctPrintings` to `apps/mobile/lib/core/logic/free_limits.dart` with the same rule
+- [X] T021 Run `cd apps/web && npm test` and `cd apps/mobile && flutter test` until T007–T012 pass. If JS and Dart disagree, fix the implementation that drifted, not the fixture, unless the product rule in [spec.md](./spec.md) changed
 
 **Checkpoint**: Foundation ready — both clients parse a Fabrary table, match printings, plan an add-on-top import, and refuse a free-tier over-cap batch. No Settings UI yet
 
@@ -86,17 +86,17 @@ Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Ed
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T022 [P] [US1] Create `apps/mobile/test/widgets/binder_settings_test.dart`: open Binder shows a Settings control (`Key('binderSettings')`); tile menu has Settings (`Key('binderTileSettings-{id}')`); activating either pushes a page titled Settings that shows that Binder’s name and **Import from Fabrary** (`Key('importFabrary')`); Want List tab has neither control; `apps/mobile/lib/features/settings/settings_screen.dart` has no Fabrary import
-- [ ] T023 [P] [US1] Create `apps/web/tests/pages/BinderSettings.test.jsx` (and extend `apps/web/tests/components/BinderGrid.test.jsx`): open Binder header Settings (`data-testid="binder-settings"`) and tile menu Settings navigate to `/binder/settings?b={clientId}`; page shows Binder name + **Import from Fabrary** (`data-testid="import-fabrary"`); `/wants` has no Settings import; app-wide Settings has no Fabrary import; signed-out `/binder/settings` uses the same gate as `/binder`
+- [X] T022 [P] [US1] Create `apps/mobile/test/widgets/binder_settings_test.dart`: open Binder shows a Settings control (`Key('binderSettings')`); tile menu has Settings (`Key('binderTileSettings-{id}')`); activating either pushes a page titled Settings that shows that Binder’s name and **Import from Fabrary** (`Key('importFabrary')`); Want List tab has neither control; `apps/mobile/lib/features/settings/settings_screen.dart` has no Fabrary import
+- [X] T023 [P] [US1] Create `apps/web/tests/pages/BinderSettings.test.jsx` (and extend `apps/web/tests/components/BinderGrid.test.jsx`): open Binder header Settings (`data-testid="binder-settings"`) and tile menu Settings navigate to `/binder/settings?b={clientId}`; page shows Binder name + **Import from Fabrary** (`data-testid="import-fabrary"`); `/wants` has no Settings import; app-wide Settings has no Fabrary import; signed-out `/binder/settings` uses the same gate as `/binder`
 
 ### Implementation for User Story 1
 
-- [ ] T024 [P] [US1] Create `apps/mobile/lib/features/binder/binder_settings_screen.dart`: pushed page, title Settings, shows the passed `binderId` name from `bindersProvider`, **Import from Fabrary** control (picker wiring can no-op until US2). Back pops. No Binder mutations. Empty Binder MUST still show Settings
-- [ ] T025 [P] [US1] Create `apps/web/src/pages/BinderSettings.jsx`: title Settings, reads `?b=` / `getOpenBinderId()` / `targetOwnedBinderId()` from `apps/web/src/utils/openBinder.js`, shows that Binder’s name and **Import from Fabrary**. `useDocumentHead` title. No Binder edits. Empty Binder still shows Settings
-- [ ] T026 [US1] Register `<Route path="/binder/settings" element={<BinderSettings />} />` in `apps/web/src/App.jsx` next to `/binder`. Missing `?b=` falls back the same way `/binder` does (Trade Binder). Signed-out uses the `/binder` gate. Do not add `/binder/settings` to `apps/web/src/components/elements/Header.jsx` or `apps/web/scripts/generateSeoPages.js`. Do not add a `netlify.toml` redirect
-- [ ] T027 [US1] Add Settings to the open-Binder app bar in `apps/mobile/lib/features/binder/binder_screen.dart` and a Settings item on the tile `PopupMenuButton` in `apps/mobile/lib/features/binder/binder_grid.dart`. Both push T024 with that `binderId`. Hide on Want List. Keep Rename/Delete on the tile menu (do not move them)
-- [ ] T028 [US1] Add Settings on the open-Binder header in `apps/web/src/pages/BinderCollection.jsx` and a Settings `MenuItem` in `apps/web/src/components/binder/BinderGrid.jsx` that goes to `/binder/settings?b=`. Do not touch `apps/web/src/pages/SharedBinder.jsx`. Keep Rename/Delete on the tile menu
-- [ ] T029 [US1] Wire T024–T028 until T022 and T023 pass. Mobile signed-out with on-device Binders can open Settings with no account wall
+- [X] T024 [P] [US1] Create `apps/mobile/lib/features/binder/binder_settings_screen.dart`: pushed page, title Settings, shows the passed `binderId` name from `bindersProvider`, **Import from Fabrary** control (picker wiring can no-op until US2). Back pops. No Binder mutations. Empty Binder MUST still show Settings
+- [X] T025 [P] [US1] Create `apps/web/src/pages/BinderSettings.jsx`: title Settings, reads `?b=` / `getOpenBinderId()` / `targetOwnedBinderId()` from `apps/web/src/utils/openBinder.js`, shows that Binder’s name and **Import from Fabrary**. `useDocumentHead` title. No Binder edits. Empty Binder still shows Settings
+- [X] T026 [US1] Register `<Route path="/binder/settings" element={<BinderSettings />} />` in `apps/web/src/App.jsx` next to `/binder`. Missing `?b=` falls back the same way `/binder` does (Trade Binder). Signed-out uses the `/binder` gate. Do not add `/binder/settings` to `apps/web/src/components/elements/Header.jsx` or `apps/web/scripts/generateSeoPages.js`. Do not add a `netlify.toml` redirect
+- [X] T027 [US1] Add Settings to the open-Binder app bar in `apps/mobile/lib/features/binder/binder_screen.dart` and a Settings item on the tile `PopupMenuButton` in `apps/mobile/lib/features/binder/binder_grid.dart`. Both push T024 with that `binderId`. Hide on Want List. Keep Rename/Delete on the tile menu (do not move them)
+- [X] T028 [US1] Add Settings on the open-Binder header in `apps/web/src/pages/BinderCollection.jsx` and a Settings `MenuItem` in `apps/web/src/components/binder/BinderGrid.jsx` that goes to `/binder/settings?b=`. Do not touch `apps/web/src/pages/SharedBinder.jsx`. Keep Rename/Delete on the tile menu
+- [X] T029 [US1] Wire T024–T028 until T022 and T023 pass. Mobile signed-out with on-device Binders can open Settings with no account wall
 
 **Checkpoint**: User Story 1 is fully functional and testable independently (Settings entry + Import label). Preview and writes not required yet
 
@@ -110,14 +110,14 @@ Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Ed
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T030 [P] [US2] Extend `apps/mobile/test/widgets/binder_settings_test.dart`: after a fixture CSV, preview shows owned/matched/unmatched/copies (`Key('fabraryPreview')`), lists unmatched names before confirm, states add-on-top, Confirm stays enabled when unmatched exist; Cancel / back leaves `binderProvider` unchanged; Want/Extra-filled rows do not increase copiesToAdd; working indicator appears before preview
-- [ ] T031 [P] [US2] Extend `apps/web/tests/pages/BinderSettings.test.jsx` with the same preview / unmatched-names / cancel / Want-Extra assertions (`data-testid="fabrary-preview"`)
+- [X] T030 [P] [US2] Extend `apps/mobile/test/widgets/binder_settings_test.dart`: after a fixture CSV, preview shows owned/matched/unmatched/copies (`Key('fabraryPreview')`), lists unmatched names before confirm, states add-on-top, Confirm stays enabled when unmatched exist; Cancel / back leaves `binderProvider` unchanged; Want/Extra-filled rows do not increase copiesToAdd; working indicator appears before preview
+- [X] T031 [P] [US2] Extend `apps/web/tests/pages/BinderSettings.test.jsx` with the same preview / unmatched-names / cancel / Want-Extra assertions (`data-testid="fabrary-preview"`)
 
 ### Implementation for User Story 2
 
-- [ ] T032 [US2] On `apps/mobile/lib/features/binder/binder_settings_screen.dart`, Import from Fabrary opens `file_picker` (`.csv` / `.txt`), reads UTF-8, runs `parseFabraryCsv` + `planFabraryImport` against `catalogProvider` + this `binderId` + current entries + `isProProvider`. Render T030 preview. Do not call `BinderNotifier.add` yet. Show a working state from pick until preview/refuse
-- [ ] T033 [P] [US2] On `apps/web/src/pages/BinderSettings.jsx`, Import uses `<input type="file" accept=".csv,text/csv,.txt">`, same plan against `useCardData` + open Binder + `getBinderEntries` + entitlement. Same preview. No `upsertEntry` yet
-- [ ] T034 [US2] Cancel / back from preview on both T032 and T033 MUST NOT write Binders or Want List. Confirm control is visible but can remain inert until US3. Until T030 and T031 pass: unmatched names are on the preview, not only a count
+- [X] T032 [US2] On `apps/mobile/lib/features/binder/binder_settings_screen.dart`, Import from Fabrary opens `file_picker` (`.csv` / `.txt`), reads UTF-8, runs `parseFabraryCsv` + `planFabraryImport` against `catalogProvider` + this `binderId` + current entries + `isProProvider`. Render T030 preview. Do not call `BinderNotifier.add` yet. Show a working state from pick until preview/refuse
+- [X] T033 [P] [US2] On `apps/web/src/pages/BinderSettings.jsx`, Import uses `<input type="file" accept=".csv,text/csv,.txt">`, same plan against `useCardData` + open Binder + `getBinderEntries` + entitlement. Same preview. No `upsertEntry` yet
+- [X] T034 [US2] Cancel / back from preview on both T032 and T033 MUST NOT write Binders or Want List. Confirm control is visible but can remain inert until US3. Until T030 and T031 pass: unmatched names are on the preview, not only a count
 
 **Checkpoint**: User Stories 1 and 2 work independently (pick → preview → cancel). No cards added yet
 
@@ -131,16 +131,16 @@ Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Ed
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T035 [P] [US3] Extend `apps/mobile/test/widgets/binder_settings_test.dart` (and a notifier test in `apps/mobile/test/core/providers/` or existing binder notifier tests): confirm applies `adds` to this Binder only; previous rows remain; new Printing qty = Have, condition NM; existing NM qty increases by Have; LP row of that Printing unchanged; other Binder + Want List unchanged; second confirm of the same plan doubles again; unmatched names remain after apply
-- [ ] T036 [P] [US3] Extend `apps/web/tests/pages/BinderSettings.test.jsx` (mock `upsertEntries`) with the same add-on-top / other-Binder / second-import assertions
+- [X] T035 [P] [US3] Extend `apps/mobile/test/widgets/binder_settings_test.dart` (and a notifier test in `apps/mobile/test/core/providers/` or existing binder notifier tests): confirm applies `adds` to this Binder only; previous rows remain; new Printing qty = Have, condition NM; existing NM qty increases by Have; LP row of that Printing unchanged; other Binder + Want List unchanged; second confirm of the same plan doubles again; unmatched names remain after apply
+- [X] T036 [P] [US3] Extend `apps/web/tests/pages/BinderSettings.test.jsx` (mock `upsertEntries`) with the same add-on-top / other-Binder / second-import assertions
 
 ### Implementation for User Story 3
 
-- [ ] T037 [US3] Add `BinderNotifier.applyImportAdds(binderId, adds)` in `apps/mobile/lib/core/providers.dart`: one state replace combining NM qty, one `save`, then a single `syncAfterBinderMutation`. Do not loop `add()`. Do not write Want List or other `binderId`s. Failed persist MUST leave prior state
-- [ ] T038 [P] [US3] Add `upsertEntries(rows)` in `apps/web/src/services/binder.js` (one or chunked `.upsert([...], { onConflict: 'user_id,client_id' })` using `entryClientId` + `cardStub` + NM + this `binderId`). Re-check `canImportDistinctPrintings` before the request. Failed upsert MUST NOT leave a half-import in local UI state
-- [ ] T039 [US3] Wire Confirm on `apps/mobile/lib/features/binder/binder_settings_screen.dart` to T037 when `plan.ok`. After success, return to the Binder list (or stay with unmatched still visible — unmatched MUST remain available per FR-012). Collection Stats / tile count will follow existing Binder totals
-- [ ] T040 [US3] Wire Confirm on `apps/web/src/pages/BinderSettings.jsx` to T038 the same way; refresh `getBinderEntries` after success
-- [ ] T041 [US3] Keep the unmatched list available after a successful add on both T039 and T040 (summary they can dismiss is enough). Until T035 and T036 pass: a second import of the same file adds Have again (SC-012)
+- [X] T037 [US3] Add `BinderNotifier.applyImportAdds(binderId, adds)` in `apps/mobile/lib/core/providers.dart`: one state replace combining NM qty, one `save`, then a single `syncAfterBinderMutation`. Do not loop `add()`. Do not write Want List or other `binderId`s. Failed persist MUST leave prior state
+- [X] T038 [P] [US3] Add `upsertEntries(rows)` in `apps/web/src/services/binder.js` (one or chunked `.upsert([...], { onConflict: 'user_id,client_id' })` using `entryClientId` + `cardStub` + NM + this `binderId`). Re-check `canImportDistinctPrintings` before the request. Failed upsert MUST NOT leave a half-import in local UI state
+- [X] T039 [US3] Wire Confirm on `apps/mobile/lib/features/binder/binder_settings_screen.dart` to T037 when `plan.ok`. After success, return to the Binder list (or stay with unmatched still visible — unmatched MUST remain available per FR-012). Collection Stats / tile count will follow existing Binder totals
+- [X] T040 [US3] Wire Confirm on `apps/web/src/pages/BinderSettings.jsx` to T038 the same way; refresh `getBinderEntries` after success
+- [X] T041 [US3] Keep the unmatched list available after a successful add on both T039 and T040 (summary they can dismiss is enough). Until T035 and T036 pass: a second import of the same file adds Have again (SC-012)
 
 **Checkpoint**: User Story 3 is independently testable (preview + confirm actually stocks the Binder)
 
@@ -154,14 +154,14 @@ Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Ed
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T042 [P] [US4] Extend `apps/mobile/test/widgets/binder_settings_test.dart`: wrong headers → not-Fabrary copy, no write; all Have empty → no-owned copy; owned but zero matches → no-matched copy; free player over cap → Pro upgrade path (`presentProPaywall` / existing upsell), Binder unchanged; dismiss returns to Settings with no partial adds
-- [ ] T043 [P] [US4] Extend `apps/web/tests/pages/BinderSettings.test.jsx` with the same refuse reasons (`not_fabrary`, `no_owned`, `no_matched`, `free_cap`) and no `upsertEntries` call
+- [X] T042 [P] [US4] Extend `apps/mobile/test/widgets/binder_settings_test.dart`: wrong headers → not-Fabrary copy, no write; all Have empty → no-owned copy; owned but zero matches → no-matched copy; free player over cap → Pro upgrade path (`presentProPaywall` / existing upsell), Binder unchanged; dismiss returns to Settings with no partial adds
+- [X] T043 [P] [US4] Extend `apps/web/tests/pages/BinderSettings.test.jsx` with the same refuse reasons (`not_fabrary`, `no_owned`, `no_matched`, `free_cap`) and no `upsertEntries` call
 
 ### Implementation for User Story 4
 
-- [ ] T044 [P] [US4] Surface `plan.refuseReason` on `apps/mobile/lib/features/binder/binder_settings_screen.dart` with the player-facing lines in [contracts/binder-settings.md](./contracts/binder-settings.md). Do not apply adds when `!plan.ok`
-- [ ] T045 [P] [US4] Surface the same refuse reasons on `apps/web/src/pages/BinderSettings.jsx`. `free_cap` uses the existing Pro upgrade pattern from `apps/web/src/pages/BinderCollection.jsx` / entitlement (show upgrade, write nothing)
-- [ ] T046 [US4] On mobile `free_cap`, call the existing paywall helper used by `apps/mobile/lib/features/paywall/pro_limits.dart` (`presentProPaywall`); on success, re-run the plan (Pro now allows) but do not silently import 50 of 3,800. Until T042 and T043 pass: every refuse leaves Binders and Want List unchanged
+- [X] T044 [P] [US4] Surface `plan.refuseReason` on `apps/mobile/lib/features/binder/binder_settings_screen.dart` with the player-facing lines in [contracts/binder-settings.md](./contracts/binder-settings.md). Do not apply adds when `!plan.ok`
+- [X] T045 [P] [US4] Surface the same refuse reasons on `apps/web/src/pages/BinderSettings.jsx`. `free_cap` uses the existing Pro upgrade pattern from `apps/web/src/pages/BinderCollection.jsx` / entitlement (show upgrade, write nothing)
+- [X] T046 [US4] On mobile `free_cap`, call the existing paywall helper used by `apps/mobile/lib/features/paywall/pro_limits.dart` (`presentProPaywall`); on success, re-run the plan (Pro now allows) but do not silently import 50 of 3,800. Until T042 and T043 pass: every refuse leaves Binders and Want List unchanged
 
 **Checkpoint**: All four user stories are independently functional
 
@@ -171,10 +171,10 @@ Touches **I** (reuse Binder write + in-memory catalog; settings page only; no Ed
 
 **Purpose**: Docs and a table-side pass after the stories work
 
-- [ ] T047 [P] Add a one-line note to `docs/CONTEXT.md` under Binder that a Fabrary collection export can be imported from that Binder’s settings (Have adds Near Mint copies; Want List is not written)
-- [ ] T048 [P] Confirm `packages/contracts/README.md` lists both new fixtures and the `free_limits.json` batch-import cases after T021
-- [ ] T049 Run the automated + manual checks in [quickstart.md](./quickstart.md) (`cd apps/web && npm test`; `cd apps/mobile && flutter test`; Settings entry, preview, confirm, refuse)
-- [ ] T050 Confirm web `/binder/settings` is not in `apps/web/src/components/elements/Header.jsx` and shared `apps/web/src/pages/SharedBinder.jsx` cannot import
+- [X] T047 [P] Add a one-line note to `docs/CONTEXT.md` under Binder that a Fabrary collection export can be imported from that Binder’s settings (Have adds Near Mint copies; Want List is not written)
+- [X] T048 [P] Confirm `packages/contracts/README.md` lists both new fixtures and the `free_limits.json` batch-import cases after T021
+- [X] T049 Run the automated + manual checks in [quickstart.md](./quickstart.md) (`cd apps/web && npm test`; `cd apps/mobile && flutter test`; Settings entry, preview, confirm, refuse)
+- [X] T050 Confirm web `/binder/settings` is not in `apps/web/src/components/elements/Header.jsx` and shared `apps/web/src/pages/SharedBinder.jsx` cannot import
 
 ---
 

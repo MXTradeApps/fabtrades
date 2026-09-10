@@ -1,0 +1,695 @@
+{
+  "description": "Fabrary owned row → catalog Printing id, or unmatched. Identifier is not a match key. Catalog rows are catalog-shaped.",
+  "cases": [
+    {
+      "name": "blank foil matches regular Normal, not Rainbow",
+      "row": {
+        "Identifier": "sink-below",
+        "Name": "Sink Below",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR101",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-rainbow",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Rainbow Foil",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr101-normal" }
+    },
+    {
+      "name": "Rainbow foil matches Rainbow, not Normal",
+      "row": {
+        "Identifier": "sink-below",
+        "Name": "Sink Below",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR101",
+        "Edition": "",
+        "Foiling": "Rainbow",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr101-rainbow",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Rainbow Foil",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr101-rainbow" }
+    },
+    {
+      "name": "Cold foil matches Cold, not Normal",
+      "row": {
+        "Identifier": "sink-below",
+        "Name": "Sink Below",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR101",
+        "Edition": "",
+        "Foiling": "Cold",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr101-cold",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Cold Foil",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr101-cold" }
+    },
+    {
+      "name": "Gold foil matches Gold, not Normal",
+      "row": {
+        "Identifier": "sink-below",
+        "Name": "Sink Below",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR101",
+        "Edition": "",
+        "Foiling": "Gold",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr101-gold",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Gold Foil",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr101-gold" }
+    },
+    {
+      "name": "blank Treatment excludes Extended Art",
+      "row": {
+        "Identifier": "command",
+        "Name": "Command and Conquer",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR000",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr000-ea",
+          "name": "Command and Conquer (Extended Art)",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr000-reg",
+          "name": "Command and Conquer",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr000-reg" }
+    },
+    {
+      "name": "Treatment Extended Art matches only the treated name",
+      "row": {
+        "Identifier": "command",
+        "Name": "Command and Conquer",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR000",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "Extended Art",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr000-reg",
+          "name": "Command and Conquer",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr000-ea",
+          "name": "Command and Conquer (Extended Art)",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr000-ea" }
+    },
+    {
+      "name": "First edition matches 1st Edition, not Unlimited",
+      "row": {
+        "Identifier": "bull",
+        "Name": "Wounded Bull",
+        "Pitch": "",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR001",
+        "Edition": "First",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr001-unl",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "Unlimited",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr001-1st",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "1st Edition",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr001-1st" }
+    },
+    {
+      "name": "Unlimited edition matches Unlimited, not First",
+      "row": {
+        "Identifier": "alpha",
+        "Name": "Wounded Bull",
+        "Pitch": "",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR001",
+        "Edition": "Unlimited",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr001-1st",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "1st Edition",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr001-unl",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "Unlimited",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr001-unl" }
+    },
+    {
+      "name": "blank edition excludes First, Unlimited, and Alpha",
+      "row": {
+        "Identifier": "alpha",
+        "Name": "Wounded Bull",
+        "Pitch": "",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR001",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr001-1st",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "1st Edition",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr001-reg",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr001-reg" }
+    },
+    {
+      "name": "Alpha matches only a catalog row that carries an alpha token",
+      "row": {
+        "Identifier": "alpha",
+        "Name": "Wounded Bull",
+        "Pitch": "",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR001",
+        "Edition": "Alpha",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr001-1st",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "1st Edition",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr001-alpha",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "Alpha",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr001-alpha" }
+    },
+    {
+      "name": "Alpha is unmatched when no catalog row says alpha",
+      "row": {
+        "Identifier": "alpha",
+        "Name": "Wounded Bull",
+        "Pitch": "",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR001",
+        "Edition": "Alpha",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr001-1st",
+          "name": "Wounded Bull",
+          "collectorNumber": "WTR001",
+          "extNumber": "WTR001",
+          "subTypeName": "1st Edition",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": {
+        "unmatched": {
+          "name": "Wounded Bull",
+          "setNumber": "WTR001",
+          "foiling": "",
+          "treatment": "",
+          "edition": "Alpha"
+        }
+      }
+    },
+    {
+      "name": "Pitch Red matches pitch 1, not Yellow",
+      "row": {
+        "Identifier": "sink-below",
+        "Name": "Sink Below",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR101",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-yel",
+          "name": "Sink Below (Yellow)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "2",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr101-red",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr101-red" }
+    },
+    {
+      "name": "Pitch Yellow matches pitch 2",
+      "row": {
+        "Identifier": "sink-below",
+        "Name": "Sink Below",
+        "Pitch": "Yellow",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR101",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-red",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr101-yel",
+          "name": "Sink Below (Yellow)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "2",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr101-yel" }
+    },
+    {
+      "name": "Pitch Blue matches pitch 3",
+      "row": {
+        "Identifier": "sink-below",
+        "Name": "Sink Below",
+        "Pitch": "Blue",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR101",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-red",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr101-blu",
+          "name": "Sink Below (Blue)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "3",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr101-blu" }
+    },
+    {
+      "name": "blank Pitch matches a colorless printing",
+      "row": {
+        "Identifier": "tunic",
+        "Name": "Fyendal's Spring Tunic",
+        "Pitch": "",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR150",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr150-red",
+          "name": "Fyendal's Spring Tunic (Red)",
+          "collectorNumber": "WTR150",
+          "extNumber": "WTR150",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr150-none",
+          "name": "Fyendal's Spring Tunic",
+          "collectorNumber": "WTR150",
+          "extNumber": "WTR150",
+          "subTypeName": "Normal",
+          "pitch": null,
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr150-none" }
+    },
+    {
+      "name": "two catalog hits including a regular printing — regular wins",
+      "row": {
+        "Identifier": "command",
+        "Name": "Command and Conquer",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR000",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr000-ea",
+          "name": "Command and Conquer (Alternate Art)",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr000-reg",
+          "name": "Command and Conquer",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr000-reg" }
+    },
+    {
+      "name": "two treated hits, no regular — first by name, then set number, then finish",
+      "row": {
+        "Identifier": "command",
+        "Name": "Command and Conquer",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR000",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "Extended Art",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr000-ea-rf",
+          "name": "Command and Conquer (Extended Art)",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Rainbow Foil",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr000-ea-normal",
+          "name": "Command and Conquer (Extended Art)",
+          "collectorNumber": "WTR000",
+          "extNumber": "WTR000",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr000-ea-normal" }
+    },
+    {
+      "name": "same file twice yields the same printingId (SC-012)",
+      "row": {
+        "Identifier": "sink-below",
+        "Name": "Sink Below",
+        "Pitch": "Red",
+        "Set": "Welcome to Rathe",
+        "Set number": "WTR101",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "2"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-rainbow",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Rainbow Foil",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        },
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": { "printingId": "wtr101-normal" }
+    },
+    {
+      "name": "quoted CSV name with a comma still matches 10,000 Year Reunion",
+      "csv": "Identifier,Name,Pitch,Set,Set number,Edition,Foiling,Treatment,Have\nreunion,\"10,000 Year Reunion\",Red,The Hunted,THC001,,,,1\n",
+      "row": {
+        "Identifier": "reunion",
+        "Name": "10,000 Year Reunion",
+        "Pitch": "Red",
+        "Set": "The Hunted",
+        "Set number": "THC001",
+        "Edition": "",
+        "Foiling": "",
+        "Treatment": "",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "thc001-normal",
+          "name": "10,000 Year Reunion (Red)",
+          "collectorNumber": "THC001",
+          "extNumber": "THC001",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "The Hunted"
+        }
+      ],
+      "expected": { "printingId": "thc001-normal" }
+    },
+    {
+      "name": "unknown set number is unmatched",
+      "row": {
+        "Identifier": "junk",
+        "Name": "Not In Catalog",
+        "Pitch": "",
+        "Set": "Nowhere",
+        "Set number": "ZZZ999",
+        "Edition": "",
+        "Foiling": "Rainbow",
+        "Treatment": "Full Art",
+        "Have": "1"
+      },
+      "catalog": [
+        {
+          "id": "wtr101-normal",
+          "name": "Sink Below (Red)",
+          "collectorNumber": "WTR101",
+          "extNumber": "WTR101",
+          "subTypeName": "Normal",
+          "pitch": "1",
+          "setName": "Welcome to Rathe"
+        }
+      ],
+      "expected": {
+        "unmatched": {
+          "name": "Not In Catalog",
+          "setNumber": "ZZZ999",
+          "foiling": "Rainbow",
+          "treatment": "Full Art",
+          "edition": ""
+        }
+      }
+    }
+  ]
+}
