@@ -36,8 +36,6 @@ class FabraryUnmatched {
 }
 
 class FabraryMatch {
-  const FabraryMatch._({this.printingId, this.unmatched});
-
   const FabraryMatch.hit(String id)
       : printingId = id,
         unmatched = null;

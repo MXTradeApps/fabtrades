@@ -56,7 +56,7 @@ class _HaveParse {
   final int quantity;
 }
 
-_HaveParse parseHave(dynamic raw) {
+_HaveParse _parseHave(dynamic raw) {
   final text = '$raw'.trim();
   if (text.isEmpty) return const _HaveParse.empty();
   final n = num.tryParse(text);
@@ -101,7 +101,7 @@ FabraryImportPlan planFabraryImport({
   var ownedCount = 0;
 
   for (final row in resolvedRows ?? const <Map<String, dynamic>>[]) {
-    final have = parseHave(row['Have']);
+    final have = _parseHave(row['Have']);
     if (have.kind == 'empty') continue;
     if (have.kind == 'invalid') {
       ownedCount += 1;

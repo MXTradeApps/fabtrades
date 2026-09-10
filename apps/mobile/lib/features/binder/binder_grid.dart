@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/widgets.dart';
@@ -66,7 +67,7 @@ class BinderGrid extends ConsumerWidget {
 
     return CustomScrollView(
       key: const Key('binderGrid'),
-      cacheExtent: 1200,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),

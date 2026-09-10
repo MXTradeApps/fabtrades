@@ -749,7 +749,7 @@ export async function getPublicBinder(token) {
     }
 }
 
-export async function createBinder({ name, isPro = false, liveCount }) {
+export async function createBinder({ name, isPro = false }) {
     try {
         const { user, error: authError } = await requireAuthenticatedUser(
             'You must be logged in to create a binder',

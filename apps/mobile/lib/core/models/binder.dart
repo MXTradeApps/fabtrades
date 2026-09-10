@@ -149,8 +149,8 @@ class Binder {
       return a.clientId.compareTo(b.clientId);
     });
     return [
-      if (trade != null) trade,
-      if (collection != null) collection,
+      ?trade,
+      ?collection,
       ...rest,
     ];
   }

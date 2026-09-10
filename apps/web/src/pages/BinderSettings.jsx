@@ -26,7 +26,7 @@ import {
     COLLECTION_BINDER_ID,
 } from '../services/binder.js';
 
-export const FABRARY_REFUSE_COPY = {
+const FABRARY_REFUSE_COPY = {
     not_fabrary: 'This is not a Fabrary collection export',
     no_owned: 'No owned cards (Have) were found',
     no_matched: 'None of the owned cards were found in the catalog',

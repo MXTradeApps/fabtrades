@@ -14,7 +14,7 @@ function formatTileUsd(amount) {
     }).format(amount);
 }
 
-export function formatBinderTileValue(ownedRows) {
+function formatBinderTileValue(ownedRows) {
     let copies = 0;
     let amount = 0;
     let priced = false;
@@ -88,7 +88,6 @@ export default function BinderGrid({
     entries = [],
     resolveCard,
     onOpen,
-    onCreate,
     onRename,
     onDelete,
     onSettings,
