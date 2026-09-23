@@ -20,7 +20,11 @@ import '../auth/sign_in_sheet.dart';
 /// these two functions so behaviour stays consistent wherever Pro is offered.
 
 /// Shows the paywall for the current offering and returns true if the customer
-/// has Pro when it closes. A no-op while [unlockAllFeatures] is on.
+/// has Pro when it closes.
+///
+/// Feature-gated calls (`onlyIfNeeded: true`) skip presentation while
+/// [unlockAllFeatures] is on. Explicit "See plans" (`onlyIfNeeded: false`)
+/// still presents so App Review and customers can subscribe.
 ///
 /// Sign-in is not required. App Review 5.1.1(v) treats Pro as IAP that is not
 /// account-based: local limits lift from StoreKit even for a guest. An optional
@@ -44,7 +48,9 @@ Future<bool> presentProPaywall(
   bool onlyIfNeeded = true,
   String trigger = 'settings',
 }) async {
-  if (unlockAllFeatures) return true;
+  // Keep the purchase path alive while features are free. App Review needs
+  // My Account → See plans to open the store; gated call sites must not.
+  if (unlockAllFeatures && onlyIfNeeded) return true;
 
   if (!ref.read(purchasesAvailableProvider)) {
     _showMessage(context, 'Subscriptions are unavailable in this build.');

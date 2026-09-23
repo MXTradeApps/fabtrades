@@ -12,6 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/harness.dart';
 
+/// Serves a fixed entitlement state, standing in for the RevenueCat SDK (whose
+/// method channels don't exist under `flutter test`).
 class _FakeSubscription extends SubscriptionNotifier {
   _FakeSubscription(this.status);
 
@@ -21,6 +23,7 @@ class _FakeSubscription extends SubscriptionNotifier {
   Future<SubscriptionStatus> build() async => status;
 }
 
+/// A device whose store lookup fails outright — no network, or an SDK error.
 class _UnreadableSubscription extends SubscriptionNotifier {
   @override
   Future<SubscriptionStatus> build() async =>
@@ -48,8 +51,13 @@ Future<ProviderContainer> _pumpAccount(
             ? _UnreadableSubscription.new
             : () => _FakeSubscription(status),
       ),
+      // Prices would otherwise come from the store.
       proOfferingProvider.overrideWith((ref) async => null),
+      // Overridden rather than left to read Supabase, which has no client under
+      // `flutter test`.
       serverEntitlementProvider.overrideWith((ref) async => server),
+      // Account also renders a sign-in block; keep it signed out so this test
+      // stays about subscriptions.
       accountProvider.overrideWith((ref) => Stream.value(null)),
     ],
   );
@@ -66,14 +74,36 @@ Future<ProviderContainer> _pumpAccount(
 }
 
 void main() {
-  testWidgets('does not offer a purchase when there is no entitlement',
+  testWidgets('offers an upgrade when the customer has no entitlement',
+      (tester) async {
+    final container =
+        await _pumpAccount(tester, status: SubscriptionStatus.free);
+
+    // Features are ungated, but the purchase path still has to be visible for
+    // App Review. Real entitlement is what decides upgrade vs manage.
+    expect(container.read(entitlementProvider).isPro, isFalse);
+    expect(find.text('SUBSCRIPTION'), findsOneWidget);
+    expect(find.text('See plans'), findsOneWidget);
+    expect(find.text('Restore purchases'), findsOneWidget);
+    expect(find.text('Privacy Policy'), findsOneWidget);
+    expect(find.text('Terms of Use'), findsOneWidget);
+    expect(find.text('Manage subscription'), findsNothing);
+  });
+
+  testWidgets('See plans opens the store without requiring an account',
       (tester) async {
     await _pumpAccount(tester, status: SubscriptionStatus.free);
 
-    expect(find.text('See plans'), findsNothing);
-    expect(find.text('Restore purchases'), findsNothing);
-    expect(find.text('SUBSCRIPTION'), findsNothing);
-    expect(find.text('Manage subscription'), findsNothing);
+    await tester.tap(find.text('See plans'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Guideline 5.1.1(v): registration cannot sit in front of IAP. The native
+    // paywall is missing under `flutter test`, so the sheet that used to block
+    // purchase is the thing we can still assert is gone.
+    expect(find.text('Sync your collection'), findsNothing);
+    expect(find.text('Continue with Google'), findsNothing);
+    expect(find.text('Continue with Apple'), findsNothing);
   });
 
   testWidgets('shows renewal date and Customer Center for a subscriber',
@@ -129,7 +159,7 @@ void main() {
 
   testWidgets('honours a subscription bought on the other platform',
       (tester) async {
-    await _pumpAccount(
+    final container = await _pumpAccount(
       tester,
       status: SubscriptionStatus.free,
       server: ServerEntitlement(
@@ -140,9 +170,31 @@ void main() {
       ),
     );
 
+    // The whole point of a server-owned entitlements row: buy on Android, get
+    // Pro on iOS.
+    expect(container.read(isProProvider), isTrue);
     expect(find.text('Active until Mar 14, 2027.'), findsOneWidget);
     expect(find.textContaining('Purchased through Google Play'), findsOneWidget);
+    // StoreKit cannot manage a Play subscription, so offering the link would
+    // dead-end.
     expect(find.text('Manage subscription'), findsNothing);
+    expect(find.text('See plans'), findsNothing);
+  });
+
+  testWidgets('keeps Pro when the store is unreachable but the server says yes',
+      (tester) async {
+    final container = await _pumpAccount(
+      tester,
+      server: ServerEntitlement(
+        isActive: true,
+        source: 'app_store',
+        expiresAt: DateTime(2027, 3, 14),
+      ),
+    );
+
+    // Losing Pro because a store lookup timed out would be the worst possible
+    // failure mode for someone who has paid.
+    expect(container.read(isProProvider), isTrue);
     expect(find.text('See plans'), findsNothing);
   });
 
@@ -156,6 +208,7 @@ void main() {
 
     expect(find.text('SUBSCRIPTION'), findsNothing);
     expect(find.text('See plans'), findsNothing);
+    // The rest of My Account is unaffected.
     expect(find.text('ACCOUNT'), findsOneWidget);
   });
 

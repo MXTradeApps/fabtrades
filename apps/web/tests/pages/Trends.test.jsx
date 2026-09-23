@@ -116,6 +116,14 @@ describe('Trends', () => {
         expect(screen.getAllByText('Browse Sets').length).toBeGreaterThan(0);
         expect(screen.queryByText('Home')).not.toBeInTheDocument();
         expect(screen.getAllByText('Trade Calculator').length).toBeGreaterThan(0);
+        expect(screen.getByRole('link', { name: 'iOS App' })).toHaveAttribute(
+            'href',
+            'https://apps.apple.com/us/app/fabtrades/id6794308687',
+        );
+        expect(screen.getByRole('link', { name: 'Android App' })).toHaveAttribute(
+            'href',
+            'https://play.google.com/store/apps/details?id=fabtrades.myapp',
+        );
     });
 
     test('/trends lands on recent movers with no set list', async () => {

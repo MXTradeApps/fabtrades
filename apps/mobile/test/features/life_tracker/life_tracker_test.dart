@@ -1,6 +1,4 @@
-import 'package:fabtrades/core/models/card_model.dart';
 import 'package:fabtrades/core/providers.dart';
-import 'package:fabtrades/features/life_tracker/hero_picker.dart';
 import 'package:fabtrades/features/life_tracker/life_tracker_models.dart';
 import 'package:fabtrades/features/life_tracker/life_tracker_provider.dart';
 import 'package:fabtrades/features/life_tracker/life_tracker_repository.dart';
@@ -132,6 +130,8 @@ void main() {
       n.setFormat(LifeFormat.silverAge);
       final state = c.read(lifeTrackerProvider);
       expect(state.format, LifeFormat.silverAge);
+      expect(state.you.life, 20);
+      expect(state.opponent.life, 20);
       expect(state.timerRemainingSeconds, 35 * 60);
       expect(state.timerRunning, isFalse);
     });
@@ -148,22 +148,35 @@ void main() {
       expect(c.read(lifeTrackerProvider).timerRemainingSeconds, 55 * 60);
     });
 
-    test('resetGame restores starting lives, clears history, and starts timer',
+    test('startGame restores starting lives, clears history, and starts timer',
         () async {
       final c = await container();
       final n = c.read(lifeTrackerProvider.notifier);
-      n.setHero(opponent: false, heroName: 'Bravo', life: 40);
       n.adjustLife(opponent: false, delta: -5);
       n.commitPending(false);
-      n.resetGame();
+      n.startGame();
 
       final state = c.read(lifeTrackerProvider);
       expect(state.you.life, 40);
-      expect(state.you.config.heroName, 'Bravo');
+      expect(state.opponent.life, 40);
       expect(state.history, isEmpty);
       expect(state.timerRemainingSeconds, 55 * 60);
       expect(state.timerRunning, isTrue);
       expect(state.timerRunningSince, isNotNull);
+    });
+
+    test('startGame on Silver Age/Limited uses 20 life', () async {
+      final c = await container();
+      final n = c.read(lifeTrackerProvider.notifier);
+      n.setFormat(LifeFormat.silverAge);
+      n.startGame();
+
+      final state = c.read(lifeTrackerProvider);
+      expect(state.format, LifeFormat.silverAge);
+      expect(state.you.life, 20);
+      expect(state.opponent.life, 20);
+      expect(state.timerRemainingSeconds, 35 * 60);
+      expect(state.timerRunning, isTrue);
     });
 
     test('restores running timer by subtracting wall-clock elapsed', () async {
@@ -190,77 +203,4 @@ void main() {
     });
   });
 
-  group('hero picker filtering', () {
-    const youngBravo = CardModel(
-      id: '1',
-      name: 'Bravo',
-      cardType: 'Hero',
-      cardSubType: 'Young',
-      life: '20',
-    );
-    const adultBravo = CardModel(
-      id: '2',
-      name: 'Bravo, Showstopper',
-      cardType: 'Hero',
-      life: '40',
-    );
-    const weaponHero = CardModel(
-      id: '3',
-      name: 'Anothos // Bravo',
-      cardType: 'Hero;Weapon',
-      cardSubType: 'Hammer (2H);Young',
-      life: '20',
-      rarity: 'Token',
-    );
-    const slashName = CardModel(
-      id: '4',
-      name: 'Something // Else',
-      cardType: 'Hero',
-      life: '40',
-    );
-
-    test('excludes Hero;Weapon and // combo names', () {
-      expect(isPlayableHeroCard(youngBravo), isTrue);
-      expect(isPlayableHeroCard(adultBravo), isTrue);
-      expect(isPlayableHeroCard(weaponHero), isFalse);
-      expect(isPlayableHeroCard(slashName), isFalse);
-    });
-
-    test('CC lists adult heroes only; Silver Age lists young only', () {
-      final catalog = [youngBravo, adultBravo, weaponHero, slashName];
-      final cc = buildHeroOptions(catalog, LifeFormat.cc);
-      final sa = buildHeroOptions(catalog, LifeFormat.silverAge);
-
-      expect(cc.map((h) => h.name), ['Bravo, Showstopper']);
-      expect(sa.map((h) => h.name), ['Bravo']);
-      expect(cc.single.life, 40);
-      expect(sa.single.life, 20);
-    });
-
-    test('corrects swapped life/intellect (Aurora-style TCGplayer data)', () {
-      const aurora = CardModel(
-        id: 'aurora',
-        name: 'Aurora, Legacy of Tempest',
-        cardType: 'Hero',
-        life: '4',
-        intellect: '40',
-      );
-      const youngSwapped = CardModel(
-        id: 'young-swap',
-        name: 'Aurora',
-        cardType: 'Hero',
-        cardSubType: 'Young',
-        life: '4',
-        intellect: '20',
-      );
-
-      expect(resolvedHeroLife(aurora), 40);
-      expect(resolvedHeroLife(youngSwapped), 20);
-      expect(resolvedHeroLife(adultBravo), 40);
-
-      final cc = buildHeroOptions([aurora, youngSwapped], LifeFormat.cc);
-      expect(cc.single.name, 'Aurora, Legacy of Tempest');
-      expect(cc.single.life, 40);
-    });
-  });
 }

@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import 'life_tracker_models.dart';
 import 'life_tracker_provider.dart';
 
+
 Future<void> showAuditHistorySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -69,7 +70,7 @@ class _AuditHistorySheet extends ConsumerWidget {
                         final e = entries[index];
                         return _HistoryRow(
                           entry: e,
-                          label: _playerLabel(state, e.isOpponent),
+                          label: e.isOpponent ? 'Opponent' : 'You',
                           timeLabel: timeFmt.format(e.at.toLocal()),
                         );
                       },
@@ -79,13 +80,6 @@ class _AuditHistorySheet extends ConsumerWidget {
         );
       },
     );
-  }
-
-  String _playerLabel(LifeTrackerState state, bool isOpponent) {
-    final player = isOpponent ? state.opponent : state.you;
-    final hero = player.config.heroName;
-    if (hero != null && hero.isNotEmpty) return hero;
-    return isOpponent ? 'Opponent' : 'You';
   }
 }
 

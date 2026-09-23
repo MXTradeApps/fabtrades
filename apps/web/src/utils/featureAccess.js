@@ -4,5 +4,6 @@
  * Flip to `false` (and `unlockAllFeatures` in
  * `apps/mobile/lib/core/logic/feature_access.dart`) to restore Pro gating.
  * RevenueCat, entitlements, paywall UI, and `freeLimits` stay in place.
+ * Mobile My Account still offers See plans so a purchase can complete.
  */
 export const unlockAllFeatures = true;

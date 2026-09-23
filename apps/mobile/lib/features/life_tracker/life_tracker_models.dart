@@ -7,13 +7,13 @@ enum LifeFormat {
 
   String get label => switch (this) {
         LifeFormat.cc => 'Classic Constructed',
-        LifeFormat.silverAge => 'Silver Age',
+        LifeFormat.silverAge => 'Silver Age / Limited',
       };
 
   /// Short label for segmented controls.
   String get shortLabel => switch (this) {
         LifeFormat.cc => 'CC',
-        LifeFormat.silverAge => 'Silver Age',
+        LifeFormat.silverAge => 'Silver Age/Limited',
       };
 
   Duration get roundDuration => switch (this) {
@@ -21,7 +21,10 @@ enum LifeFormat {
         LifeFormat.silverAge => const Duration(minutes: 35),
       };
 
-  int get defaultStartingLife => 40;
+  int get defaultStartingLife => switch (this) {
+        LifeFormat.cc => 40,
+        LifeFormat.silverAge => 20,
+      };
 
   int get roundSeconds => roundDuration.inSeconds;
 

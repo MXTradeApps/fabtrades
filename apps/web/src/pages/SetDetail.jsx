@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import { Link, useParams } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
+import { SearchClearAdornment } from '../components/search/index.js';
 import { CardThumbnail } from '../components/ui/CardImagePreview.jsx';
 import TcgplayerBuyLink from '../components/ui/TcgplayerBuyLink.jsx';
 import { useSets } from '../hooks/useSets.js';
@@ -369,7 +370,16 @@ const SetDetail = () => {
                                         <InputAdornment position="start">
                                             <SearchIcon sx={{ color: mutedColor, fontSize: 18 }} />
                                         </InputAdornment>
-                                    )
+                                    ),
+                                    endAdornment: (
+                                        <SearchClearAdornment
+                                            value={query}
+                                            onClear={() => setQuery('')}
+                                            dense
+                                            isDark={isDark}
+                                            color={mutedColor}
+                                        />
+                                    ),
                                 }}
                             />
                             <ToggleButtonGroup

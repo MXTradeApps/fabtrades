@@ -22,6 +22,7 @@ import {
 import { Link } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
 import CatalogPrintingResults from '../components/search/CatalogPrintingResults.jsx';
+import { SearchClearAdornment } from '../components/search/index.js';
 import { useSets } from '../hooks/useSets.js';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useThemeMode } from '../contexts/ThemeContext.jsx';
@@ -220,7 +221,15 @@ const SetList = () => {
                             <InputAdornment position="start">
                                 <SearchIcon sx={{ color: mutedColor }} />
                             </InputAdornment>
-                        )
+                        ),
+                        endAdornment: (
+                            <SearchClearAdornment
+                                value={query}
+                                onClear={() => setQuery('')}
+                                isDark={isDark}
+                                color={mutedColor}
+                            />
+                        ),
                     }}
                 />
 

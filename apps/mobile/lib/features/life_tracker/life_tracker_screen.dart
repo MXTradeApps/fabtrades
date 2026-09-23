@@ -186,11 +186,20 @@ class _CenterBar extends StatelessWidget {
       ),
     );
 
-    return Material(
-      color: scheme.surfaceContainerHighest,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        border: axis == Axis.vertical
+            ? Border.symmetric(
+                vertical: BorderSide(color: scheme.outline, width: 3),
+              )
+            : Border.symmetric(
+                horizontal: BorderSide(color: scheme.outline, width: 3),
+              ),
+      ),
       child: axis == Axis.vertical
           ? SizedBox(
-              width: 64,
+              width: 68,
               child: Column(
                 children: [
                   historyBtn,
@@ -201,7 +210,7 @@ class _CenterBar extends StatelessWidget {
               ),
             )
           : SizedBox(
-              height: 56,
+              height: 60,
               child: Row(
                 children: [
                   historyBtn,
@@ -261,8 +270,7 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
     final scheme = theme.colorScheme;
     final player = widget.player;
     final pending = player.pendingDelta;
-    final hero = player.config.heroName;
-    final lifeSize = widget.landscape ? 88.0 : 108.0;
+    final lifeSize = widget.landscape ? 96.0 : 120.0;
 
     final deltaColor =
         pending >= 0 ? AppTheme.positive : AppTheme.negative;
@@ -341,8 +349,8 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                 children: [
                   const Spacer(),
                   Container(
-                    width: 1,
-                    color: scheme.outlineVariant.withValues(alpha: 0.55),
+                    width: 3,
+                    color: scheme.outline.withValues(alpha: 0.85),
                   ),
                   const Spacer(),
                 ],
@@ -375,19 +383,10 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                     '${player.life}',
                     style: theme.textTheme.displayLarge?.copyWith(
                       fontSize: lifeSize,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       height: 1.0,
+                      letterSpacing: -1.5,
                       fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    hero ?? ' ',
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],

@@ -16,6 +16,8 @@ import {
     PrivacyTipOutlined,
     DescriptionOutlined,
     SupportAgentOutlined,
+    Apple,
+    Android,
 } from '@mui/icons-material';
 import { Link, useLocation } from 'react-router-dom';
 import { formatTimestamp } from "../../utils/helpers.js";
@@ -35,6 +37,19 @@ const LEGAL_ITEMS = [
     { label: 'Support', to: '/support', icon: SupportAgentOutlined, match: (path) => path === '/support' },
     { label: 'Privacy Policy', to: '/privacy', icon: PrivacyTipOutlined, match: (path) => path === '/privacy' },
     { label: 'Terms of Use', to: '/terms', icon: DescriptionOutlined, match: (path) => path === '/terms' },
+];
+
+const APP_LINKS = [
+    {
+        label: 'iOS App',
+        href: 'https://apps.apple.com/us/app/fabtrades/id6794308687',
+        icon: Apple,
+    },
+    {
+        label: 'Android App',
+        href: 'https://play.google.com/store/apps/details?id=fabtrades.myapp',
+        icon: Android,
+    },
 ];
 
 const Header = ({ lastUpdatedTimestamp }) => {
@@ -253,7 +268,12 @@ const Header = ({ lastUpdatedTimestamp }) => {
             }}
         >
             <Box
-                sx={{ width: 280 }}
+                sx={{
+                    width: 280,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
                 role="presentation"
                 onClick={toggleDrawer(false)}
                 onKeyDown={toggleDrawer(false)}
@@ -277,7 +297,7 @@ const Header = ({ lastUpdatedTimestamp }) => {
                         Menu
                     </Typography>
                 </Box>
-                <List sx={{ px: 1 }}>
+                <List sx={{ px: 1, flex: 1, overflow: 'auto' }}>
                     {NAV_ITEMS.map((item) => {
                         const { label, to, icon: Icon, match } = item;
                         const active = match(location.pathname);
@@ -346,6 +366,52 @@ const Header = ({ lastUpdatedTimestamp }) => {
                                             fontWeight: active ? 700 : 500,
                                             color: accent,
                                             '& .MuiTypography-root': { fontSize: '0.875rem' }
+                                        }}
+                                    />
+                                </ListItemButton>
+                            </ListItem>
+                        );
+                    })}
+                </List>
+                <List
+                    component="nav"
+                    aria-label="Mobile apps"
+                    sx={{
+                        mt: 'auto',
+                        px: 1,
+                        pt: 1,
+                        pb: 2,
+                        borderTop: '1px solid',
+                        borderColor: isDark ? 'rgba(212, 165, 116, 0.35)' : 'rgba(139, 69, 19, 0.2)',
+                    }}
+                >
+                    {APP_LINKS.map((item) => {
+                        const { label, href, icon: Icon } = item;
+                        const accent = isDark ? '#f5f1ed' : '#2c1810';
+                        return (
+                            <ListItem key={href} disablePadding sx={{ mt: 0.5 }}>
+                                <ListItemButton
+                                    component="a"
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    sx={{
+                                        borderRadius: 2,
+                                        '&:hover': {
+                                            backgroundColor: isDark ? 'rgba(200, 113, 55, 0.25)' : 'rgba(139, 69, 19, 0.15)',
+                                        },
+                                        transition: 'all 0.2s ease-in-out',
+                                    }}
+                                >
+                                    <ListItemIcon sx={{ minWidth: 36, color: accent }}>
+                                        <Icon sx={{ fontSize: '1.1rem' }} />
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={label}
+                                        sx={{
+                                            fontWeight: 500,
+                                            color: accent,
+                                            '& .MuiTypography-root': { fontSize: '0.875rem' },
                                         }}
                                     />
                                 </ListItemButton>

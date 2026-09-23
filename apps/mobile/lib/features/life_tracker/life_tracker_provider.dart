@@ -208,26 +208,13 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
 
   void setFormat(LifeFormat format) {
     if (format == state.format) return;
-    var you = state.you;
-    var opponent = state.opponent;
-
-    // Update default starting life only for players without a hero.
-    if (you.config.heroName == null) {
-      final cfg =
-          you.config.copyWith(startingLife: format.defaultStartingLife);
-      you = you.copyWith(config: cfg);
-      if (state.isPristine) {
-        you = PlayerState.fresh(cfg);
-      }
-    }
-    if (opponent.config.heroName == null) {
-      final cfg =
-          opponent.config.copyWith(startingLife: format.defaultStartingLife);
-      opponent = opponent.copyWith(config: cfg);
-      if (state.isPristine) {
-        opponent = PlayerState.fresh(cfg);
-      }
-    }
+    final cfg = PlayerConfig(startingLife: format.defaultStartingLife);
+    final you = state.isPristine
+        ? PlayerState.fresh(cfg)
+        : state.you.copyWith(config: cfg);
+    final opponent = state.isPristine
+        ? PlayerState.fresh(cfg)
+        : state.opponent.copyWith(config: cfg);
 
     state = state.copyWith(
       format: format,
@@ -241,58 +228,16 @@ class LifeTrackerNotifier extends Notifier<LifeTrackerState> {
     _persist();
   }
 
-  void setHero({
-    required bool opponent,
-    String? heroName,
-    int? life,
-  }) {
-    final player = opponent ? state.opponent : state.you;
-    final starting = life ?? player.config.startingLife;
-    final cfg = player.config.copyWith(
-      heroName: heroName,
-      startingLife: starting,
-    );
-
-    PlayerState next;
-    if (state.isPristine) {
-      next = PlayerState.fresh(cfg);
-    } else {
-      next = player.copyWith(config: cfg);
-    }
-
-    state = opponent
-        ? state.copyWith(opponent: next)
-        : state.copyWith(you: next);
-    _persist();
-  }
-
-  void setStartingLife({required bool opponent, required int life}) {
-    final clamped = life.clamp(0, 1 << 30);
-    final player = opponent ? state.opponent : state.you;
-    final cfg = player.config.copyWith(startingLife: clamped);
-
-    PlayerState next;
-    if (state.isPristine) {
-      next = PlayerState.fresh(cfg);
-    } else {
-      next = player.copyWith(config: cfg);
-    }
-
-    state = opponent
-        ? state.copyWith(opponent: next)
-        : state.copyWith(you: next);
-    _persist();
-  }
-
-  void resetGame() {
+  void startGame() {
     _youSettle?.cancel();
     _opponentSettle?.cancel();
 
     final remaining = state.format.roundSeconds;
+    final cfg = PlayerConfig(startingLife: state.format.defaultStartingLife);
     state = LifeTrackerState(
       format: state.format,
-      you: PlayerState.fresh(state.you.config),
-      opponent: PlayerState.fresh(state.opponent.config),
+      you: PlayerState.fresh(cfg),
+      opponent: PlayerState.fresh(cfg),
       history: const [],
       timerRemainingSeconds: remaining,
       timerRunning: true,
