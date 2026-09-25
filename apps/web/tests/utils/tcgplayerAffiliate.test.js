@@ -8,6 +8,8 @@ describe('tcgplayerAffiliateUrl', () => {
     expect(tcgplayerAffiliateUrl(null)).toBeNull();
     expect(tcgplayerAffiliateUrl(undefined)).toBeNull();
     expect(tcgplayerAffiliateUrl('')).toBeNull();
+    expect(tcgplayerAffiliateUrl(0)).toBeNull();
+    expect(tcgplayerAffiliateUrl(-12)).toBeNull();
   });
 
   test('wraps the product page in the partner u param', () => {

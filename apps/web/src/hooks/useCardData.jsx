@@ -1,6 +1,7 @@
 // CardDataContext.js
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { fetchCatalog } from '../services/fabDb.js';
+import { linkBasePrintings } from '../utils/catalogPrintings.js';
 // Create context
 const CardDataContext = createContext();
 
@@ -265,16 +266,21 @@ export const CardDataProvider = ({ children }) => {
 
                 const allCards = processJsonData(rows);
                 const enhancedCards = enhanceDisplayNames(allCards);
+                const linked = linkBasePrintings(enhancedCards);
 
-                // Create unique ID lookup map
+                // Create unique ID lookup map. A leftover blank-finish id
+                // points at the Normal printing so binders and links still open it.
                 const idLookup = {};
-                enhancedCards.forEach(card => {
+                linked.cards.forEach(card => {
                     if (card._uniqueId) {
                         idLookup[card._uniqueId] = card;
                     }
                 });
+                for (const [baseId, normalId] of linked.aliases) {
+                    if (idLookup[normalId]) idLookup[baseId] = idLookup[normalId];
+                }
 
-                setCards(enhancedCards);
+                setCards(linked.cards);
                 setCardIdLookup(idLookup);
 
             } catch (err) {

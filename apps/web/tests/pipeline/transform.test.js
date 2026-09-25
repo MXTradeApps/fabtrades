@@ -97,11 +97,11 @@ describe('toBigInt', () => {
 });
 
 describe('subtypeSlug', () => {
-  it('falls back to "base" for empty/blank input', () => {
-    expect(subtypeSlug('')).toBe('base');
-    expect(subtypeSlug(null)).toBe('base');
-    expect(subtypeSlug(undefined)).toBe('base');
-    expect(subtypeSlug('!!!')).toBe('base');
+  it('treats an empty finish as Normal', () => {
+    expect(subtypeSlug('')).toBe('normal');
+    expect(subtypeSlug(null)).toBe('normal');
+    expect(subtypeSlug(undefined)).toBe('normal');
+    expect(subtypeSlug('!!!')).toBe('normal');
   });
 
   it('lowercases and hyphenates', () => {
@@ -120,9 +120,9 @@ describe('printingId', () => {
     expect(printingId(101, 'Rainbow Foil')).toBe('101-rainbow-foil');
   });
 
-  it('uses the "base" slug when subtype is missing', () => {
-    expect(printingId(101, '')).toBe('101-base');
-    expect(printingId(101, null)).toBe('101-base');
+  it('uses the Normal id when subtype is missing', () => {
+    expect(printingId(101, '')).toBe('101-normal');
+    expect(printingId(101, null)).toBe('101-normal');
   });
 });
 
@@ -438,5 +438,31 @@ describe('buildRows', () => {
 
   it('returns empty collections for empty input', () => {
     expect(buildRows([], '1', 1, new Map())).toEqual({ cards: [], prices: [], history: [] });
+  });
+
+  it('stores a blank finish on the Normal printing instead of a second card', () => {
+    const { cards, prices } = buildRows([
+      {
+        productId: '715690',
+        name: 'Bravery of the Blade',
+        subTypeName: '',
+        extNumber: 'IAR254',
+        marketPrice: '',
+        lowPrice: '',
+      },
+      {
+        productId: '715690',
+        name: 'Bravery of the Blade',
+        subTypeName: 'Normal',
+        extNumber: 'IAR254',
+        marketPrice: '5.18',
+        lowPrice: '5.36',
+      },
+    ], '24762', 1, new Map());
+    expect(cards).toHaveLength(1);
+    expect(cards[0].id).toBe('715690-normal');
+    expect(cards[0].sub_type_name).toBe('Normal');
+    expect(prices).toHaveLength(1);
+    expect(prices[0]).toMatchObject({ card_id: '715690-normal', tcg_market: 5.18, tcg_low: 5.36 });
   });
 });

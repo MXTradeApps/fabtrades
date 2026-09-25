@@ -4,15 +4,18 @@ Daily ingest that publishes the Flesh and Blood (FAB) card + price database to *
 any number of apps (the mobile app, the web app, etc.) can read from one shared source.
 
 ```
-TCGCSV (TCGplayer, game 62)  ──►  transform  ──►  Supabase (upsert)
+Official card list (Legend Story Studios)  ──►  identity (name, number, stats)
+TCGCSV (TCGplayer, game 62)                ──►  prices, mapped onto those printings
+                                                    Supabase (upsert)
                                                     fab_sets, fab_cards, fab_card_prices, fab_price_history
 ```
 
 ## What it does
-1. Fetches sets (TCGplayer "groups") from TCGCSV.
-2. Fetches each set's `ProductsAndPrices.csv` (cards, art URLs, USD prices).
-3. Upserts everything into Supabase and appends a daily row to `fab_price_history`.
-4. Logs the run in `fab_pipeline_runs`.
+1. Fetches the official English card list. That list wins wherever a printing disagrees with TCGplayer (name, collector number, type, class, pitch, and the other card stats).
+2. Fetches sets (TCGplayer "groups") from TCGCSV and each set's `ProductsAndPrices.csv`.
+3. Maps each official printing onto the TCGplayer row we already store, keeping that row's id so prices, history, and binders stay attached. Official printings with no TCGplayer row are added under a set we already know, without a price. TCGplayer rows that do not map are left in place.
+4. Upserts everything into Supabase and appends a daily row to `fab_price_history`.
+5. Logs the run in `fab_pipeline_runs`.
 
 CardMarket EU prices come from the public singles catalog for game 16 (Flesh and Blood),
 matched to TCGCSV printings by normalized name (including pitch color). Game 22 is

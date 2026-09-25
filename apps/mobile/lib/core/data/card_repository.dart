@@ -1073,6 +1073,17 @@ List<CardModel> finishesForCard(List<CardModel> catalog, CardModel card) {
   return matches;
 }
 
+/// `{productId}-base` is a blank finish that later became Normal
+/// (`{productId}-normal`). Keep the Normal row so search does not list both.
+List<CardModel> linkBaseToNormal(List<CardModel> cards) {
+  final normalIds = cards.map((card) => card.id).where((id) => id.endsWith('-normal')).toSet();
+  return cards.where((card) {
+    if (!card.id.endsWith('-base')) return true;
+    final normalId = '${card.id.substring(0, card.id.length - 4)}normal';
+    return !normalIds.contains(normalId);
+  }).toList();
+}
+
 /// Reads card + price data from the shared Supabase database.
 class CardRepository {
   CardRepository(this._client);
@@ -1100,7 +1111,7 @@ class CardRepository {
       if (list.length < pageSize) break;
       from += pageSize;
     }
-    return all;
+    return linkBaseToNormal(all);
   }
 
   /// All printings (normal/foil/alt) that share a card name.
@@ -1111,9 +1122,9 @@ class CardRepository {
         .eq('name', name)
         .eq('is_sealed', false)
         .order('is_foil');
-    return (rows as List)
+    return linkBaseToNormal((rows as List)
         .map((r) => CardModel.fromMap(r as Map<String, dynamic>))
-        .toList();
+        .toList());
   }
 
   /// Daily price snapshots for a printing (oldest → newest) for charts.

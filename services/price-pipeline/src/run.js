@@ -2,7 +2,8 @@ import { getSupabaseClient, ENABLE_CARDMARKET } from './config.js';
 import { fetchGroups, fetchGroupProducts } from './tcgcsv.js';
 import { fetchCardMarketByName } from './cardmarket.js';
 import { buildRows } from './transform.js';
-import { upsertInChunks } from './supabase.js';
+import { applyOfficialCards, buildUnmatchedOfficialCards, fetchOfficialPrintings } from './official.js';
+import { retireBaseDuplicates, upsertInChunks } from './supabase.js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 
@@ -21,6 +22,10 @@ function dedupeByKey(arr, keyFn) {
 async function main() {
   const startedAt = new Date();
   console.log(`🌀 FABTrades ingest${DRY_RUN ? ' (dry run)' : ''} @ ${startedAt.toISOString()}`);
+
+  console.log('📡 Fetching official card list...');
+  const officialRows = await fetchOfficialPrintings();
+  console.log(`   ✓ ${officialRows.length} English printings`);
 
   console.log('📡 Fetching TCGplayer groups (sets)...');
   const groups = await fetchGroups();
@@ -64,6 +69,29 @@ async function main() {
     console.log(`${cards.length} products`);
   }
 
+  const groupsById = new Map(groups.map((group) => [Number(group.groupId), group]));
+  const { claimed, stats } = applyOfficialCards(allCards, officialRows, groupsById);
+  const now = allCards[0]?.updated_at || new Date().toISOString();
+  const { cards: officialOnly, skipped: officialSkipped } = buildUnmatchedOfficialCards(
+    officialRows,
+    claimed,
+    groups,
+    now
+  );
+  allCards.push(...officialOnly);
+  console.log(
+    `   ✓ Official list: ${stats.matched} mapped (${stats.corrected} corrected), ` +
+      `${officialOnly.length} added, ${stats.unmatchedSingles} TCGplayer singles left unmapped, ` +
+      `${officialSkipped} official printings skipped (no known set)`
+  );
+  if (stats.unmatchedSample.length > 0) {
+    console.log(`   · Unmapped sample: ${stats.unmatchedSample.join(' || ')}`);
+  }
+  if (officialOnly.length > 0) {
+    const sample = officialOnly.slice(0, 10).map((card) => `${card.collector_number} ${card.name}`);
+    console.log(`   · Added sample: ${sample.join(' || ')}`);
+  }
+
   // Safety net: collapse any exact-duplicate keys so a single upsert can't touch a row twice.
   dedupeByKey(allCards, (c) => c.id);
   dedupeByKey(allPrices, (p) => p.card_id);
@@ -101,6 +129,8 @@ async function main() {
     await upsertInChunks(supabase, 'fab_card_prices', allPrices, 'card_id');
     console.log('⬆️  Upserting price_history (daily snapshot)...');
     await upsertInChunks(supabase, 'fab_price_history', allHistory, 'card_id,captured_on');
+    console.log('🔗 Linking blank-finish rows onto Normal...');
+    await retireBaseDuplicates(supabase);
 
     await supabase
       .from('fab_pipeline_runs')

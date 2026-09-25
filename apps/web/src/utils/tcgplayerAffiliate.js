@@ -17,11 +17,13 @@ export const TCGPLAYER_PARTNER_LINK =
  */
 export function tcgplayerAffiliateUrl(productId, options = {}) {
     if (productId == null || productId === '') return null;
+    const id = Number(productId);
+    if (!Number.isInteger(id) || id <= 0) return null;
 
     const partnerLink = options.partnerLink || TCGPLAYER_PARTNER_LINK;
     if (!partnerLink) return null;
 
-    const destination = new URL(`https://www.tcgplayer.com/product/${productId}`);
+    const destination = new URL(`https://www.tcgplayer.com/product/${id}`);
     const printing = (options.subTypeName || '').trim();
     if (printing && printing.toLowerCase() !== 'normal') {
         destination.searchParams.set('Printing', printing);

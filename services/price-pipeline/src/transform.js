@@ -44,7 +44,10 @@ export function subtypeSlug(subTypeName) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || 'base';
+  // A missing finish is the Normal printing. TCGplayer sometimes sends that row
+  // with an empty subTypeName and later labels it "Normal"; those must share
+  // one id or the catalog shows the card twice.
+  return slug || 'normal';
 }
 
 export function printingId(productId, subTypeName) {
@@ -117,7 +120,7 @@ export function buildRows(groupProducts, groupId, setNumber, cmByName) {
       clean_name: row.cleanName || null,
       image_url: row.imageUrl || null,
       tcgplayer_url: row.url || null,
-      sub_type_name: row.subTypeName || null,
+      sub_type_name: row.subTypeName || 'Normal',
       is_foil: isFoil,
       rarity: row.extRarity || row.rarity || null,
       collector_number: row.extNumber || row.number || null,
@@ -169,5 +172,45 @@ export function buildRows(groupProducts, groupId, setNumber, cmByName) {
     });
   });
 
-  return { cards, prices, history };
+  return collapsePrintings(cards, prices, history);
+}
+
+// A blank finish and an explicit Normal row share an id. Keep one of each,
+// preferring a labeled subtype and any price that is actually present.
+function fillFrom(primary, secondary) {
+  const merged = { ...secondary, ...primary };
+  for (const [key, value] of Object.entries(secondary)) {
+    if (merged[key] == null && value != null) merged[key] = value;
+  }
+  return merged;
+}
+
+function collapsePrintings(cards, prices, history) {
+  const cardMap = new Map();
+  for (const card of cards) {
+    const prev = cardMap.get(card.id);
+    if (!prev) {
+      cardMap.set(card.id, card);
+      continue;
+    }
+    const rank = (row) => (row.sub_type_name ? 1 : 0);
+    const primary = rank(card) >= rank(prev) ? card : prev;
+    const secondary = primary === card ? prev : card;
+    cardMap.set(card.id, fillFrom(primary, secondary));
+  }
+
+  const mergePriced = (map, row, key) => {
+    const prev = map.get(key);
+    map.set(key, prev ? fillFrom(row, prev) : row);
+  };
+  const priceMap = new Map();
+  for (const price of prices) mergePriced(priceMap, price, price.card_id);
+  const historyMap = new Map();
+  for (const row of history) mergePriced(historyMap, row, `${row.card_id}|${row.captured_on}`);
+
+  return {
+    cards: [...cardMap.values()],
+    prices: [...priceMap.values()],
+    history: [...historyMap.values()]
+  };
 }
