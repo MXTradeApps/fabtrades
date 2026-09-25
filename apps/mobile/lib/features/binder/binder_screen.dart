@@ -1,16 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:showcaseview/showcaseview.dart';
 
 import '../../app/app.dart';
 import '../../app/theme.dart';
 import '../../core/logic/binder_names.dart';
+import '../../core/logic/binder_text.dart';
 import '../../core/logic/free_limits.dart';
 import '../../core/models/binder.dart';
 import '../../core/models/binder_entry.dart';
 import '../../core/providers.dart';
+import '../auth/sign_in_sheet.dart';
 import '../onboarding/onboarding_keys.dart';
 import '../onboarding/onboarding_provider.dart';
 import '../onboarding/onboarding_repository.dart';
@@ -103,6 +106,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
     final onBinderTab = _tab.index == 0;
     final viewingWants = !onBinderTab || openId == BinderIds.want;
     final inBinder = onBinderTab && openId != null;
+    final inOwnedBinder = inBinder && !viewingWants;
     final openRows = openId == null || openId == BinderIds.want
         ? const <BinderEntry>[]
         : ownedInBinder(owned, openId);
@@ -134,14 +138,40 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
               icon: const Icon(Icons.add_box_outlined),
               label: const Text('New'),
             ),
-          if ((inBinder || viewingWants) &&
-              (viewingWants ? _count(wanted) : openRows.length) > 0)
+          if (viewingWants && _count(wanted) > 0)
             TextButton(
               key: const Key('clearBinder'),
               onPressed: () => _clearBinder(context),
-              child: Text(viewingWants ? 'Clear Want List' : 'Clear Binder'),
+              child: const Text('Clear Want List'),
             ),
-          const AppMenuAction(),
+          if (inOwnedBinder)
+            PopupMenuButton<String>(
+              key: const Key('binderOverflow'),
+              tooltip: 'Binder actions',
+              icon: const Icon(Icons.more_vert),
+              onSelected: (action) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!context.mounted) return;
+                  if (action == 'clear') _clearBinder(context);
+                  if (action == 'share') _shareBinder(context);
+                });
+              },
+              itemBuilder: (_) => [
+                if (openRows.isNotEmpty)
+                  const PopupMenuItem(
+                    key: Key('clearBinder'),
+                    value: 'clear',
+                    child: Text('Clear Binder'),
+                  ),
+                const PopupMenuItem(
+                  key: Key('shareBinder'),
+                  value: 'share',
+                  child: Text('Share Binder'),
+                ),
+              ],
+            )
+          else
+            const AppMenuAction(),
         ],
         bottom: inBinder
             ? null
@@ -379,6 +409,81 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
     );
     if (confirmed != true || !context.mounted) return;
     ref.read(binderProvider.notifier).clearInBinder(targetId);
+  }
+
+  Future<void> _shareBinder(BuildContext context) async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const Key('shareBinderDialog'),
+        title: const Text('Share Binder'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            FilledButton.icon(
+              key: const Key('copyBinderLink'),
+              onPressed: () => Navigator.pop(ctx, 'link'),
+              icon: const Icon(Icons.link),
+              label: const Text('Copy Link to Binder'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const Key('copyBinderText'),
+              onPressed: () => Navigator.pop(ctx, 'text'),
+              icon: const Icon(Icons.text_snippet_outlined),
+              label: const Text('Copy Binder as Text'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    if (choice == 'link') {
+      await _copyBinderLink(context);
+    } else if (choice == 'text') {
+      await _copyBinderText(context);
+    }
+  }
+
+  Future<void> _copyBinderLink(BuildContext context) async {
+    if (!ref.read(isSignedInProvider)) {
+      final signedIn = await presentSignIn(
+        context,
+        source: 'share_binder',
+        copy: SignInCopy.shareBinder,
+      );
+      if (!signedIn || !context.mounted) return;
+    }
+    try {
+      final share =
+          await ref.read(binderShareRepositoryProvider).ensureEnabledShare();
+      await Clipboard.setData(ClipboardData(text: share.url));
+      if (!context.mounted) return;
+      _toast(context, 'Link copied');
+    } catch (_) {
+      if (!context.mounted) return;
+      _toast(context, 'Could not copy link');
+    }
+  }
+
+  Future<void> _copyBinderText(BuildContext context) async {
+    final openId = ref.read(openBinderIdProvider);
+    if (openId == null) return;
+    final binder = ref.read(bindersProvider.notifier).byId(openId);
+    final text = formatBinderAsText(
+      name: binder?.name ?? 'Binder',
+      entries: ownedInBinder(ref.read(binderProvider), openId),
+    );
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
+    _toast(context, 'Binder copied as text');
+  }
+
+  void _toast(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showNameError(BuildContext context, BinderNameResult result) {

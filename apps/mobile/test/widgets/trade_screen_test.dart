@@ -16,8 +16,9 @@ void main() {
     expect(find.text('Add my cards'), findsOneWidget);
     expect(find.text('Add their cards'), findsOneWidget);
     expect(find.text('Even'), findsOneWidget);
-    expect(find.text('Their 0 cards'), findsOneWidget);
-    expect(find.text('My 0 cards'), findsOneWidget);
+    expect(find.text('Receiving'), findsOneWidget);
+    expect(find.text('Giving'), findsOneWidget);
+    expect(find.text('TCGplayer'), findsNothing);
     expect(tester.getSize(find.byKey(const Key('tradeDragBar'))).height,
         lessThan(88));
   });
@@ -38,8 +39,8 @@ void main() {
 
     expect(find.text('Their Card'), findsOneWidget);
     expect(find.text('My Card'), findsOneWidget);
-    expect(find.text('Their 1 card'), findsOneWidget);
-    expect(find.text('My 1 card'), findsOneWidget);
+    expect(find.text('Receiving'), findsOneWidget);
+    expect(find.text('Giving'), findsOneWidget);
     // theirs 10 - mine 4 => +$6.00 in your favor
     expect(find.text('+\$6.00'), findsOneWidget);
   });
@@ -63,7 +64,7 @@ void main() {
     expect(find.text('Low \$0.50'), findsOneWidget);
   });
 
-  testWidgets('totals show market and low for both sides', (tester) async {
+  testWidgets('totals show only the low value for both sides', (tester) async {
     final container = await pumpApp(tester, const TradeScreen());
     await tester.pump();
 
@@ -77,11 +78,11 @@ void main() {
         );
     await tester.pump();
 
-    expect(find.text('\$10.00'), findsOneWidget);
-    expect(find.text('\$4.00'), findsOneWidget);
+    expect(find.text('\$10.00'), findsNothing);
+    expect(find.text('\$4.00'), findsNothing);
     expect(find.text('Low \$8.00'), findsOneWidget);
     expect(find.text('Low \$3.00'), findsOneWidget);
-    expect(find.text('+\$6.00'), findsOneWidget);
+    expect(find.text('+\$6.00'), findsNothing);
     expect(find.text('Low +\$5.00'), findsOneWidget);
     expect(tester.getSize(find.byKey(const Key('tradeDragBar'))).height,
         lessThan(108));

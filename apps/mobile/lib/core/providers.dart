@@ -13,6 +13,7 @@ import 'data/auth_repository.dart';
 import 'data/card_repository.dart';
 import 'data/catalog_repository.dart';
 import 'data/binder_repository.dart';
+import 'data/binder_share_repository.dart';
 import 'data/binders_repository.dart';
 import 'data/entitlement_repository.dart';
 import 'data/lend_repository.dart';
@@ -780,6 +781,10 @@ final binderRepositoryProvider = Provider<BinderRepository>((ref) =>
 final bindersRepositoryProvider = Provider<BindersRepository>((ref) =>
     BindersRepository(
         ref.watch(sharedPreferencesProvider), ref.watch(syncJournalProvider)));
+
+final binderShareRepositoryProvider = Provider<BinderShareRepository>(
+  (ref) => BinderShareRepository(ref.watch(supabaseClientProvider)),
+);
 
 /// Currently drilled-in Binder, or null when the grid is showing.
 final openBinderIdProvider = NotifierProvider<OpenBinderIdNotifier, String?>(

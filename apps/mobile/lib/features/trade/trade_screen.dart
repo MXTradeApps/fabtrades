@@ -10,7 +10,6 @@ import '../../core/analytics/analytics.dart';
 import '../../core/data/card_repository.dart';
 import '../../core/logic/free_limits.dart';
 import '../../core/logic/pricing.dart';
-import '../../core/models/app_settings.dart';
 import '../../core/models/card_model.dart';
 import '../../core/models/trade.dart';
 import '../../core/providers.dart';
@@ -43,7 +42,6 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
   @override
   Widget build(BuildContext context) {
     final trade = ref.watch(tradeDraftProvider);
-    final settings = ref.watch(settingsProvider);
     final pricing = ref.watch(pricingProvider);
     final notifier = ref.read(tradeDraftProvider.notifier);
     final isEmpty = trade.haveItems.isEmpty && trade.wantItems.isEmpty;
@@ -110,7 +108,6 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
                       description: TourCopy.tradeDragBody,
                       child: _DragBar(
                         trade: trade,
-                        settings: settings,
                         pricing: pricing,
                         onFindFiller: () => showTradeFillerSheet(context, ref),
                         onDrag: (dy) {
@@ -413,18 +410,16 @@ class _TradeSideList extends ConsumerWidget {
 }
 
 /// The draggable summary bar between the two lists. Drag vertically to give
-/// more room to either side; shows each side's market + low totals and delta.
+/// more room to either side; shows each side's low total and the low delta.
 class _DragBar extends StatelessWidget {
   const _DragBar({
     required this.trade,
-    required this.settings,
     required this.pricing,
     required this.onDrag,
     required this.onFindFiller,
   });
 
   final Trade trade;
-  final AppSettings settings;
   final Pricing pricing;
   final ValueChanged<double> onDrag;
   final VoidCallback onFindFiller;
@@ -447,16 +442,23 @@ class _DragBar extends StatelessWidget {
     final diff = theirs - mine; // + => you gain value
     final lowDiff = theirLow - myLow;
     final balanced = diff.abs() < 0.01;
-    final Color deltaColor = balanced
-        ? theme.colorScheme.onSurfaceVariant
-        : (diff >= 0 ? AppTheme.positive : AppTheme.negative);
-    final String deltaText = balanced
-        ? 'Even'
-        : '${diff >= 0 ? '+' : '-'}$symbol${diff.abs().toStringAsFixed(2)}';
-    final String lowDeltaText = lowDiff.abs() < 0.01
-        ? 'Low Even'
-        : 'Low ${lowDiff >= 0 ? '+' : '-'}$symbol${lowDiff.abs().toStringAsFixed(2)}';
     final showLow = theirLow > 0 || myLow > 0;
+    final shownDiff = showLow ? lowDiff : diff;
+    final shownBalanced = shownDiff.abs() < 0.01;
+    final Color deltaColor = shownBalanced
+        ? theme.colorScheme.onSurfaceVariant
+        : (shownDiff >= 0 ? AppTheme.positive : AppTheme.negative);
+    final String deltaText = shownBalanced
+        ? (showLow ? 'Low Even' : 'Even')
+        : showLow
+            ? 'Low ${shownDiff >= 0 ? '+' : '-'}$symbol${shownDiff.abs().toStringAsFixed(2)}'
+            : '${shownDiff >= 0 ? '+' : '-'}$symbol${shownDiff.abs().toStringAsFixed(2)}';
+    final theirValue = showLow
+        ? 'Low $symbol${theirLow.toStringAsFixed(2)}'
+        : '$symbol${theirs.toStringAsFixed(2)}';
+    final myValue = showLow
+        ? 'Low $symbol${myLow.toStringAsFixed(2)}'
+        : '$symbol${mine.toStringAsFixed(2)}';
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -486,58 +488,25 @@ class _DragBar extends StatelessWidget {
               theme,
               icon: Icons.south,
               accent: AppTheme.wantAccent,
-              label: 'Their ${trade.wantCount} '
-                  '${trade.wantCount == 1 ? 'card' : 'cards'}',
-              value: '$symbol${theirs.toStringAsFixed(2)}',
-              lowValue: showLow ? 'Low $symbol${theirLow.toStringAsFixed(2)}' : null,
+              label: 'Receiving',
+              value: theirValue,
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 1),
               child: Row(
                 children: [
-                  Icon(Icons.sell_outlined,
-                      size: 13, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 5),
-                  Flexible(
-                    child: Text(
-                      settings.source.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                  const Spacer(),
                   // When the sides don't match, offer a shortcut to find cards
-                  // that fill the value gap; it lives in the bar's empty middle.
-                  if (!balanced) ...[
-                    _FindFillerButton(onTap: onFindFiller),
-                    const Spacer(),
-                  ],
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(balanced ? Icons.balance : Icons.trending_up,
-                          size: 14, color: deltaColor),
-                      const SizedBox(width: 4),
-                      Text(deltaText,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              color: deltaColor,
-                              fontWeight: FontWeight.w800,
-                              height: 1.15)),
-                      if (showLow) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          lowDeltaText,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontSize: 11,
-                            height: 1.15,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                  // that fill the value gap.
+                  if (!balanced) _FindFillerButton(onTap: onFindFiller),
+                  const Spacer(),
+                  Icon(shownBalanced ? Icons.balance : Icons.trending_up,
+                      size: 14, color: deltaColor),
+                  const SizedBox(width: 4),
+                  Text(deltaText,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: deltaColor,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15)),
                 ],
               ),
             ),
@@ -545,10 +514,8 @@ class _DragBar extends StatelessWidget {
               theme,
               icon: Icons.north,
               accent: AppTheme.haveAccent,
-              label: 'My ${trade.haveCount} '
-                  '${trade.haveCount == 1 ? 'card' : 'cards'}',
-              value: '$symbol${mine.toStringAsFixed(2)}',
-              lowValue: showLow ? 'Low $symbol${myLow.toStringAsFixed(2)}' : null,
+              label: 'Giving',
+              value: myValue,
             ),
           ],
         ),
@@ -562,7 +529,6 @@ class _DragBar extends StatelessWidget {
     required Color accent,
     required String label,
     required String value,
-    String? lowValue,
   }) {
     return Row(
       children: [
@@ -575,17 +541,6 @@ class _DragBar extends StatelessWidget {
         Text(value,
             style: theme.textTheme.bodySmall
                 ?.copyWith(fontWeight: FontWeight.w800, height: 1.15)),
-        if (lowValue != null) ...[
-          const SizedBox(width: 6),
-          Text(
-            lowValue,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 11,
-              height: 1.15,
-            ),
-          ),
-        ],
       ],
     );
   }

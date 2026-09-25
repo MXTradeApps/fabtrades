@@ -149,6 +149,9 @@ void main() {
     expect(find.text('My Binders'), findsNothing);
     expect(find.widgetWithText(Tab, 'Want List (0)'), findsNothing);
     expect(find.widgetWithText(Tab, 'Binder (1)'), findsNothing);
+    expect(find.byTooltip('Menu'), findsNothing);
+    expect(find.byKey(const Key('binderOverflow')), findsOneWidget);
+    expect(find.byKey(const Key('clearBinder')), findsNothing);
 
     await tester.tap(find.byKey(const Key('binderBackToGrid')));
     await tester.pumpAndSettle();
@@ -176,7 +179,13 @@ void main() {
     await tester.tap(find.byKey(const Key('binderTile-system:trade')));
     await tester.pumpAndSettle();
     expect(find.text('Alpha'), findsOneWidget);
+    expect(find.byKey(const Key('clearBinder')), findsNothing);
+    expect(find.byTooltip('Menu'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('binderOverflow')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('clearBinder')), findsOneWidget);
+    expect(find.byKey(const Key('shareBinder')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('clearBinder')));
     await tester.pumpAndSettle();
@@ -192,6 +201,8 @@ void main() {
       isNotEmpty,
     );
 
+    await tester.tap(find.byKey(const Key('binderOverflow')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('clearBinder')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('binderClearConfirmButton')));
@@ -541,5 +552,50 @@ void main() {
     expect(find.text('51–51 of 51'), findsOneWidget);
     expect(find.byKey(const Key('binderRow-c050-Normal')), findsOneWidget);
     expect(find.byKey(const Key('binderRow-c000-Normal')), findsNothing);
+  });
+
+  testWidgets('grid keeps the hamburger; empty open Binder still shares',
+      (tester) async {
+    await pumpGrid(tester);
+    expect(find.byTooltip('Menu'), findsOneWidget);
+    expect(find.byKey(const Key('binderOverflow')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Menu'), findsNothing);
+    expect(find.byKey(const Key('binderOverflow')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('binderOverflow')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('clearBinder')), findsNothing);
+    expect(find.byKey(const Key('shareBinder')), findsOneWidget);
+  });
+
+  testWidgets('Share Binder offers copy link and copy as text', (tester) async {
+    final container = await pumpGrid(tester);
+    container.read(binderProvider.notifier).add(
+          buildCard(
+            id: 'a-Normal',
+            name: 'Alpha',
+            collectorNumber: 'SUP001',
+            setName: 'Super Slam',
+          ),
+          quantity: 2,
+          binderId: BinderIds.trade,
+        );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('binderOverflow')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('shareBinder')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('shareBinderDialog')), findsOneWidget);
+    expect(find.byKey(const Key('copyBinderLink')), findsOneWidget);
+    expect(find.byKey(const Key('copyBinderText')), findsOneWidget);
+    expect(find.text('Copy Link to Binder'), findsOneWidget);
+    expect(find.text('Copy Binder as Text'), findsOneWidget);
   });
 }

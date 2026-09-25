@@ -65,6 +65,13 @@ class SignInCopy {
         'your binder and trade history. You can do this later in My Account.',
     dismissLabel: 'Not now',
   );
+
+  static const shareBinder = SignInCopy(
+    title: 'Sign in to share a link',
+    body:
+        'A shareable binder link is tied to your account so you can turn it '
+        'off later. Copying the binder as text still works without signing in.',
+  );
 }
 
 /// Why an account is worth having, then one button per provider.

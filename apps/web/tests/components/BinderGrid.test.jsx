@@ -14,6 +14,7 @@ const mockRenameBinder = jest.fn();
 const mockDeleteBinder = jest.fn();
 const mockClearBinder = jest.fn();
 const mockApplyBinderMove = jest.fn();
+const mockEnsureBinderShare = jest.fn();
 
 let mockUser = { id: 'user-1' };
 
@@ -73,7 +74,7 @@ jest.mock('../../src/services/binder.js', () => ({
     getBinders: (...args) => mockGetBinders(...args),
     upsertEntry: (...args) => mockUpsertEntry(...args),
     removeEntry: jest.fn(),
-    ensureBinderShare: jest.fn(),
+    ensureBinderShare: (...args) => mockEnsureBinderShare(...args),
     regenerateBinderShare: jest.fn(),
     setBinderShareEnabled: jest.fn(),
     createBinder: (...args) => mockCreateBinder(...args),
@@ -138,6 +139,14 @@ describe('BinderGrid', () => {
         mockDeleteBinder.mockResolvedValue({ data: { success: true }, error: null });
         mockClearBinder.mockResolvedValue({ data: { success: true }, error: null });
         mockApplyBinderMove.mockResolvedValue({ data: {}, error: null });
+        mockEnsureBinderShare.mockResolvedValue({
+            data: {
+                token: 'abc123',
+                isEnabled: true,
+                url: 'https://fabtrades.net/b/abc123',
+            },
+            error: null,
+        });
     });
 
     test('signed-in /binder shows two tiles and drill-in/back', async () => {
@@ -657,5 +666,36 @@ describe('BinderGrid', () => {
         expect(screen.queryByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).not.toBeInTheDocument();
         expect(screen.getByTestId('binder-home-title')).toHaveTextContent('My Binders');
         expect(screen.getByTestId('binder-open-name')).toHaveTextContent('Trade Binder');
+    });
+
+    test('Share modal copies binder contents as text', async () => {
+        const writeText = jest.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, { clipboard: { writeText } });
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    {
+                        cardId: pricedPrinting._uniqueId,
+                        quantity: 3,
+                        isWanted: false,
+                        binderId: 'system:trade',
+                        card: pricedPrinting,
+                    },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        renderCollection(false);
+        fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
+        expect(await screen.findByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+        expect(await screen.findByText('Share binder')).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('copy-binder-text'));
+        await waitFor(() => expect(writeText).toHaveBeenCalled());
+        expect(writeText.mock.calls[0][0]).toContain('Trade Binder');
+        expect(writeText.mock.calls[0][0]).toContain('3x Lightning Press');
+        expect(await screen.findByText('Binder copied as text')).toBeInTheDocument();
     });
 });

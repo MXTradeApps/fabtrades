@@ -10,6 +10,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    Divider,
     FormControl,
     FormControlLabel,
     IconButton,
@@ -59,6 +60,7 @@ import {
     WANT_BINDER_ID,
 } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
+import { formatBinderAsText } from '../utils/binderText.js';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
 import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
@@ -680,6 +682,29 @@ const BinderCollection = ({ isWanted = false }) => {
         }
     };
 
+    const copyBinderAsText = async () => {
+        const text = formatBinderAsText({
+            name: viewingWants ? 'Want List' : (openBinder?.name || 'Binder'),
+            entries: entries.map((entry) => {
+                const card = resolveCard(entry);
+                return {
+                    quantity: entry.quantity,
+                    name: card.name,
+                    collectorNumber: card.collectorNumber,
+                    finish: card.finish,
+                    condition: entry.condition || 'NM',
+                    setName: card.setName,
+                };
+            }),
+        });
+        try {
+            await navigator.clipboard.writeText(text);
+            setToast('Binder copied as text');
+        } catch {
+            setToast('Could not copy binder');
+        }
+    };
+
     const toggleShareEnabled = async (enabled) => {
         setShareBusy(true);
         const { data, error: shareError } = await setBinderShareEnabled(enabled);
@@ -1249,6 +1274,21 @@ const BinderCollection = ({ isWanted = false }) => {
                             </Box>
                         </>
                     )}
+                    <Divider sx={{ my: 2.5 }} />
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.75, color: textColor }}>
+                        Copy binder as text
+                    </Typography>
+                    <Typography sx={{ color: mutedColor, fontSize: '0.875rem', mb: 1.5 }}>
+                        Copy a list of the cards in this binder to paste into Discord, notes, or a spreadsheet.
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        startIcon={<ContentCopyIcon />}
+                        onClick={copyBinderAsText}
+                        data-testid="copy-binder-text"
+                    >
+                        Copy Binder as Text
+                    </Button>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
                     <Button

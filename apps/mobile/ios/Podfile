@@ -37,7 +37,8 @@ require File.expand_path(
   _mlkit_commons['rootUri'].sub(%r{\Afile://}, ''),
 )
 
-# Flutter regenerates this package at iOS 13.0; file_picker_darwin needs 14.0+.
+# Flutter regenerates this package at iOS 13.0. file_picker_darwin needs 14.0+,
+# and Xcode only honors the enum form (.iOS(.v15)), not .iOS("15.5").
 spm_ios_sync = File.expand_path('../tool/sync_spm_ios_platform.sh', __dir__)
 system('bash', spm_ios_sync) if File.exist?(spm_ios_sync)
 
