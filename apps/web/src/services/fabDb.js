@@ -27,6 +27,9 @@ const restFetch = async (pathAndQuery, headers = {}, { method = 'GET', body, sig
     const { url, key } = requireSupabaseConfig();
     const response = await fetch(`${url}/rest/v1/${pathAndQuery}`, {
         method,
+        // Prices change on every pipeline run. A cached GET of `updated_at` or of
+        // the catalog itself would keep the previous ingest on screen.
+        cache: 'no-store',
         headers: {
             apikey: key,
             Authorization: `Bearer ${key}`,
@@ -255,23 +258,50 @@ const fetchCatalogSnapshot = async (url) => {
 };
 
 /**
- * The catalog, preferring the snapshot `scripts/generateCatalog.js` writes at
- * build time.
- *
- * Reading it live costs seventeen paginated requests against PostgREST, none of
- * which the browser is allowed to cache — Supabase sends no `Cache-Control`, so
- * every visit paid for the whole catalog again. The snapshot is one immutable,
- * CDN-served file instead.
- *
- * Falling back to the database keeps `vite dev` working without a build step,
- * and covers a client whose cached bundle outlived the deploy its snapshot
- * shipped in.
+ * True when a pipeline run has written prices newer than the build-time snapshot.
+ * Missing live timestamp means we cannot tell, so the snapshot stands.
  */
-export const fetchCatalog = async () => {
-    const url = snapshotUrl();
+export function catalogSnapshotIsStale(snapshotUpdatedAt, liveUpdatedAt) {
+    if (!liveUpdatedAt) return false;
+    if (!snapshotUpdatedAt) return true;
+    const live = Date.parse(liveUpdatedAt);
+    const baked = Date.parse(snapshotUpdatedAt);
+    if (Number.isNaN(live) || Number.isNaN(baked)) return liveUpdatedAt !== snapshotUpdatedAt;
+    return live > baked;
+}
+
+/**
+ * The catalog, preferring the snapshot `scripts/generateCatalog.js` writes at
+ * build time when it still matches the database.
+ *
+ * Reading it live costs seventeen paginated requests against PostgREST. The
+ * snapshot is one immutable, CDN-served file instead, and it is what most
+ * visits use. It is only as fresh as the last deploy, though, and the price
+ * pipeline can run without that deploy succeeding. Every load therefore checks
+ * `fab_card_prices.updated_at`. A newer timestamp means the pipeline has run,
+ * and the catalog is read from the database so the site shows those prices.
+ *
+ * Falling back to the database also keeps `vite dev` working without a build
+ * step, and covers a client whose cached bundle outlived the deploy its
+ * snapshot shipped in.
+ *
+ * @param {{ snapshotUrl?: string|null }} [options] Tests pass a snapshot URL.
+ *   Production omits it and uses the URL baked into the build.
+ */
+export const fetchCatalog = async ({ snapshotUrl: url = snapshotUrl() } = {}) => {
     if (url) {
         try {
-            return await fetchCatalogSnapshot(url);
+            const [snapshot, liveUpdatedAt] = await Promise.all([
+                fetchCatalogSnapshot(url),
+                fetchPricesUpdatedAt().catch((error) => {
+                    console.warn('[catalog] Could not check price freshness.', error);
+                    return null;
+                })
+            ]);
+            if (!catalogSnapshotIsStale(snapshot.pricesUpdatedAt, liveUpdatedAt)) {
+                return snapshot;
+            }
+            console.info('[catalog] Pipeline prices are newer than this build; reading the database.');
         } catch (error) {
             console.warn('[catalog] Falling back to a direct database read.', error);
         }

@@ -148,12 +148,13 @@ sends no `Cache-Control`. Every visit re-downloaded the lot.
 So [`apps/web/scripts/generateCatalog.js`](../../apps/web/scripts/generateCatalog.js)
 runs the same queries **at build time** and writes the result to a content-hashed
 `dist/catalog/catalog-<hash>.json`, which `netlify.toml` serves `immutable`. The
-browser fetches one CDN file (~0.35 MB brotli) and makes no database request at all.
+browser fetches that one CDN file (~0.35 MB brotli) when it is still current.
 
-The consequence to remember: **fresh prices only reach the website when it rebuilds.**
-`update-prices.yml` pings a Netlify build hook after each daily ingest for exactly
-that reason. If prices look stale on the web but current on mobile, check that hook
-before suspecting the pipeline.
+Every page load also reads the latest `fab_card_prices.updated_at`. When a pipeline
+run is newer than the snapshot, `fetchCatalog()` loads the catalog from the database
+instead, so prices update on the website even if the Netlify rebuild has not
+finished or the build hook was skipped. `update-prices.yml` still pings the hook
+after each ingest so the fast snapshot catches up.
 
-`fetchCatalog()` falls back to reading the database directly when there is no
-snapshot, which is what `vite dev` and a failed generation both look like.
+`fetchCatalog()` also reads the database directly when there is no snapshot, which
+is what `vite dev` and a failed generation both look like.

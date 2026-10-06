@@ -26,10 +26,10 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run ingest
 
-      # The website serves the catalog as a static file built from these tables
-      # (apps/web/scripts/generateCatalog.js), so fresh prices only reach visitors
-      # once the site is rebuilt. Skipped when the hook secret is unset, which is
-      # what a fork or a pre-Netlify checkout looks like.
+      # Rebuild so the next visit can use the fast catalog snapshot. The site also
+      # compares that file to fab_card_prices.updated_at and reads the database
+      # when the pipeline is newer, so a skipped hook does not leave prices stale.
+      # Skipped when the hook secret is unset, which is what a fork looks like.
       - name: Trigger website rebuild
         env:
           NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}

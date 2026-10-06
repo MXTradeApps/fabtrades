@@ -6,9 +6,10 @@
  * PostgREST requests that the browser is not allowed to cache, because Supabase
  * returns no `Cache-Control` header. Every visit re-downloaded the lot.
  *
- * Prices only change when the daily "Update FAB Prices" Action runs, so the
- * catalog is effectively static between deploys. This script runs BEFORE
- * `vite build` and freezes it into a single content-hashed file:
+ * This script runs BEFORE `vite build` and freezes the catalog into a single
+ * content-hashed file, which is the fast path between deploys. The pipeline can
+ * publish newer prices without a rebuild; `fetchCatalog()` notices that from
+ * `fab_card_prices.updated_at` and reads the database when the file is behind.
  *
  *   public/catalog/catalog-<hash>.json  -> copied verbatim into dist/ by Vite
  *   .catalog-snapshot.json              -> build metadata (gitignored)
