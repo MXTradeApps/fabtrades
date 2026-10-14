@@ -77,10 +77,7 @@ class _LifeTrackerScreenState extends ConsumerState<LifeTrackerScreen> {
             : Column(
                 children: [
                   Expanded(
-                    child: RotatedBox(
-                      quarterTurns: 2,
-                      child: opponentPanel,
-                    ),
+                    child: RotatedBox(quarterTurns: 2, child: opponentPanel),
                   ),
                   centerBar,
                   Expanded(child: youPanel),
@@ -121,8 +118,8 @@ class _CenterBar extends StatelessWidget {
     final timerColor = expired
         ? scheme.error
         : running
-            ? scheme.onSurface
-            : scheme.onSurfaceVariant;
+        ? scheme.onSurface
+        : scheme.onSurfaceVariant;
 
     final historyBtn = IconButton(
       tooltip: 'History',
@@ -278,8 +275,7 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
     final pending = player.pendingDelta;
     final lifeSize = widget.landscape ? 96.0 : 120.0;
 
-    final deltaColor =
-        pending >= 0 ? AppTheme.positive : AppTheme.negative;
+    final deltaColor = pending >= 0 ? AppTheme.positive : AppTheme.negative;
     final deltaText = pending > 0 ? '+$pending' : '$pending';
 
     return ColoredBox(
@@ -299,20 +295,11 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                   onLongPressStart: (_) => _startHold(-5),
                   onLongPressEnd: (_) => _endHold(),
                   onLongPressCancel: _endHold,
-                  child: const Align(
+                  child: Align(
                     alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: EdgeInsets.only(left: 16),
-                      child: Opacity(
-                        opacity: 0.35,
-                        child: Text(
-                          '−',
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ),
+                      padding: const EdgeInsets.only(left: 14),
+                      child: _ZoneSign(icon: Icons.remove_rounded),
                     ),
                   ),
                 ),
@@ -327,20 +314,11 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                   onLongPressStart: (_) => _startHold(5),
                   onLongPressEnd: (_) => _endHold(),
                   onLongPressCancel: _endHold,
-                  child: const Align(
+                  child: Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
-                      padding: EdgeInsets.only(right: 16),
-                      child: Opacity(
-                        opacity: 0.35,
-                        child: Text(
-                          '+',
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ),
+                      padding: const EdgeInsets.only(right: 14),
+                      child: _ZoneSign(icon: Icons.add_rounded),
                     ),
                   ),
                 ),
@@ -357,7 +335,7 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                 builder: (context, constraints) => Center(
                   child: Column(
                     children: [
-                      Expanded(child: _ZoneSeam(color: scheme.outline)),
+                      const Expanded(child: _ZoneSeam()),
                       // Room for the pending delta above the total.
                       SizedBox(
                         height: math.min(
@@ -365,7 +343,7 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                           constraints.maxHeight * 0.7,
                         ),
                       ),
-                      Expanded(child: _ZoneSeam(color: scheme.outline)),
+                      const Expanded(child: _ZoneSeam()),
                     ],
                   ),
                 ),
@@ -418,20 +396,38 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
   }
 }
 
-/// One half of the tap-zone divider: a solid hairline with rounded ends.
+/// One half of the tap-zone divider: a solid rounded bar, bright enough to
+/// read at arm's length across a play table.
 class _ZoneSeam extends StatelessWidget {
-  const _ZoneSeam({required this.color});
-
-  final Color color;
+  const _ZoneSeam();
 
   @override
   Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
     return Container(
-      width: 2,
+      width: 4,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(1),
+        borderRadius: BorderRadius.circular(2),
       ),
+    );
+  }
+}
+
+/// The − / + marker at the outer edge of each tap zone.
+class _ZoneSign extends StatelessWidget {
+  const _ZoneSign({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      icon,
+      size: 48,
+      color: Theme.of(
+        context,
+      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
     );
   }
 }
