@@ -234,7 +234,7 @@ describe('Fabrary import', () => {
         expect(screen.getByText(/Unknown Junk/)).toBeInTheDocument();
         expect(screen.getByText(/Cards we couldn't match/)).toBeInTheDocument();
         expect(screen.getByText(/aren't in the FAB Trades catalog/)).toBeInTheDocument();
-        expect(screen.getByText(/adds Have copies to Collection/)).toBeInTheDocument();
+        expect(screen.getByText(/Haves will be added to the Collection Binder/)).toBeInTheDocument();
         expect(screen.getByTestId('fabrary-unmatched')).toBeInTheDocument();
         expect(screen.getByTestId('fabrary-confirm')).not.toBeDisabled();
 
