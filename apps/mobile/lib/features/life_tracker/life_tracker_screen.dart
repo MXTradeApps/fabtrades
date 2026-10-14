@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../app/theme.dart';
@@ -191,10 +193,14 @@ class _CenterBar extends StatelessWidget {
         color: scheme.surfaceContainerHighest,
         border: axis == Axis.vertical
             ? Border.symmetric(
-                vertical: BorderSide(color: scheme.outline, width: 3),
+                vertical: BorderSide(
+                  color: scheme.outline.withValues(alpha: 0.5),
+                ),
               )
             : Border.symmetric(
-                horizontal: BorderSide(color: scheme.outline, width: 3),
+                horizontal: BorderSide(
+                  color: scheme.outline.withValues(alpha: 0.5),
+                ),
               ),
       ),
       child: axis == Axis.vertical
@@ -341,19 +347,28 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
               ),
             ],
           ),
-          // Center divider marking − (left) vs + (right) tap zones.
+          // Center divider marking − (left) vs + (right) tap zones. It breaks
+          // around the total so it reads as a seam between zones rather than
+          // a line struck through the number.
           IgnorePointer(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  Container(
-                    width: 3,
-                    color: scheme.outline.withValues(alpha: 0.85),
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: LayoutBuilder(
+                builder: (context, constraints) => Center(
+                  child: Column(
+                    children: [
+                      Expanded(child: _ZoneSeam(color: scheme.outline)),
+                      // Room for the pending delta above the total.
+                      SizedBox(
+                        height: math.min(
+                          lifeSize * 1.7,
+                          constraints.maxHeight * 0.7,
+                        ),
+                      ),
+                      Expanded(child: _ZoneSeam(color: scheme.outline)),
+                    ],
                   ),
-                  const Spacer(),
-                ],
+                ),
               ),
             ),
           ),
@@ -381,12 +396,16 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                   ),
                   Text(
                     '${player.life}',
-                    style: theme.textTheme.displayLarge?.copyWith(
+                    // Ask google_fonts for the real ExtraBold file. A weight
+                    // copied onto the theme's Outfit Regular is synthesised,
+                    // which notches the joins at this size. Proportional
+                    // figures: Outfit's tabular ones collide at heavy weights.
+                    style: GoogleFonts.outfit(
+                      textStyle: theme.textTheme.displayLarge,
                       fontSize: lifeSize,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w800,
                       height: 1.0,
-                      letterSpacing: -1.5,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                      letterSpacing: 0,
                     ),
                   ),
                 ],
@@ -394,6 +413,24 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One half of the tap-zone divider: a solid hairline with rounded ends.
+class _ZoneSeam extends StatelessWidget {
+  const _ZoneSeam({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 2,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(1),
       ),
     );
   }
