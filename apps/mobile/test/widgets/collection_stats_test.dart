@@ -157,7 +157,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('binderBackToGrid')));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(Tab, 'Want List (0)'));
+    await tester.tap(find.byKey(const Key('binderTile-system:want')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

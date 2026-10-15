@@ -40,10 +40,10 @@ abstract final class TourCopy {
       'received also comes off your Want List automatically.';
 
   // ── Binder ─────────────────────────────────────────────────────────────
-  static const binderTabsTitle = 'Binder & Want List';
+  static const binderTabsTitle = 'My Binders';
   static const binderTabsBody =
       'Your Binders are a grid — Trade Binder is what you trade, Collection '
-      'is a keep pile. Want List is the other tab, not a Binder.';
+      'is a keep pile, and Want List tracks the cards you are after.';
 
   static const binderTotalTitle = 'Collection Stats';
   static const binderTotalBody =

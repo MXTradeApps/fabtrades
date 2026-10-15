@@ -35,22 +35,8 @@ class BinderScreen extends ConsumerStatefulWidget {
   ConsumerState<BinderScreen> createState() => _BinderScreenState();
 }
 
-class _BinderScreenState extends ConsumerState<BinderScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tab = TabController(length: 2, vsync: this);
+class _BinderScreenState extends ConsumerState<BinderScreen> {
   bool _wantTourStarted = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tab.addListener(_onTabChanged);
-  }
-
-  void _onTabChanged() {
-    if (_tab.indexIsChanging) return;
-    setState(() {});
-    if (_tab.index == 1) _maybeStartWantListTour();
-  }
 
   void _maybeStartWantListTour() {
     if (_wantTourStarted) return;
@@ -79,7 +65,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
     home.addOnFinishCallback(finishTour);
     home.addOnDismissCallback(onDismiss);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _tab.index != 1) {
+      if (!mounted || ref.read(openBinderIdProvider) != BinderIds.want) {
         finishTour();
         return;
       }
@@ -88,32 +74,22 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   }
 
   @override
-  void dispose() {
-    _tab.removeListener(_onTabChanged);
-    _tab.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    ref.listen<String?>(openBinderIdProvider, (_, next) {
+      if (next == BinderIds.want) _maybeStartWantListTour();
+    });
     final entries = ref.watch(binderProvider);
     final binders = ref.watch(bindersProvider);
     final pricing = ref.watch(pricingProvider);
     final openId = ref.watch(openBinderIdProvider);
     final wanted = entries.where((e) => e.isWanted).toList();
-    final owned = entries.where((e) => !e.isWanted).toList();
-    final onBinderTab = _tab.index == 0;
-    final viewingWants = !onBinderTab || openId == BinderIds.want;
-    final inBinder = onBinderTab && openId != null;
+    final viewingWants = openId == BinderIds.want;
+    final inBinder = openId != null;
     final inOwnedBinder = inBinder && !viewingWants;
-    final openRows = openId == null || openId == BinderIds.want
+    final openRows = openId == null || viewingWants
         ? const <BinderEntry>[]
-        : ownedInBinder(owned, openId);
-    final title = _appBarTitle(
-      onBinderTab: onBinderTab,
-      openId: openId,
-      binders: binders,
-    );
+        : ownedInBinder(entries, openId);
+    final title = _appBarTitle(openId: openId, binders: binders);
 
     return Scaffold(
       appBar: AppBar(
@@ -128,9 +104,14 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
                 },
               )
             : null,
-        title: Text(title, key: const Key('binderHomeTitle')),
+        title: ShowcaseTheme.mark(
+          key: OnboardingKeys.binderTabs,
+          title: TourCopy.binderTabsTitle,
+          description: TourCopy.binderTabsBody,
+          child: Text(title, key: const Key('binderHomeTitle')),
+        ),
         actions: [
-          if (onBinderTab && openId == null)
+          if (openId == null)
             TextButton.icon(
               key: const Key('createBinder'),
               onPressed: () => _createBinder(context),
@@ -170,48 +151,22 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
               ],
             ),
         ],
-        bottom: inBinder
-            ? null
-            : PreferredSize(
-                preferredSize: const Size.fromHeight(46),
-                child: ShowcaseTheme.mark(
-                  key: OnboardingKeys.binderTabs,
-                  title: TourCopy.binderTabsTitle,
-                  description: TourCopy.binderTabsBody,
-                  child: TabBar(
-                    controller: _tab,
-                    tabs: [
-                      Tab(text: 'Binder (${_count(owned)})'),
-                      Tab(text: 'Want List (${_count(wanted)})'),
-                    ],
-                  ),
-                ),
-              ),
       ),
-      body: TabBarView(
-        controller: _tab,
-        physics: inBinder ? const NeverScrollableScrollPhysics() : null,
-        children: [
-          openId == null
-              ? BinderGrid(
-                  onOpen: (id) {
-                    ref.read(binderFiltersProvider.notifier).clear();
-                    ref.read(openBinderIdProvider.notifier).open(id);
-                  },
-                  onRename: (id) => _renameBinder(context, id),
-                  onDelete: (id) => _deleteBinder(context, id),
-                  onClear: (id) => _clearBinder(context, clientId: id),
+      body: openId == null
+          ? BinderGrid(
+              onOpen: (id) {
+                ref.read(binderFiltersProvider.notifier).clear();
+                ref.read(openBinderIdProvider.notifier).open(id);
+              },
+              onRename: (id) => _renameBinder(context, id),
+              onDelete: (id) => _deleteBinder(context, id),
+              onClear: (id) => _clearBinder(context, clientId: id),
+            )
+          : viewingWants
+              ? WantListPane(
+                  onAdd: () => _addBySearch(isWanted: true),
                 )
-              : openId == BinderIds.want
-                  ? WantListPane(
-                      onAdd: () => _addBySearch(isWanted: true),
-                    )
-                  : BinderList(binderId: openId, pricing: pricing),
-          WantListPane(
-            onAdd: () => _addBySearch(isWanted: true),
-          ),
-        ],
-      ),
+              : BinderList(binderId: openId, pricing: pricing),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: SizedBox(
         key: const Key('binderActionRow'),
@@ -221,10 +176,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (onBinderTab &&
-                openId != null &&
-                openId != BinderIds.want &&
-                openRows.isNotEmpty) ...[
+            if (inOwnedBinder && openRows.isNotEmpty) ...[
               Flexible(
                 child: Align(
                   alignment: Alignment.centerLeft,
@@ -271,11 +223,9 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   int _count(List<BinderEntry> e) => e.fold<int>(0, (s, x) => s + x.quantity);
 
   static String _appBarTitle({
-    required bool onBinderTab,
     required String? openId,
     required List<Binder> binders,
   }) {
-    if (!onBinderTab) return 'Want List';
     if (openId == null) return 'My Binders';
     for (final binder in Binder.gridOrder(binders)) {
       if (binder.clientId == openId) return binder.name;
@@ -368,8 +318,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
 
   Future<void> _clearBinder(BuildContext context, {String? clientId}) async {
     final openId = ref.read(openBinderIdProvider);
-    final targetId = clientId ??
-        (openId ?? (_tab.index == 1 ? BinderIds.want : null));
+    final targetId = clientId ?? openId;
     if (targetId == null) return;
     final isWant = targetId == BinderIds.want;
     final binder = ref.read(bindersProvider.notifier).byId(targetId);
@@ -409,6 +358,11 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   }
 
   Future<void> _shareBinder(BuildContext context) async {
+    final openId = ref.read(openBinderIdProvider);
+    // Share links only ever show the Trade Binder (see
+    // get_public_binder_by_token), so other Binders share as text only.
+    final canLink =
+        openId != null && ref.read(bindersProvider.notifier).byId(openId)?.isTrade == true;
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -418,13 +372,15 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            FilledButton.icon(
-              key: const Key('copyBinderLink'),
-              onPressed: () => Navigator.pop(ctx, 'link'),
-              icon: const Icon(Icons.link),
-              label: const Text('Copy Link to Binder'),
-            ),
-            const SizedBox(height: 8),
+            if (canLink) ...[
+              FilledButton.icon(
+                key: const Key('copyBinderLink'),
+                onPressed: () => Navigator.pop(ctx, 'link'),
+                icon: const Icon(Icons.link),
+                label: const Text('Copy Link to Binder'),
+              ),
+              const SizedBox(height: 8),
+            ],
             OutlinedButton.icon(
               key: const Key('copyBinderText'),
               onPressed: () => Navigator.pop(ctx, 'text'),
@@ -521,6 +477,18 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
   }
 
   Future<void> _showBinderAddOptions(BuildContext context) async {
+    if (ref.read(openBinderIdProvider) == null) {
+      // On the grid nothing is open, so ask where the cards should go rather
+      // than silently filing them in the Trade Binder.
+      final target = await _pickTargetBinder(context);
+      if (target == null || !context.mounted) return;
+      ref.read(binderFiltersProvider.notifier).clear();
+      ref.read(openBinderIdProvider.notifier).open(target);
+      if (target == BinderIds.want) {
+        await _addBySearch(isWanted: true);
+        return;
+      }
+    }
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -553,6 +521,38 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
         ),
       ),
       routeSettings: const RouteSettings(name: 'Add To Binder'),
+    );
+  }
+
+  Future<String?> _pickTargetBinder(BuildContext context) {
+    final binders = Binder.gridOrder(ref.read(bindersProvider));
+    return showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            key: const Key('addTargetBinderSheet'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(title: Text('Add cards to…')),
+              for (final binder in binders)
+                ListTile(
+                  key: Key('addTarget-${binder.clientId}'),
+                  leading: Icon(
+                    binder.isWant
+                        ? Icons.bookmark_border_rounded
+                        : Icons.collections_bookmark_outlined,
+                  ),
+                  title: Text(binder.name),
+                  onTap: () => Navigator.pop(ctx, binder.clientId),
+                ),
+            ],
+          ),
+        ),
+      ),
+      routeSettings: const RouteSettings(name: 'Add To Which Binder'),
     );
   }
 
