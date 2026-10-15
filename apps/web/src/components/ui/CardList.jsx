@@ -3,18 +3,17 @@ import {
     List,
     ListItem,
     IconButton,
-    Chip,
     Select,
     MenuItem,
     FormControl,
     Box,
     Typography,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import StyleIcon from '@mui/icons-material/Style';
 import Tooltip from '@mui/material/Tooltip';
 import { formatCurrency } from "../../utils/helpers.js";
-import { getCardGradient } from "../../utils/searchUtils.js";
+import FoilTag from "./FoilTag.jsx";
 import { usePriceType } from "../../contexts/PriceContext.jsx";
 import { useThemeMode } from "../../contexts/ThemeContext.jsx";
 import { CardThumbnail } from "./CardImagePreview.jsx";
@@ -63,28 +62,30 @@ const CardList = ({
     // Generate quantity options (1-6)
     const quantityOptions = Array.from({ length: 6 }, (_, i) => i + 1);
 
-    const muted = isDark ? 'rgba(212, 165, 116, 0.7)' : 'rgba(93, 58, 26, 0.55)';
-    const paperBorder = isDark ? 'rgba(200, 113, 55, 0.25)' : 'rgba(139, 69, 19, 0.15)';
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-
     const emptyState = cards.length === 0 && (
         <Box sx={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 1,
+            justifyContent: 'center',
+            gap: 1.25,
+            flexGrow: 1,
             py: { xs: 3, sm: 5 },
             px: 2,
             textAlign: 'center'
         }}>
-            <StyleIcon sx={{
-                fontSize: 36,
-                color: isDark ? 'rgba(212, 165, 116, 0.35)' : 'rgba(139, 69, 19, 0.25)'
-            }} />
-            <Typography variant="body2" sx={{
-                color: isDark ? 'rgba(212, 165, 116, 0.6)' : 'rgba(93, 58, 26, 0.55)',
-                maxWidth: '28ch'
+            <Box sx={{
+                width: 44,
+                height: 44,
+                borderRadius: '12px',
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor: 'action.hover',
+                color: 'text.disabled',
             }}>
+                <StyleIcon sx={{ fontSize: 22 }} />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: '28ch' }}>
                 {disabled
                     ? 'Loading card prices…'
                     : 'Search above to add cards to this side of the trade'}
@@ -95,41 +96,66 @@ const CardList = ({
     const quantitySelect = (card, index, { compact = false } = {}) => (
         <FormControl
             size="small"
-            sx={{
-                minWidth: compact ? 48 : { xs: 50, sm: 55, md: 60, lg: 65, xl: 70 },
-                flexShrink: 0,
-                '& .MuiOutlinedInput-root': {
-                    fontSize: compact
-                        ? '0.7rem'
-                        : { xs: '0.7rem', sm: '0.75rem', md: '0.8rem', lg: '0.85rem', xl: '0.9rem' },
-                    height: compact ? 26 : { xs: 26, sm: 28, md: 30, lg: 32, xl: 34 }
-                }
-            }}
+            sx={{ flexShrink: 0 }}
             onClick={(event) => event.stopPropagation()}
         >
             <Select
                 value={card.quantity || 1}
                 onChange={(e) => handleQuantityChange(index, e.target.value)}
+                inputProps={{ 'aria-label': `Quantity of ${card.name || 'card'}` }}
+                renderValue={(qty) => `${qty}×`}
                 sx={{
-                    fontSize: compact
-                        ? '0.7rem'
-                        : { xs: '0.7rem', sm: '0.75rem', md: '0.8rem', lg: '0.85rem', xl: '0.9rem' },
+                    height: compact ? 26 : 30,
+                    fontSize: '0.8125rem',
+                    fontWeight: 650,
+                    fontVariantNumeric: 'tabular-nums',
+                    bgcolor: 'surface.sunken',
                     '& .MuiSelect-select': {
-                        py: compact ? 0.25 : { xs: 0.25, sm: 0.5, md: 0.75, lg: 1, xl: 1.25 },
-                        px: compact ? 0.75 : { xs: 0.75, sm: 1, md: 1.25, lg: 1.5, xl: 1.75 }
-                    }
+                        py: 0,
+                        pl: compact ? 0.9 : 1.1,
+                        pr: compact ? '22px !important' : '26px !important',
+                    },
+                    '& .MuiSelect-icon': { fontSize: '1.1rem', right: 2, color: 'text.secondary' },
                 }}
             >
                 {quantityOptions.map((qty) => (
-                    <MenuItem key={qty} value={qty} sx={{ 
-                        fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem', lg: '0.85rem', xl: '0.9rem' }
-                    }}>
+                    <MenuItem key={qty} value={qty} sx={{ fontVariantNumeric: 'tabular-nums' }}>
                         {qty}
                     </MenuItem>
                 ))}
             </Select>
         </FormControl>
     );
+
+    const removeButton = (card, index, size = 'small') => (
+        <IconButton
+            onClick={(event) => {
+                event.stopPropagation();
+                onRemoveCard(index);
+            }}
+            size="small"
+            aria-label={`Delete ${card.name || 'card'}`}
+            sx={{
+                color: 'text.disabled',
+                p: size === 'small' ? 0.5 : 0.75,
+                '&:hover': { color: 'error.main', bgcolor: 'action.hover' },
+            }}
+        >
+            <DeleteOutlineIcon sx={{ fontSize: size === 'small' ? '1.05rem' : '1.2rem' }} />
+        </IconButton>
+    );
+
+    const nameButtonSx = (printing) => ({
+        border: 0,
+        background: 'none',
+        p: 0,
+        m: 0,
+        textAlign: 'left',
+        color: 'text.primary',
+        fontFamily: 'inherit',
+        cursor: printing ? 'pointer' : 'default',
+        '&:hover': printing ? { color: 'primary.main' } : undefined,
+    });
 
     return (
         <>
@@ -144,75 +170,34 @@ const CardList = ({
             {emptyState}
 
             {!isGrid && cards.length > 0 && (
-                <List sx={{
-                    width: '100%',
-                    p: 0,
-                    m: 0,
-                    '& .MuiListItem-root': {
-                        width: '100%',
-                        maxWidth: '100%'
-                    }
-                }}>
+                <List sx={{ width: '100%', p: 0, m: 0 }}>
                     {cards.map((card, index) => {
-                        const gradient = getCardGradient(card.subTypeName, isDark);
                         const printing = resolvePrinting(card, cardIdLookup);
                         return (
                             <ListItem
                                 key={`${card.uniqueId || card.name}-${index}`}
                                 sx={{
-                                    border: isDark 
-                                        ? '1px solid rgba(200, 113, 55, 0.2)' 
-                                        : '1px solid rgba(139, 69, 19, 0.15)',
-                                    borderRadius: 2,
-                                    mb: 1,
-                                    background: gradient.background,
-                                    flexDirection: 'row',
+                                    display: 'grid',
+                                    gridTemplateColumns: 'auto minmax(0, 1fr) auto auto',
                                     alignItems: 'center',
-                                    gap: 1.5,
-                                    p: { xs: 1, sm: 1.25, md: 1.5, lg: 1.75, xl: 2 },
-                                    position: 'relative',
-                                    width: '100%',
-                                    boxShadow: isDark 
-                                        ? '0 2px 6px rgba(0, 0, 0, 0.2)' 
-                                        : '0 2px 6px rgba(139, 69, 19, 0.08)',
-                                    '&:hover': {
-                                        borderColor: '#d4a574',
-                                        boxShadow: isDark 
-                                            ? '0 4px 12px rgba(212, 165, 116, 0.2)' 
-                                            : '0 4px 12px rgba(139, 69, 19, 0.15)',
-                                        transform: 'translateY(-1px)',
-                                        background: gradient.backgroundHover,
-                                    },
-                                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    '&::before': {
-                                        content: '""',
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        width: '4px',
-                                        height: '100%',
-                                        background: 'linear-gradient(180deg, #8b4513 0%, #d4a574 100%)',
-                                        borderTopLeftRadius: 8,
-                                        borderBottomLeftRadius: 8,
-                                        opacity: 0,
-                                        transition: 'opacity 0.25s ease'
-                                    },
-                                    '&:hover::before': {
-                                        opacity: 1
-                                    }
+                                    columnGap: 1.25,
+                                    px: 1,
+                                    py: 0.9,
+                                    borderRadius: '10px',
+                                    transition: 'background-color 120ms ease',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                    '& + &': { mt: 0.25 },
                                 }}
                             >
-                                <CardThumbnail 
-                                    imageUrl={card.imageUrl} 
+                                <CardThumbnail
+                                    imageUrl={card.imageUrl}
                                     fallbackUrl={card.imageUrlFallback}
                                     alt={card.name}
-                                    size={40}
+                                    size={36}
                                     onClick={printing ? () => handleOpenDetail(card) : undefined}
                                 />
-                                
-                                <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    {quantitySelect(card, index)}
 
+                                <Box sx={{ minWidth: 0 }}>
                                     <Typography
                                         component={printing ? 'button' : 'span'}
                                         type={printing ? 'button' : undefined}
@@ -220,91 +205,57 @@ const CardList = ({
                                         aria-label={printing ? `View details for ${card.name}` : undefined}
                                         variant="body2"
                                         sx={{
-                                            fontSize: { xs: '0.8rem', sm: '0.875rem', md: '0.95rem', lg: '1rem', xl: '1.125rem' },
-                                            fontWeight: 'medium',
+                                            ...nameButtonSx(printing),
+                                            display: 'block',
+                                            maxWidth: '100%',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 600,
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap',
-                                            flex: 1,
-                                            minWidth: 0,
-                                            border: 0,
-                                            background: 'none',
-                                            p: 0,
-                                            m: 0,
-                                            textAlign: 'left',
-                                            color: 'inherit',
-                                            fontFamily: 'inherit',
-                                            cursor: printing ? 'pointer' : 'default',
-                                            textDecoration: printing ? 'underline' : 'none',
-                                            textDecorationColor: 'transparent',
-                                            '&:hover': printing ? {
-                                                textDecorationColor: 'currentColor',
-                                            } : undefined,
                                         }}
                                     >
                                         {card.name}
                                     </Typography>
-                                </Box>
-
-                                <Box sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    flexShrink: 0,
-                                    minWidth: 'fit-content'
-                                }}>
-                                    <Box sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'flex-end',
-                                        gap: 0.15,
-                                        minWidth: 'fit-content'
-                                    }}>
-                                        <Tooltip title={card.price ? '' : 'No market price available — not counted in totals'}>
-                                            <Chip
-                                                label={card.price ? formatPrice(card.price) : 'No price'}
-                                                color={card.price ? 'primary' : 'default'}
-                                                variant={card.price ? 'filled' : 'outlined'}
-                                                size="small"
-                                                sx={{
-                                                    fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem', lg: '0.8rem', xl: '0.875rem' },
-                                                    minWidth: 'fit-content'
-                                                }}
-                                            />
-                                        </Tooltip>
-                                        {card.lowPrice != null && Number(card.lowPrice) > 0 && (
-                                            <Typography
-                                                component="span"
-                                                sx={{
-                                                    fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
-                                                    color: muted,
-                                                    lineHeight: 1.1,
-                                                    whiteSpace: 'nowrap'
-                                                }}
-                                            >
-                                                Low {formatPrice(card.lowPrice)}
-                                            </Typography>
-                                        )}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.4, minWidth: 0 }}>
+                                        {quantitySelect(card, index, { compact: true })}
+                                        <FoilTag subTypeName={card.subTypeName} />
                                     </Box>
-
-                                    <IconButton
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            onRemoveCard(index);
-                                        }}
-                                        size="small"
-                                        aria-label={`Delete ${card.name || 'card'}`}
-                                        sx={{
-                                            color: 'error.main',
-                                            p: { xs: 0.25, sm: 0.5, md: 0.75, lg: 1, xl: 1.25 },
-                                            '&:hover': {
-                                                backgroundColor: 'rgba(244, 67, 54, 0.1)'
-                                            }
-                                        }}
-                                    >
-                                        <DeleteIcon fontSize="small" />
-                                    </IconButton>
                                 </Box>
+
+                                <Box sx={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                    <Tooltip title={card.price ? '' : 'No market price available — not counted in totals'}>
+                                        <Typography
+                                            component="span"
+                                            sx={{
+                                                display: 'block',
+                                                fontWeight: 700,
+                                                fontSize: card.price ? '0.9375rem' : '0.75rem',
+                                                color: card.price ? 'text.primary' : 'text.disabled',
+                                                whiteSpace: 'nowrap',
+                                                lineHeight: 1.3,
+                                            }}
+                                        >
+                                            {card.price ? formatPrice(card.price) : 'No price'}
+                                        </Typography>
+                                    </Tooltip>
+                                    {card.lowPrice != null && Number(card.lowPrice) > 0 && (
+                                        <Typography
+                                            component="span"
+                                            sx={{
+                                                display: 'block',
+                                                fontSize: '0.6875rem',
+                                                color: 'text.secondary',
+                                                lineHeight: 1.3,
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                        >
+                                            Low {formatPrice(card.lowPrice)}
+                                        </Typography>
+                                    )}
+                                </Box>
+
+                                {removeButton(card, index)}
                             </ListItem>
                         );
                     })}
@@ -315,18 +266,15 @@ const CardList = ({
                 <Box
                     sx={{
                         display: 'grid',
-                        // Wide enough for price + controls; capped so tiles don't balloon.
                         gridTemplateColumns: isLandscape
-                            ? 'repeat(auto-fill, minmax(132px, 148px))'
-                            : 'repeat(auto-fill, minmax(120px, 1fr))',
-                        gap: isLandscape ? 0.85 : 1,
+                            ? 'repeat(auto-fill, minmax(128px, 1fr))'
+                            : 'repeat(auto-fill, minmax(116px, 1fr))',
+                        gap: 1.25,
                         width: '100%',
                         pb: 0.5,
-                        justifyContent: isLandscape ? 'start' : 'stretch',
                     }}
                 >
                     {cards.map((card, index) => {
-                        const gradient = getCardGradient(card.subTypeName, isDark);
                         const printing = resolvePrinting(card, cardIdLookup);
                         return (
                             <Box
@@ -334,18 +282,8 @@ const CardList = ({
                                 sx={{
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    borderRadius: 1,
-                                    overflow: 'hidden',
-                                    border: `1px solid ${paperBorder}`,
-                                    background: gradient.background,
-                                    boxShadow: isDark
-                                        ? '0 1px 4px rgba(0, 0, 0, 0.2)'
-                                        : '0 1px 4px rgba(139, 69, 19, 0.08)',
-                                    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-                                    '&:hover': {
-                                        borderColor: '#d4a574',
-                                        background: gradient.backgroundHover,
-                                    },
+                                    gap: 0.75,
+                                    minWidth: 0,
                                 }}
                             >
                                 <Box
@@ -359,9 +297,15 @@ const CardList = ({
                                         aspectRatio: '5 / 7',
                                         p: 0,
                                         border: 0,
+                                        borderRadius: '4.5% / 3.2%',
                                         cursor: printing ? 'pointer' : 'default',
-                                        backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                                        bgcolor: 'action.hover',
                                         overflow: 'hidden',
+                                        boxShadow: isDark
+                                            ? '0 0 0 1px rgba(255,255,255,0.06), 0 4px 12px rgba(0,0,0,0.4)'
+                                            : '0 0 0 1px rgba(44,24,16,0.06), 0 4px 12px rgba(44,24,16,0.12)',
+                                        transition: 'transform 160ms ease',
+                                        '&:hover': printing ? { transform: 'translateY(-2px)' } : undefined,
                                     }}
                                 >
                                     {card.imageUrl || card.imageUrlFallback ? (
@@ -397,102 +341,75 @@ const CardList = ({
                                                 px: 0.5,
                                             }}
                                         >
-                                            <Typography sx={{ color: muted, fontSize: '0.65rem', textAlign: 'center' }}>
+                                            <Typography sx={{ color: 'text.disabled', fontSize: '0.65rem', textAlign: 'center' }}>
                                                 No image
                                             </Typography>
                                         </Box>
                                     )}
-                                    <Box
-                                        sx={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            px: 0.5,
-                                            py: 0.1,
-                                            fontSize: '0.65rem',
-                                            fontWeight: 800,
-                                            color: '#fff',
-                                            backgroundColor: 'rgba(0, 0, 0, 0.78)',
-                                            borderBottomRightRadius: 4,
-                                        }}
-                                    >
-                                        {card.quantity || 1}x
-                                    </Box>
+                                    {(card.quantity || 1) > 1 && (
+                                        <Box
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 6,
+                                                left: 6,
+                                                px: 0.75,
+                                                height: 20,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                borderRadius: 999,
+                                                fontSize: '0.6875rem',
+                                                fontWeight: 750,
+                                                fontVariantNumeric: 'tabular-nums',
+                                                color: '#fff',
+                                                bgcolor: 'rgba(0, 0, 0, 0.72)',
+                                                backdropFilter: 'blur(4px)',
+                                            }}
+                                        >
+                                            {card.quantity}×
+                                        </Box>
+                                    )}
                                 </Box>
 
-                                <Box sx={{
-                                    px: 0.7,
-                                    py: 0.55,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 0.35,
-                                }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, px: 0.25 }}>
                                     <Typography
                                         component={printing ? 'button' : 'span'}
                                         type={printing ? 'button' : undefined}
                                         onClick={printing ? () => handleOpenDetail(card) : undefined}
                                         aria-label={printing ? `View details for ${card.name}` : undefined}
                                         sx={{
-                                            color: textColor,
+                                            ...nameButtonSx(printing),
                                             fontWeight: 600,
-                                            fontSize: '0.72rem',
-                                            lineHeight: 1.2,
+                                            fontSize: '0.75rem',
+                                            lineHeight: 1.25,
                                             display: '-webkit-box',
                                             WebkitLineClamp: 2,
                                             WebkitBoxOrient: 'vertical',
                                             overflow: 'hidden',
-                                            minHeight: '1.7em',
-                                            border: 0,
-                                            background: 'none',
-                                            p: 0,
-                                            m: 0,
-                                            textAlign: 'left',
-                                            fontFamily: 'inherit',
-                                            cursor: printing ? 'pointer' : 'default',
-                                            textDecoration: printing ? 'underline' : 'none',
-                                            textDecorationColor: 'transparent',
-                                            '&:hover': printing ? {
-                                                textDecorationColor: 'currentColor',
-                                            } : undefined,
+                                            minHeight: '2.5em',
                                         }}
                                         title={card.name}
                                     >
                                         {card.name}
                                     </Typography>
 
-                                    <Typography
-                                        sx={{
-                                            color: isDark ? '#e4c09c' : '#8b4513',
-                                            fontWeight: 700,
-                                            fontSize: '0.75rem',
-                                            fontVariantNumeric: 'tabular-nums',
-                                            lineHeight: 1.2,
-                                        }}
-                                    >
-                                        {card.price ? formatPrice(card.price) : 'No price'}
-                                    </Typography>
-
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        {quantitySelect(card, index, { compact: true })}
-                                        <IconButton
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                onRemoveCard(index);
-                                            }}
-                                            size="small"
-                                            aria-label={`Delete ${card.name || 'card'}`}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                                        <Typography
                                             sx={{
-                                                color: 'error.main',
-                                                p: 0.25,
-                                                ml: 'auto',
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(244, 67, 54, 0.1)'
-                                                }
+                                                color: card.price ? 'text.primary' : 'text.disabled',
+                                                fontWeight: 700,
+                                                fontSize: '0.8125rem',
+                                                fontVariantNumeric: 'tabular-nums',
+                                                lineHeight: 1.2,
+                                                mr: 'auto',
+                                                whiteSpace: 'nowrap',
                                             }}
                                         >
-                                            <DeleteIcon sx={{ fontSize: '1rem' }} />
-                                        </IconButton>
+                                            {card.price ? formatPrice(card.price) : 'No price'}
+                                        </Typography>
+                                        {quantitySelect(card, index, { compact: true })}
+                                        {removeButton(card, index)}
                                     </Box>
+                                    <FoilTag subTypeName={card.subTypeName} sx={{ alignSelf: 'flex-start' }} />
                                 </Box>
                             </Box>
                         );

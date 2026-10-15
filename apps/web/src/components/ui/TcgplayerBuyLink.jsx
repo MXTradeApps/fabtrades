@@ -1,5 +1,4 @@
 import { Box, Typography } from '@mui/material';
-import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 import { tcgplayerAffiliateUrl } from '../../utils/tcgplayerAffiliate.js';
 import tcgplayerMark from '../../assets/marketplaces/tcgplayer-mark.svg';
 
@@ -8,13 +7,12 @@ import tcgplayerMark from '../../assets/marketplaces/tcgplayer-mark.svg';
  * Opens the TCGplayer product page via the Impact partner redirect.
  */
 const TcgplayerBuyLink = ({ productId, subTypeName }) => {
-    const { isDark } = useThemeMode();
-    const href = tcgplayerAffiliateUrl(productId, { subTypeName });
+        const href = tcgplayerAffiliateUrl(productId, { subTypeName });
 
     if (!href) return null;
 
-    const color = isDark ? 'rgba(212, 165, 116, 0.75)' : 'rgba(93, 58, 26, 0.65)';
-    const hoverColor = isDark ? '#e4c09c' : '#8b4513';
+    const color = 'text.secondary';
+    const hoverColor = 'primary.main';
 
     return (
         <Box
@@ -39,7 +37,6 @@ const TcgplayerBuyLink = ({ productId, subTypeName }) => {
                     color: hoverColor
                 },
                 '&:focus-visible': {
-                    outline: `1px solid ${hoverColor}`,
                     outlineOffset: 2,
                     borderRadius: 0.5
                 }
@@ -62,7 +59,7 @@ const TcgplayerBuyLink = ({ productId, subTypeName }) => {
             <Typography
                 component="span"
                 sx={{
-                    fontSize: '0.58rem',
+                    fontSize: '0.625rem',
                     fontWeight: 500,
                     letterSpacing: '0.01em',
                     lineHeight: 1,

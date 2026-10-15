@@ -139,13 +139,19 @@ const SignInDialog = ({ open, onClose }) => {
 
     return (
         <Dialog open={open} onClose={() => handleClose()} maxWidth="xs" fullWidth>
-            <DialogTitle sx={{ pr: 6 }}>
+            <DialogTitle sx={{ pr: 6, pt: 3 }}>
+                <Box
+                    component="img"
+                    src="/app_icon.png"
+                    alt=""
+                    sx={{ width: 40, height: 40, borderRadius: '11px', display: 'block', mb: 1.5 }}
+                />
                 Sync your collection
                 <IconButton
                     aria-label="close"
                     onClick={() => handleClose()}
                     disabled={Boolean(busy)}
-                    sx={{ position: 'absolute', right: 8, top: 8 }}
+                    sx={{ position: 'absolute', right: 12, top: 12, color: 'text.secondary' }}
                 >
                     <CloseIcon />
                 </IconButton>
@@ -172,9 +178,10 @@ const SignInDialog = ({ open, onClose }) => {
                                 )
                             }
                             sx={{
-                                justifyContent: 'flex-start',
-                                py: 1.25,
+                                justifyContent: 'center',
+                                minHeight: 46,
                                 px: 2,
+                                '& .MuiButton-startIcon': { position: 'absolute', left: 16 },
                                 textTransform: 'none',
                                 fontWeight: 600,
                                 backgroundColor: provider.color,

@@ -10,7 +10,6 @@ const SearchClearAdornment = ({
     disabled = false,
     color,
     dense = false,
-    isDark = false,
 }) => {
     if (!value || disabled) return null;
 
@@ -24,12 +23,8 @@ const SearchClearAdornment = ({
                 aria-label="clear search"
                 sx={{
                     p: dense ? 0.35 : 0.5,
-                    color,
-                    '&:hover': {
-                        backgroundColor: isDark
-                            ? 'rgba(212, 165, 116, 0.12)'
-                            : 'rgba(139, 69, 19, 0.08)',
-                    },
+                    color: color || 'text.secondary',
+                    '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
                 }}
             >
                 <ClearIcon sx={{ fontSize: dense ? '0.95rem' : '1.1rem' }} />

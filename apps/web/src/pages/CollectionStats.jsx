@@ -3,18 +3,16 @@ import {
     Box,
     Button,
     CircularProgress,
-    Container,
-    Paper,
     Typography,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon, InsightsOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
+import { Page, PageHeader, Panel, EmptyState } from '../components/layout/Page.jsx';
 import MoverBox from '../components/movers/MoverBox.jsx';
 import { moverBoxGridSx } from '../components/movers/moverBoxStyles.js';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import { useAuth } from '../contexts/AuthContext';
-import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { usePriceType } from '../contexts/PriceContext.jsx';
 import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
@@ -35,7 +33,6 @@ const sourceLabel = (priceSource) =>
 const CollectionStats = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { isDark } = useThemeMode();
     const { priceSource } = usePriceType();
     const { openDetail } = useCardDetail();
     const { cards, cardIdLookup, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
@@ -57,14 +54,8 @@ const CollectionStats = () => {
         canonicalPath: '/binder',
     });
 
-    const bgGradient = isDark
-        ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
-        : 'linear-gradient(135deg, #f5f1ed 0%, #e8dfd6 50%, #f0e6dc 100%)';
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
-    const accentColor = isDark ? '#e4c09c' : '#8b4513';
-    const paperBg = isDark ? 'rgba(44, 24, 16, 0.6)' : '#ffffff';
-    const paperBorder = isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.15)';
+    const textColor = 'text.primary';
+    const mutedColor = 'text.secondary';
 
     const catalogById = useMemo(() => {
         const map = new Map();
@@ -127,13 +118,6 @@ const CollectionStats = () => {
     const copies = useMemo(() => copiesByPrintingId(entries), [entries]);
     const idsKey = useMemo(() => [...ids].sort().join(','), [ids]);
     const label = sourceLabel(priceSource);
-    const sectionSx = {
-        p: 2.5,
-        mb: 2,
-        backgroundColor: paperBg,
-        border: `1px solid ${paperBorder}`,
-        borderRadius: 3,
-    };
     const binderName =
         binders.find((b) => b.clientId === binderId && !b.deletedAt)?.name || 'Binder';
 
@@ -193,65 +177,45 @@ const CollectionStats = () => {
 
     if (!user) {
         return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: '100vh',
-                    background: bgGradient,
-                    backgroundAttachment: 'fixed',
-                }}
-            >
+            <>
                 <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
-                <Container maxWidth="sm" sx={{ mt: 8 }}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            p: 4,
-                            textAlign: 'center',
-                            backgroundColor: paperBg,
-                            border: `1px solid ${paperBorder}`,
-                            borderRadius: 3,
-                        }}
-                    >
-                        <Typography variant="h5" sx={{ mb: 2, color: accentColor, fontWeight: 700 }}>
-                            Sign In Required
-                        </Typography>
-                        <Typography variant="body1" sx={{ mb: 3, color: mutedColor }}>
+                <Page maxWidth={720}>
+                    <Panel sx={{ mt: { xs: 2, md: 6 } }}>
+                        <EmptyState
+                            icon={<InsightsOutlined />}
+                            title="Sign In Required"
+                            actions={(
+                                <>
+                                    <Button variant="contained" size="large" onClick={() => setSignInOpen(true)}>
+                                        Sign in
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        color="inherit"
+                                        size="large"
+                                        startIcon={<ArrowBackIcon />}
+                                        onClick={() => navigate('/')}
+                                    >
+                                        Back
+                                    </Button>
+                                </>
+                            )}
+                        >
                             Sign in to sync your binder across devices.
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <Button variant="contained" onClick={() => setSignInOpen(true)}>
-                                Sign in
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                startIcon={<ArrowBackIcon />}
-                                onClick={() => navigate('/')}
-                            >
-                                Back
-                            </Button>
-                        </Box>
-                    </Paper>
-                </Container>
+                        </EmptyState>
+                    </Panel>
+                </Page>
                 <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
-            </Box>
+            </>
         );
     }
 
     const renderDirection = (kind, title, list, color, emptyCopy) => (
-        <Box
-            sx={{
-                '&:not(:first-of-type)': {
-                    mt: 2.5,
-                    pt: 2.5,
-                    borderTop: `1px solid ${paperBorder}`,
-                },
-            }}
-        >
+        <Box sx={{ '&:not(:first-of-type)': { mt: 3 } }}>
             <Typography
-                variant="subtitle1"
-                sx={{ color, fontWeight: 700, mb: 1 }}
+                variant="h5"
+                component="h3"
+                sx={{ color, mb: 1.25 }}
             >
                 {title}
             </Typography>
@@ -274,9 +238,6 @@ const CollectionStats = () => {
                             amountChange={row.amount_change}
                             copies={copies[row.card_id]}
                             onSelect={() => openPrinting(row.card_id)}
-                            isDark={isDark}
-                            textColor={textColor}
-                            mutedColor={mutedColor}
                             priceSource={priceSource}
                         />
                     ))}
@@ -285,76 +246,57 @@ const CollectionStats = () => {
         </Box>
     );
 
+    const valueSx = {
+        fontFamily: (t) => t.typography.h1.fontFamily,
+        fontWeight: 800,
+        fontStretch: '112%',
+        fontSize: { xs: '1.75rem', sm: '2.25rem' },
+        letterSpacing: '-0.02em',
+        lineHeight: 1.1,
+        color: 'text.primary',
+        fontVariantNumeric: 'tabular-nums',
+    };
+
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: '100vh',
-                background: bgGradient,
-                backgroundAttachment: 'fixed',
-            }}
-        >
+        <>
             <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
-            <Container maxWidth="md" sx={{ py: 3, flexGrow: 1 }}>
+            <Page maxWidth={1080}>
                 <Button
-                    startIcon={<ArrowBackIcon />}
+                    size="small"
+                    color="inherit"
+                    startIcon={<ArrowBackIcon sx={{ fontSize: '1rem !important' }} />}
                     onClick={goBack}
-                    sx={{ color: accentColor, mb: 2 }}
+                    sx={{ mb: 2, ml: -1, color: 'text.secondary', '&:hover': { color: 'text.primary' } }}
                 >
                     Back
                 </Button>
-                <Typography variant="h4" sx={{ color: textColor, fontWeight: 800 }}>
-                    Collection Stats
-                </Typography>
-                <Typography sx={{ color: mutedColor, mt: 0.5, mb: 2.5 }}>{binderName}</Typography>
+                <PageHeader title="Collection Stats" subtitle={binderName} />
 
-                <Paper elevation={0} data-testid="collection-stats-headline" sx={sectionSx}>
-                    <Typography
-                        sx={{
-                            fontWeight: 800,
-                            fontSize: '0.75rem',
-                            letterSpacing: 0.4,
-                            textTransform: 'uppercase',
-                            color: accentColor,
-                            mb: 1,
-                        }}
-                    >
+                <Panel data-testid="collection-stats-headline" sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
+                    <Typography variant="overline" component="div" sx={{ color: mutedColor, mb: 1 }}>
                         Total Value
                     </Typography>
                     <Box
                         sx={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            gap: 3,
-                            flexWrap: 'wrap',
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, max-content)' },
+                            columnGap: 6,
+                            rowGap: 2,
                         }}
                     >
-                        <Typography
-                            sx={{
-                                fontWeight: 800,
-                                fontSize: '1.8rem',
-                                color: '#2e7d32',
-                                fontVariantNumeric: 'tabular-nums',
-                            }}
-                        >
-                            {formatCatalogPrice(usdAmount, 'USD')}
-                        </Typography>
-                        <Typography
-                            sx={{
-                                fontWeight: 800,
-                                fontSize: '1.8rem',
-                                color: '#2e7d32',
-                                fontVariantNumeric: 'tabular-nums',
-                            }}
-                        >
-                            {formatCatalogPrice(eurAmount, 'EUR')}
-                        </Typography>
+                        <Box>
+                            <Typography sx={valueSx}>{formatCatalogPrice(usdAmount, 'USD')}</Typography>
+                            <Typography variant="caption" sx={{ color: mutedColor }}>TCGplayer</Typography>
+                        </Box>
+                        <Box>
+                            <Typography sx={valueSx}>{formatCatalogPrice(eurAmount, 'EUR')}</Typography>
+                            <Typography variant="caption" sx={{ color: mutedColor }}>CardMarket</Typography>
+                        </Box>
                     </Box>
-                </Paper>
+                </Panel>
 
-                <Paper elevation={0} sx={sectionSx}>
-                    <Typography variant="h6" sx={{ color: textColor, fontWeight: 700, mb: 1.5 }}>
+                <Box component="section">
+                    <Typography variant="h3" component="h2" sx={{ color: textColor, mb: 2 }}>
                         Recent movers
                     </Typography>
                     {moversLoading ? (
@@ -380,24 +322,24 @@ const CollectionStats = () => {
                                 'gainer',
                                 'Gainers',
                                 gainers,
-                                '#2E7D32',
+                                'success.main',
                                 'None of these Printings gained enough to rank.',
                             )}
                             {renderDirection(
                                 'loser',
                                 'Losers',
                                 losers,
-                                '#C62828',
+                                'error.main',
                                 'None of these Printings lost enough to rank.',
                             )}
                         </Box>
                     )}
-                </Paper>
-                <Typography variant="caption" sx={{ color: mutedColor, display: 'block', mt: 0.5 }}>
+                </Box>
+                <Typography variant="caption" sx={{ color: mutedColor, display: 'block', mt: 3 }}>
                     Observed catalog numbers, not an appraisal. Values follow {label}.
                 </Typography>
-            </Container>
-        </Box>
+            </Page>
+        </>
     );
 };
 

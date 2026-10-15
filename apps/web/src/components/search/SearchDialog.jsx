@@ -2,15 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogContent,
-    AppBar,
-    Toolbar,
     IconButton,
     Typography,
     Box
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchInput from './SearchInput';
-import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 
 /**
  * SearchDialog Component
@@ -26,7 +23,6 @@ const SearchDialog = ({
     keepInputOnSelect = false
 }) => {
     const [searchValue, setSearchValue] = useState('');
-    const { isDark } = useThemeMode();
 
     // Reset search when dialog closes
     useEffect(() => {
@@ -50,45 +46,37 @@ const SearchDialog = ({
             fullScreen
             open={open}
             onClose={onClose}
-            sx={{
-                '& .MuiDialog-paper': {
-                    backgroundColor: isDark ? '#1a0f0a' : '#fafafa'
-                }
-            }}
+            PaperProps={{ sx: { borderRadius: 0, border: 0, bgcolor: 'background.default' } }}
         >
-            <AppBar 
-                position="static" 
-                elevation={0}
-                sx={{ 
-                    background: isDark 
-                        ? 'linear-gradient(135deg, #2c1810 0%, #1a0f0a 100%)'
-                        : 'linear-gradient(135deg, #8b4513 0%, #5d2f0d 100%)',
-                    borderBottom: '3px solid #d4a574',
-                    boxShadow: isDark 
-                        ? '0 4px 20px rgba(0, 0, 0, 0.4)'
-                        : '0 4px 20px rgba(139, 69, 19, 0.3)'
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    px: 1,
+                    pt: 'env(safe-area-inset-top, 0px)',
+                    minHeight: 56,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
                 }}
             >
-                <Toolbar>
-                    <IconButton
-                        edge="start"
-                        color="inherit"
-                        onClick={onClose}
-                        aria-label="close"
-                        sx={{ mr: 2 }}
-                    >
-                        <CloseIcon />
-                    </IconButton>
-                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                        {title}
-                    </Typography>
-                </Toolbar>
-            </AppBar>
-            
-            <DialogContent sx={{ p: 2, backgroundColor: isDark ? '#1a0f0a' : '#fafafa' }}>
+                <IconButton
+                    onClick={onClose}
+                    aria-label="close"
+                    sx={{ color: 'text.primary' }}
+                >
+                    <CloseIcon />
+                </IconButton>
+                <Typography variant="h5" component="h2" sx={{ flexGrow: 1, color: 'text.primary' }} noWrap>
+                    {title}
+                </Typography>
+            </Box>
+
+            <DialogContent sx={{ p: 2 }}>
                 <SearchInput
-                    label="Search for Cards"
-                    placeholder="Start typing to search..."
+                    label=""
+                    placeholder="Search by card name…"
                     items={items}
                     value={searchValue}
                     onChange={(e, val) => setSearchValue(val)}
@@ -100,9 +88,9 @@ const SearchDialog = ({
           keepInputOnSelect={keepInputOnSelect}
                 />
                 
-                <Box sx={{ mt: 3, px: 1 }}>
-                    <Typography variant="body2" sx={{ color: isDark ? '#d4a574' : 'text.secondary' }}>
-                        Select a card from the dropdown to add it to your list, or type to search for specific cards.
+                <Box sx={{ mt: 3, px: 0.5 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Tap a result to add it. The list stays open so you can add several cards in a row.
                     </Typography>
                 </Box>
             </DialogContent>

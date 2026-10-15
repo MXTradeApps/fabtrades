@@ -185,7 +185,7 @@ describe('Fabrary import', () => {
                 </ThemeModeProvider>
             </ThemeProvider>,
         );
-        await waitFor(() => screen.getByText('Want List'));
+        await waitFor(() => screen.getByRole('heading', { name: 'Want List' }));
         expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
         expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
 
@@ -198,7 +198,6 @@ describe('Fabrary import', () => {
                 </ThemeProvider>
             </MemoryRouter>,
         );
-        fireEvent.click(screen.getAllByLabelText('open drawer')[0]);
         expect(screen.queryByText('Import from Fabrary')).not.toBeInTheDocument();
         expect(screen.queryByRole('link', { name: /Settings/i })).not.toBeInTheDocument();
     });

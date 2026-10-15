@@ -8,7 +8,6 @@ import {
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { usePriceType } from '../../contexts/PriceContext.jsx';
-import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 import { useCardDetail } from '../../contexts/CardDetailContext.jsx';
 import { useCardData } from '../../hooks/useCardData.jsx';
 import { recentMovers } from '../../services/fabDb.js';
@@ -32,7 +31,6 @@ const artForRow = (row, cardIdLookup) => {
  */
 const RecentMoversSection = () => {
     const { priceSource } = usePriceType();
-    const { isDark } = useThemeMode();
     const { openDetail } = useCardDetail();
     const { cardIdLookup } = useCardData();
 
@@ -40,10 +38,10 @@ const RecentMoversSection = () => {
     const [catalogLoading, setCatalogLoading] = useState(true);
     const [catalogError, setCatalogError] = useState(null);
 
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
-    const upColor = '#2E7D32';
-    const downColor = '#C62828';
+    const textColor = 'text.primary';
+    const mutedColor = 'text.secondary';
+    const upColor = 'success.main';
+    const downColor = 'error.main';
 
     useEffect(() => {
         let cancelled = false;
@@ -74,7 +72,6 @@ const RecentMoversSection = () => {
 
     const label = sourceLabel(priceSource);
     const chrome = {
-        isDark,
         textColor,
         mutedColor,
         upColor,
@@ -115,7 +112,6 @@ const MoversBlock = ({
     loading,
     error,
     sourceLabel: label,
-    isDark,
     textColor,
     mutedColor,
     upColor,
@@ -128,8 +124,8 @@ const MoversBlock = ({
     const { gainers, losers } = splitMoversByDirection(rows);
 
     return (
-        <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ color: textColor, fontWeight: 700, mb: 1.5 }}>
+        <Box sx={{ mb: 2 }}>
+            <Typography variant="overline" component="h2" sx={{ color: mutedColor, display: 'block', mb: 1.5 }}>
                 {heading}
             </Typography>
             {loading ? (
@@ -153,9 +149,6 @@ const MoversBlock = ({
                         rows={gainers}
                         color={upColor}
                         emptyCopy={`No recent gainers on ${label}.`}
-                        isDark={isDark}
-                        textColor={textColor}
-                        mutedColor={mutedColor}
                         priceSource={priceSource}
                         cardIdLookup={cardIdLookup}
                         onSelect={onSelect}
@@ -168,9 +161,6 @@ const MoversBlock = ({
                         rows={losers}
                         color={downColor}
                         emptyCopy={`No recent losers on ${label}.`}
-                        isDark={isDark}
-                        textColor={textColor}
-                        mutedColor={mutedColor}
                         priceSource={priceSource}
                         cardIdLookup={cardIdLookup}
                         onSelect={onSelect}
@@ -189,35 +179,48 @@ const DirectionList = ({
     rows,
     color,
     emptyCopy,
-    isDark,
     textColor,
     mutedColor,
     priceSource,
     cardIdLookup,
     onSelect,
 }) => (
-    <Box sx={{ mb: 3 }}>
+    <Box sx={{ mb: 4 }}>
         <Box
             sx={{
                 display: 'flex',
-                alignItems: 'baseline',
+                alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: 0.75,
+                columnGap: 1,
+                rowGap: 0.5,
                 mb: 1.5,
             }}
         >
-            <Icon sx={{ color, fontSize: 20, position: 'relative', top: 3 }} />
-            <Typography
-                variant="subtitle1"
-                sx={{ color: textColor, fontWeight: 700, letterSpacing: '-0.01em' }}
+            <Box
+                sx={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '8px',
+                    display: 'grid',
+                    placeItems: 'center',
+                    color,
+                    bgcolor: kind === 'gainer' ? 'rgba(70, 194, 133, 0.14)' : 'rgba(240, 106, 98, 0.14)',
+                }}
             >
+                <Icon sx={{ fontSize: 18 }} />
+            </Box>
+            <Typography variant="h4" component="h3" sx={{ color: textColor }}>
                 {title}
             </Typography>
-            <Typography variant="body2" sx={{ color: mutedColor }}>
+            <Typography
+                variant="body2"
+                component="span"
+                sx={{ color: mutedColor, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}
+            >
                 ({rows.length})
             </Typography>
-            <Typography variant="body2" sx={{ color: mutedColor }}>
-                — {description}
+            <Typography variant="body2" sx={{ color: mutedColor, width: { xs: '100%', sm: 'auto' } }}>
+                {description}
             </Typography>
         </Box>
         {rows.length === 0 ? (
@@ -243,9 +246,6 @@ const DirectionList = ({
                             percentChange={row.percent_change}
                             amountChange={row.amount_change}
                             onSelect={() => onSelect(row)}
-                            isDark={isDark}
-                            textColor={textColor}
-                            mutedColor={mutedColor}
                             priceSource={priceSource}
                         />
                     );

@@ -1,5 +1,10 @@
 import { Box, Card, CardActionArea, IconButton, Menu, MenuItem, Typography } from '@mui/material';
-import { MoreVert as MoreVertIcon } from '@mui/icons-material';
+import {
+    MoreHoriz as MoreVertIcon,
+    BookmarkBorderRounded,
+    CollectionsBookmarkOutlined,
+} from '@mui/icons-material';
+import { tk } from '../../theme/tokens.js';
 import { useEffect, useState } from 'react';
 import { pickBinderCover } from '../../utils/binderCover.js';
 import { isPricedField } from '../../utils/binderValueSnapshot.js';
@@ -63,7 +68,7 @@ function BinderTileCover({ imageUrl, fallbackUrl, alt, binderId }) {
         return (
             <Box
                 data-testid={`binder-tile-cover-${binderId}`}
-                sx={{ width: '100%', height: '100%', bgcolor: 'rgba(0, 0, 0, 0.2)' }}
+                sx={{ width: '100%', height: '100%', bgcolor: 'surface.sunken' }}
             />
         );
     }
@@ -95,10 +100,6 @@ export default function BinderGrid({
     onDelete,
     onClear,
     onSettings,
-    mutedColor,
-    accentColor,
-    paperBg,
-    paperBorder,
 }) {
     const ordered = gridOrderBinders(binders);
 
@@ -107,8 +108,11 @@ export default function BinderGrid({
             data-testid="binder-grid"
             sx={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                gap: 1.5,
+                gridTemplateColumns: {
+                    xs: 'repeat(2, minmax(0, 1fr))',
+                    sm: 'repeat(auto-fill, minmax(200px, 1fr))',
+                },
+                gap: { xs: 1.5, sm: 2 },
             }}
         >
             {ordered.map((binder) => (
@@ -122,10 +126,6 @@ export default function BinderGrid({
                     onDelete={isProtectedBinder(binder) ? undefined : onDelete}
                     onClear={onClear}
                     onSettings={onSettings}
-                    mutedColor={mutedColor}
-                    accentColor={accentColor}
-                    paperBg={paperBg}
-                    paperBorder={paperBorder}
                 />
             ))}
         </Box>
@@ -141,10 +141,6 @@ function BinderTile({
     onDelete,
     onClear,
     onSettings,
-    mutedColor,
-    accentColor,
-    paperBg,
-    paperBorder,
 }) {
     const [menuEl, setMenuEl] = useState(null);
     const id = binder.clientId;
@@ -170,25 +166,26 @@ function BinderTile({
 
     return (
         <Card
-            variant="outlined"
             sx={{
                 position: 'relative',
-                backgroundColor: paperBg,
-                borderColor: paperBorder,
+                bgcolor: 'background.paper',
+                transition: 'border-color 120ms ease, box-shadow 120ms ease',
+                '&:hover': { borderColor: 'text.disabled', boxShadow: (t) => tk(t).shadowMd },
             }}
         >
             <CardActionArea
                 data-testid={`binder-tile-${id}`}
                 onClick={() => onOpen?.(binder)}
-                sx={{ p: 1.25, textAlign: 'left' }}
+                sx={{ textAlign: 'left' }}
             >
                 <Box
                     sx={{
-                        height: 120,
-                        mb: 0.5,
+                        position: 'relative',
+                        aspectRatio: '4 / 3',
                         overflow: 'hidden',
-                        borderRadius: 1,
-                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                        bgcolor: 'surface.sunken',
+                        borderBottom: 1,
+                        borderColor: 'divider',
                     }}
                 >
                     {cover.printingId ? (
@@ -198,27 +195,44 @@ function BinderTile({
                             fallbackUrl={coverRow?.imageUrlFallback}
                             alt={coverRow?.name}
                         />
-                    ) : null}
+                    ) : (
+                        <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'text.disabled' }}>
+                            {id === WANT_BINDER_ID
+                                ? <BookmarkBorderRounded sx={{ fontSize: 36 }} />
+                                : <CollectionsBookmarkOutlined sx={{ fontSize: 36 }} />}
+                        </Box>
+                    )}
                 </Box>
-                <Typography
-                    data-testid={`binder-tile-name-${id}`}
-                    sx={{ fontWeight: 700, color: accentColor, fontSize: '0.9rem' }}
-                    noWrap
-                >
-                    {binder.name}
-                </Typography>
-                <Typography data-testid={`binder-tile-count-${id}`} sx={{ color: mutedColor, fontSize: '0.8rem' }}>
-                    {copies}
-                </Typography>
-                <Typography data-testid={`binder-tile-value-${id}`} sx={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                    {value}
-                </Typography>
+                <Box sx={{ px: 1.75, py: 1.5 }}>
+                    <Typography
+                        data-testid={`binder-tile-name-${id}`}
+                        sx={{ fontWeight: 650, color: 'text.primary', fontSize: '0.9375rem', pr: 3 }}
+                        noWrap
+                    >
+                        {binder.name}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 1, mt: 0.25 }}>
+                        <Typography data-testid={`binder-tile-count-${id}`} sx={{ color: 'text.secondary', fontSize: '0.8125rem', fontVariantNumeric: 'tabular-nums' }}>
+                            {copies} {copies === 1 ? 'card' : 'cards'}
+                        </Typography>
+                        <Typography data-testid={`binder-tile-value-${id}`} sx={{ fontWeight: 700, fontSize: '0.9375rem', color: 'text.primary', fontVariantNumeric: 'tabular-nums' }}>
+                            {value}
+                        </Typography>
+                    </Box>
+                </Box>
             </CardActionArea>
             {(onRename || onDelete || onClear || onSettings) && (
-                <Box sx={{ position: 'absolute', top: 4, right: 4 }}>
+                <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
                     <IconButton
                         size="small"
+                        aria-label={`${binder.name} options`}
                         data-testid={`binder-tile-menu-${id}`}
+                        sx={{
+                            color: '#fff',
+                            bgcolor: 'rgba(0, 0, 0, 0.45)',
+                            backdropFilter: 'blur(6px)',
+                            '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.65)' },
+                        }}
                         onClick={(e) => {
                             e.stopPropagation();
                             setMenuEl(e.currentTarget);
@@ -272,6 +286,7 @@ function BinderTile({
                             setMenuEl(null);
                             onDelete(binder);
                         }}
+                        sx={{ color: 'error.main' }}
                     >
                         Delete
                     </MenuItem>

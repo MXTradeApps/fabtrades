@@ -1,34 +1,28 @@
 import { useState, useMemo } from 'react';
 import {
     Box,
-    Container,
-    Paper,
+    ButtonBase,
     Typography,
     TextField,
     InputAdornment,
-    List,
-    ListItem,
-    ListItemButton,
-    Chip,
     CircularProgress,
     Alert
 } from '@mui/material';
 import {
     Search as SearchIcon,
-    CalendarToday as CalendarIcon,
-    Style as StyleIcon,
     ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
+import { Page, PageHeader, SectionTitle } from '../components/layout/Page.jsx';
+import { tk } from '../theme/tokens.js';
 import CatalogPrintingResults from '../components/search/CatalogPrintingResults.jsx';
 import { SearchClearAdornment } from '../components/search/index.js';
 import { useSets } from '../hooks/useSets.js';
 import { useCardData } from '../hooks/useCardData.jsx';
-import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useDocumentHead } from '../utils/seo.js';
 import { matchPrintings } from '../utils/searchUtils.js';
-import { BROWSE_TIER, browseTierLabel, setBrowseTier } from '../utils/setSort.js';
+import { browseTierLabel, setBrowseTier } from '../utils/setSort.js';
 
 const formatDate = (iso) => {
     if (!iso) return 'Unknown';
@@ -44,109 +38,147 @@ const formatMoney = (value) => {
 };
 
 /**
- * Renders the official FAB set logo when available; falls back to the set name.
- * Silver Age rows keep the set name visible because chapters share one logo.
+ * Set tile: official FAB set logo on a neutral plate (falls back to the
+ * abbreviation), then the name and the numbers people scan for.
  */
-const SetTitle = ({ set, textColor, mutedColor, isDark }) => {
+const SetTile = ({ set }) => {
     const [logoFailed, setLogoFailed] = useState(false);
     const showLogo = Boolean(set.logoUrl) && !logoFailed;
-    const showNameWithLogo = setBrowseTier(set.name) === BROWSE_TIER.SILVER_AGE;
 
-    const abbreviationLabel = set.abbreviation ? (
-        <Box
-            component="span"
+    return (
+        <ButtonBase
+            component={Link}
+            to={`/sets/${set.slug || set.groupId}`}
             sx={{
-                color: mutedColor,
-                fontWeight: 500,
-                fontSize: '0.85rem',
-                flexShrink: 0
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                textAlign: 'left',
+                minWidth: 0,
+                borderRadius: '14px',
+                border: 1,
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                overflow: 'hidden',
+                transition: 'border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease',
+                '&:hover': {
+                    borderColor: 'text.disabled',
+                    boxShadow: (t) => tk(t).shadowMd,
+                },
+                '&:hover .set-tile-arrow': { transform: 'translateX(2px)', color: 'text.primary' },
+                '&.Mui-focusVisible': { borderColor: 'primary.main' },
             }}
         >
-            {set.abbreviation}
-        </Box>
-    ) : null;
-
-    if (showLogo) {
-        return (
             <Box
                 sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    minWidth: 0
+                    height: { xs: 68, sm: 84 },
+                    display: 'grid',
+                    placeItems: 'center',
+                    px: 2.5,
+                    bgcolor: 'surface.sunken',
+                    borderBottom: 1,
+                    borderColor: 'divider',
                 }}
             >
-                <Box
-                    component="img"
-                    src={set.logoUrl}
-                    alt={set.name}
-                    loading="lazy"
-                    onError={() => setLogoFailed(true)}
-                    sx={{
-                        display: 'block',
-                        height: { xs: 28, sm: 34 },
-                        maxWidth: { xs: showNameWithLogo ? '45%' : '70%', sm: 280 },
-                        width: 'auto',
-                        objectFit: 'contain',
-                        objectPosition: 'left center',
-                        // Many official logos are light/gold; a few are dark ink.
-                        // Soft plate keeps both readable on either theme.
-                        p: 0.5,
-                        borderRadius: 1,
-                        backgroundColor: isDark
-                            ? 'rgba(255, 255, 255, 0.06)'
-                            : 'rgba(44, 24, 16, 0.04)'
-                    }}
-                />
-                {showNameWithLogo ? (
-                    <Box sx={{ minWidth: 0 }}>
+                {showLogo ? (
+                    <Box
+                        component="img"
+                        src={set.logoUrl}
+                        alt=""
+                        loading="lazy"
+                        onError={() => setLogoFailed(true)}
+                        sx={{
+                            display: 'block',
+                            maxHeight: 52,
+                            maxWidth: '100%',
+                            width: 'auto',
+                            objectFit: 'contain',
+                        }}
+                    />
+                ) : (
+                    <Typography
+                        aria-hidden
+                        sx={{
+                            fontFamily: (t) => t.typography.h1.fontFamily,
+                            fontWeight: 800,
+                            fontStretch: '120%',
+                            fontSize: '1.6rem',
+                            letterSpacing: '0.02em',
+                            color: 'text.disabled',
+                        }}
+                    >
+                        {set.abbreviation || set.name.slice(0, 3).toUpperCase()}
+                    </Typography>
+                )}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5 }}>
+                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                         <Typography
                             variant="subtitle1"
-                            sx={{
-                                color: textColor,
-                                fontWeight: 600,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                lineHeight: 1.25
-                            }}
+                            noWrap
+                            sx={{ color: 'text.primary', fontWeight: 650, lineHeight: 1.3, minWidth: 0 }}
                         >
                             {set.name}
                         </Typography>
-                        {abbreviationLabel}
+                        {set.abbreviation ? (
+                            <Typography
+                                component="span"
+                                sx={{ color: 'text.secondary', fontWeight: 600, fontSize: '0.75rem', flexShrink: 0 }}
+                            >
+                                {set.abbreviation}
+                            </Typography>
+                        ) : null}
                     </Box>
-                ) : (
-                    abbreviationLabel
-                )}
-            </Box>
-        );
-    }
-
-    return (
-        <Typography
-            variant="subtitle1"
-            sx={{
-                color: textColor,
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-            }}
-        >
-            {set.name}
-            {set.abbreviation ? (
-                <Box component="span" sx={{ ml: 1, color: mutedColor, fontWeight: 500, fontSize: '0.85em' }}>
-                    {set.abbreviation}
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            columnGap: 1.5,
+                            rowGap: 0.25,
+                            mt: 0.5,
+                            color: 'text.secondary',
+                            fontSize: '0.75rem',
+                            fontVariantNumeric: 'tabular-nums',
+                        }}
+                    >
+                        <span>{formatDate(set.publishedOn)}</span>
+                        <span>{set.cardCount} cards</span>
+                        {set.topMarketPrice > 0 && (
+                            <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                                Top {formatMoney(set.topMarketPrice)}
+                            </Box>
+                        )}
+                    </Box>
                 </Box>
-            ) : null}
-        </Typography>
+                <ChevronRightIcon
+                    className="set-tile-arrow"
+                    sx={{ color: 'text.disabled', flexShrink: 0, transition: 'transform 120ms ease, color 120ms ease' }}
+                />
+            </Box>
+        </ButtonBase>
     );
+};
+
+// Consecutive sets that share a browse tier, in catalog order.
+const groupByTier = (sets) => {
+    const groups = [];
+    for (const set of sets) {
+        const tier = setBrowseTier(set.name);
+        const last = groups[groups.length - 1];
+        if (last && last.tier === tier) {
+            last.sets.push(set);
+        } else {
+            groups.push({ tier, sets: [set] });
+        }
+    }
+    return groups;
 };
 
 const SetList = () => {
     const { sets, loading, error } = useSets();
     const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
-    const { isDark } = useThemeMode();
     const [query, setQuery] = useState('');
 
     useDocumentHead({
@@ -162,72 +194,35 @@ const SetList = () => {
         () => (searching ? matchPrintings(cards, query) : []),
         [cards, query, searching],
     );
-
-    const bgGradient = isDark
-        ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
-        : 'linear-gradient(135deg, #f5f1ed 0%, #e8dfd6 50%, #f0e6dc 100%)';
-
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
+    const tiers = useMemo(() => groupByTier(sets), [sets]);
 
     return (
-        <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '100vh',
-            background: bgGradient,
-            backgroundAttachment: 'fixed'
-        }}>
+        <>
             <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
 
-            <Container maxWidth="md" sx={{ py: { xs: 2, md: 4 } }}>
-                <Box sx={{ mb: 3 }}>
-                    <Typography
-                        variant="h4"
-                        sx={{
-                            fontWeight: 700,
-                            color: textColor,
-                            mb: 0.5,
-                            fontSize: { xs: '1.5rem', md: '2rem' }
-                        }}
-                    >
-                        Browse Sets
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: mutedColor }}>
-                        Pick a set to see its cards ranked by TCGplayer market price.
-                    </Typography>
-                </Box>
+            <Page>
+                <PageHeader
+                    title="Browse Sets"
+                    subtitle="Pick a set to see its cards ranked by TCGplayer market price."
+                />
 
                 <TextField
                     fullWidth
                     placeholder="Search all cards…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    sx={{
-                        mb: 2,
-                        '& .MuiOutlinedInput-root': {
-                            backgroundColor: isDark ? 'rgba(44, 24, 16, 0.6)' : '#ffffff',
-                            '& fieldset': {
-                                borderColor: isDark ? 'rgba(212, 165, 116, 0.3)' : 'rgba(139, 69, 19, 0.3)'
-                            },
-                            '&:hover fieldset': {
-                                borderColor: isDark ? '#d4a574' : '#8b4513'
-                            }
-                        },
-                        '& input': { color: textColor }
-                    }}
+                    inputProps={{ 'aria-label': 'Search all cards' }}
+                    sx={{ mb: 3, maxWidth: 640 }}
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
-                                <SearchIcon sx={{ color: mutedColor }} />
+                                <SearchIcon sx={{ color: 'text.secondary' }} />
                             </InputAdornment>
                         ),
                         endAdornment: (
                             <SearchClearAdornment
                                 value={query}
                                 onClear={() => setQuery('')}
-                                isDark={isDark}
-                                color={mutedColor}
                             />
                         ),
                     }}
@@ -243,130 +238,40 @@ const SetList = () => {
                     <CatalogPrintingResults printings={printings} />
                 ) : loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-                        <CircularProgress sx={{ color: isDark ? '#d4a574' : '#8b4513' }} />
+                        <CircularProgress />
                     </Box>
+                ) : sets.length === 0 ? (
+                    <Typography variant="body2" sx={{ color: 'text.secondary', py: 2 }}>
+                        No sets available.
+                    </Typography>
                 ) : (
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            backgroundColor: isDark ? 'rgba(44, 24, 16, 0.6)' : '#ffffff',
-                            border: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.15)'}`,
-                            borderRadius: 2,
-                            overflow: 'hidden'
-                        }}
-                    >
-                        <List disablePadding>
-                            {sets.length === 0 && (
-                                <ListItem>
-                                    <Typography variant="body2" sx={{ color: mutedColor, py: 2 }}>
-                                        No sets available.
-                                    </Typography>
-                                </ListItem>
-                            )}
-                            {sets.map((set, idx) => {
-                                const tier = setBrowseTier(set.name);
-                                const prevTier = idx > 0
-                                    ? setBrowseTier(sets[idx - 1].name)
-                                    : null;
-                                const showSectionHeader = tier !== prevTier;
-                                const isLast = idx === sets.length - 1;
-
-                                return (
-                                    <Box key={set.groupId}>
-                                        {showSectionHeader && (
-                                            <ListItem
-                                                disablePadding
-                                                sx={{
-                                                    px: 2,
-                                                    pt: idx === 0 ? 1.25 : 2,
-                                                    pb: 0.75,
-                                                    backgroundColor: isDark
-                                                        ? 'rgba(212, 165, 116, 0.08)'
-                                                        : 'rgba(139, 69, 19, 0.06)',
-                                                    borderBottom: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.16)' : 'rgba(139, 69, 19, 0.1)'}`
-                                                }}
-                                            >
-                                                <Typography
-                                                    variant="overline"
-                                                    sx={{
-                                                        color: mutedColor,
-                                                        fontWeight: 700,
-                                                        letterSpacing: '0.08em',
-                                                        lineHeight: 1.4
-                                                    }}
-                                                >
-                                                    {browseTierLabel(tier)}
-                                                </Typography>
-                                            </ListItem>
-                                        )}
-                                        <ListItem
-                                            disablePadding
-                                            sx={{
-                                                borderBottom: isLast
-                                                    ? 'none'
-                                                    : `1px solid ${isDark ? 'rgba(212, 165, 116, 0.12)' : 'rgba(139, 69, 19, 0.08)'}`
-                                            }}
-                                        >
-                                            <ListItemButton
-                                                component={Link}
-                                                to={`/sets/${set.slug || set.groupId}`}
-                                                sx={{
-                                                    px: 2,
-                                                    py: 1.5,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 2,
-                                                    '&:hover': {
-                                                        backgroundColor: isDark ? 'rgba(200, 113, 55, 0.1)' : 'rgba(139, 69, 19, 0.06)'
-                                                    }
-                                                }}
-                                            >
-                                                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                                                    <SetTitle
-                                                        set={set}
-                                                        textColor={textColor}
-                                                        mutedColor={mutedColor}
-                                                        isDark={isDark}
-                                                    />
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5, flexWrap: 'wrap' }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <CalendarIcon sx={{ fontSize: 14, color: mutedColor }} />
-                                                            <Typography variant="caption" sx={{ color: mutedColor }}>
-                                                                {formatDate(set.publishedOn)}
-                                                            </Typography>
-                                                        </Box>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <StyleIcon sx={{ fontSize: 14, color: mutedColor }} />
-                                                            <Typography variant="caption" sx={{ color: mutedColor }}>
-                                                                {set.cardCount} cards
-                                                            </Typography>
-                                                        </Box>
-                                                        {set.topMarketPrice > 0 && (
-                                                            <Chip
-                                                                size="small"
-                                                                label={`Top ${formatMoney(set.topMarketPrice)}`}
-                                                                sx={{
-                                                                    height: 20,
-                                                                    fontSize: '0.7rem',
-                                                                    backgroundColor: isDark ? 'rgba(200, 113, 55, 0.2)' : 'rgba(139, 69, 19, 0.1)',
-                                                                    color: isDark ? '#e4c09c' : '#8b4513',
-                                                                    border: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.3)' : 'rgba(139, 69, 19, 0.2)'}`
-                                                                }}
-                                                            />
-                                                        )}
-                                                    </Box>
-                                                </Box>
-                                                <ChevronRightIcon sx={{ color: mutedColor, flexShrink: 0 }} />
-                                            </ListItemButton>
-                                        </ListItem>
-                                    </Box>
-                                );
-                            })}
-                        </List>
-                    </Paper>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {tiers.map(({ tier, sets: tierSets }, idx) => (
+                            <Box component="section" key={`${tier}-${idx}`}>
+                                <SectionTitle count={tierSets.length}>
+                                    {browseTierLabel(tier)}
+                                </SectionTitle>
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: {
+                                            xs: '1fr',
+                                            sm: 'repeat(2, minmax(0, 1fr))',
+                                            lg: 'repeat(3, minmax(0, 1fr))',
+                                        },
+                                        gap: 1.5,
+                                    }}
+                                >
+                                    {tierSets.map((set) => (
+                                        <SetTile key={set.groupId} set={set} />
+                                    ))}
+                                </Box>
+                            </Box>
+                        ))}
+                    </Box>
                 )}
-            </Container>
-        </Box>
+            </Page>
+        </>
     );
 };
 

@@ -1,20 +1,21 @@
 import { useEffect, useRef } from 'react';
-import { Box, Typography, useMediaQuery } from '@mui/material';
+import { Box, useMediaQuery } from '@mui/material';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { useLocation } from 'react-router-dom';
 import { useCardData } from "../hooks/useCardData.jsx";
 import { useTradeState } from "../hooks/useTradeState.js";
 import Header from "../components/elements/Header.jsx";
 import CardPanel from "../components/ui/CardPanel.jsx";
 import TradeSummary from "../components/elements/TradeSummary.jsx";
-import { useThemeMode } from "../contexts/ThemeContext.jsx";
+import { EmptyState } from "../components/layout/Page.jsx";
 import { useCardDetail } from "../contexts/CardDetailContext.jsx";
 
 const Home = () => {
     const location = useLocation();
-    const { isDark } = useThemeMode();
 
-    // Detect landscape vs portrait orientation using aspect ratio
-    const isLandscape = useMediaQuery('(min-aspect-ratio: 4/3)');
+    // Side-by-side layout needs a landscape window with room for both panels
+    // next to the sidebar; everything else stacks the two sides vertically.
+    const isLandscape = useMediaQuery('(min-aspect-ratio: 4/3) and (min-width: 1100px)');
     // Stacked mobile layout uses the denser list; desktop/landscape gets the card grid.
     const panelView = isLandscape ? 'grid' : 'list';
 
@@ -54,57 +55,45 @@ const Home = () => {
         }
     }, [location.state?.loadTrade, dataReady]);
 
-    // Background gradients based on theme - FAB brown/cream
-    const bgGradient = isDark 
-        ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
-        : 'linear-gradient(135deg, #f5f1ed 0%, #e8dfd6 50%, #f0e6dc 100%)';
-
     if (error) {
         return (
-            <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                height: '100vh', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: bgGradient
-            }}>
-                <Typography variant="h6" color="error" sx={{ mb: 2 }}>
-                    Error loading card data
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
+            <>
+                <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
+                <EmptyState
+                    icon={<ErrorOutlineIcon />}
+                    title="Couldn’t load card prices"
+                    sx={{ minHeight: 'calc(100dvh - var(--shell-top) - var(--shell-bottom))', justifyContent: 'center' }}
+                >
                     {error}
-                </Typography>
-            </Box>
+                </EmptyState>
+            </>
         );
     }
 
     return (
-        <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            height: 'calc(100vh - 28px)', 
-            width: '100%',
-            background: bgGradient,
-            backgroundAttachment: 'fixed'
-        }}>
-            <Header 
-                lastUpdatedTimestamp={lastUpdatedTimestamp}
-            />
+        <>
+            <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
 
-            {/* Content */}
-            <Box sx={{ 
-                display: 'flex', 
-                flexGrow: 1, 
-                flexDirection: isLandscape ? 'row' : 'column',
-                alignItems: isLandscape ? 'stretch' : 'stretch',
-                width: '100%',
-                minHeight: 0,
-                gap: isLandscape ? 1.25 : 0,
-                p: isLandscape ? 1.25 : 0
-            }}>
+            <Box
+                component="main"
+                sx={{
+                    display: 'flex',
+                    flexDirection: isLandscape ? 'row' : 'column',
+                    alignItems: 'stretch',
+                    width: '100%',
+                    // Fill the viewport between the shell bars so each side scrolls on its own.
+                    height: isLandscape ? 'calc(100dvh - var(--shell-top) - var(--shell-bottom))' : 'auto',
+                    minHeight: isLandscape ? 0 : 'calc(100dvh - var(--shell-top) - var(--shell-bottom))',
+                    gap: isLandscape ? 2 : 0,
+                    p: isLandscape ? { xs: 1.5, md: 2.5 } : 0,
+                }}
+            >
+                <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+                    Trade Calculator
+                </h1>
                 <CardPanel
                     title="Cards I Have"
+                    tone="have"
                     cards={tradeState.haveList}
                     cardOptions={cardOptions}
                     inputValue={tradeState.haveInput}
@@ -135,6 +124,7 @@ const Home = () => {
 
                 <CardPanel
                     title="Cards I Want"
+                    tone="want"
                     cards={tradeState.wantList}
                     cardOptions={cardOptions}
                     inputValue={tradeState.wantInput}
@@ -147,7 +137,7 @@ const Home = () => {
                     viewMode={panelView}
                 />
             </Box>
-        </Box>
+        </>
     );
 };
 

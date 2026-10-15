@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { 
     Box, 
     Typography, 
-    Chip, 
     Button, 
     Tooltip,
     IconButton,
@@ -23,12 +22,11 @@ import {
     Forum as ForumIcon,
     CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
-import {formatCurrency} from "../../utils/helpers.js";
 import { generateTradeOffer } from "../../utils/tradeOffer.js";
 import { confirmTrade } from "../../services/confirmTrade.js";
 import { FreeLimits } from "../../utils/freeLimits.js";
 import { useAuth } from "../../contexts/AuthContext.jsx";
-import { useThemeMode } from "../../contexts/ThemeContext.jsx";
+import { fonts, tk } from "../../theme/tokens.js";
 
 // Copy text to the clipboard with a fallback for non-secure contexts.
 const copyTextToClipboard = async (text) => {
@@ -47,35 +45,68 @@ const copyTextToClipboard = async (text) => {
     document.body.removeChild(textarea);
 };
 
-const TotalStack = ({ market, low, color, size, isDark, isLandscape }) => {
-    const muted = isDark ? 'rgba(212, 165, 116, 0.7)' : 'rgba(93, 58, 26, 0.55)';
-    const showLow = low != null && Number(low) > 0;
+// Whole amounts stay short ($12); anything with cents always shows both digits.
+const money = (value) => {
+    const amount = Math.round(Number(value || 0) * 100) / 100;
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+};
+
+// One side of the trade: label, card count, market total and observed Low.
+const SideTotal = ({ label, count, market, low, tone, align = 'left', compact }) => (
+    <Box sx={{ minWidth: 0, textAlign: align }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
+            <Box aria-hidden sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: tone, flexShrink: 0 }} />
+            <Typography
+                component="span"
+                sx={{ fontSize: compact ? '0.6875rem' : '0.75rem', fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}
+            >
+                {label} · {count} {count === 1 ? 'card' : 'cards'}
+            </Typography>
+        </Box>
+        <Typography
+            component="div"
+            sx={{
+                fontFamily: (t) => t.typography.h1.fontFamily,
+                fontWeight: 750,
+                fontStretch: '108%',
+                fontSize: compact ? '1.125rem' : '1.375rem',
+                lineHeight: 1.2,
+                mt: 0.25,
+                color: 'text.primary',
+                fontVariantNumeric: 'tabular-nums',
+                whiteSpace: 'nowrap',
+            }}
+        >
+            {money(market)}
+        </Typography>
+        {low != null && Number(low) > 0 && (
+            <Typography
+                component="div"
+                sx={{ fontSize: '0.6875rem', color: 'text.secondary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+            >
+                Low {money(low)}
+            </Typography>
+        )}
+    </Box>
+);
+
+// Two-sided bar: how the market value splits between what you give and get.
+const BalanceBar = ({ give, get, height = 6 }) => {
+    const total = Number(give || 0) + Number(get || 0);
+    const givePct = total > 0 ? (Number(give || 0) / total) * 100 : 50;
     return (
-        <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 0.15
-        }}>
-            <Chip
-                label={formatCurrency(Number(market || 0).toFixed(2))}
-                color={color}
-                variant="filled"
-                size={size}
-            />
-            {showLow && (
-                <Typography
-                    component="span"
-                    sx={{
-                        fontSize: isLandscape ? '0.6rem' : { xs: '0.55rem', sm: '0.65rem' },
-                        color: muted,
-                        lineHeight: 1.1,
-                        whiteSpace: 'nowrap'
-                    }}
-                >
-                    Low {formatCurrency(Number(low).toFixed(2))}
-                </Typography>
-            )}
+        <Box
+            role="img"
+            aria-label={total > 0 ? `You give ${Math.round(givePct)}% of the trade value` : 'No cards in the trade yet'}
+            sx={{ display: 'flex', gap: '3px', height, width: '100%' }}
+        >
+            <Box sx={{ width: `${givePct}%`, minWidth: 3, borderRadius: 999, bgcolor: total > 0 ? 'primary.main' : 'action.hover', transition: 'width 240ms ease' }} />
+            <Box sx={{ flex: 1, minWidth: 3, borderRadius: 999, bgcolor: total > 0 ? 'success.main' : 'action.hover', transition: 'width 240ms ease' }} />
         </Box>
     );
 };
@@ -95,7 +126,6 @@ const TradeSummary = ({
     urlTradeData,
     hasLoadedFromURL,
 }) => {
-    const { isDark } = useThemeMode();
     const { user } = useAuth();
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [showTradeOffer, setShowTradeOffer] = useState(false);
@@ -200,306 +230,204 @@ const TradeSummary = ({
         return `${Math.round(ageInDays / 30)} month${Math.round(ageInDays / 30) !== 1 ? 's' : ''}`;
     };
 
-    // Theme-aware colors
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const mutedColor = isDark ? 'rgba(212, 165, 116, 0.7)' : 'rgba(93, 58, 26, 0.55)';
-    const bgGradient = isLandscape 
-        ? (isDark ? 'linear-gradient(180deg, #2c1810 0%, #1a0f0a 100%)' : 'linear-gradient(180deg, #ffffff 0%, #f5f1ed 100%)')
-        : (isDark ? 'linear-gradient(90deg, #1a0f0a 0%, #2c1810 50%, #1a0f0a 100%)' : 'linear-gradient(90deg, #f5f1ed 0%, #ffffff 50%, #f5f1ed 100%)');
-
-    const chipSize = 'small';
-    const marketDiffLabel = diff > 0
-        ? `+${formatCurrency(diff.toFixed(2))}`
-        : formatCurrency(diff.toFixed(2));
-    const lowDiffLabel = lowDiff > 0
-        ? `+${formatCurrency(lowDiff.toFixed(2))}`
-        : formatCurrency(lowDiff.toFixed(2));
+    const marketDiffLabel = money(Math.abs(diff));
+    const lowDiffLabel = `${lowDiff > 0 ? '+' : lowDiff < 0 ? '−' : ''}${money(Math.abs(lowDiff))}`;
     const showLowDiff = Math.abs(lowDiff) >= 0.01 || haveLowTotal > 0 || wantLowTotal > 0;
+    const even = Math.abs(diff) < 0.01;
+    const verdict = even
+        ? 'Even trade'
+        : diff > 0
+            ? `You give ${marketDiffLabel} more`
+            : `You get ${marketDiffLabel} more`;
+    const verdictColor = even ? 'text.secondary' : diff > 0 ? 'primary.main' : 'success.main';
 
-    const labelSx = {
-        fontWeight: 'medium',
-        color: textColor,
-        fontSize: isLandscape ? '0.75rem' : { xs: '0.65rem', sm: '0.75rem' },
-        textAlign: 'center',
-        lineHeight: 1.2,
-        whiteSpace: 'nowrap'
-    };
+    const clearUrlButton = hasLoadedFromURL && urlTradeData && (
+        <Tooltip title="Clear loaded trade data from URL">
+            <IconButton
+                size="small"
+                onClick={() => setShowClearConfirm(true)}
+                aria-label="Clear loaded trade data from URL"
+                sx={{ color: 'warning.main', p: 0.5 }}
+            >
+                <ClearIcon fontSize="small" />
+            </IconButton>
+        </Tooltip>
+    );
 
-    const totalColumnSx = {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 0.35,
-        flex: 1,
-        minWidth: 0,
-        px: 0.25
-    };
-
-    const haveColumn = (
-        <Box sx={totalColumnSx}>
-            <Typography variant="h6" sx={labelSx}>
-                My {haveCardCount} cards
+    const ageWarning = urlTradeData && urlTradeData.ageInDays > 7 && (
+        <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            px: 1.25,
+            py: 0.75,
+            borderRadius: '10px',
+            bgcolor: 'action.hover',
+            color: 'warning.main',
+        }}>
+            <WarningIcon sx={{ fontSize: '1rem' }} />
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Shared trade prices are {formatAge(urlTradeData.ageInDays)} old
             </Typography>
-            <TotalStack
-                market={haveTotal}
-                low={haveLowTotal}
-                color="primary"
-                size={chipSize}
-                isDark={isDark}
-                isLandscape={isLandscape}
-            />
         </Box>
     );
 
-    const differenceColumn = (
-        <Box
-            sx={{
-                ...totalColumnSx,
-                ...(isLandscape ? {
-                    py: 0.5,
-                    px: 0.5,
-                    background: isDark
-                        ? 'linear-gradient(135deg, #1a0f0a 0%, #2c1810 100%)'
-                        : 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
-                    borderRadius: 1.5,
-                    boxShadow: isDark
-                        ? '0 1px 4px rgba(0, 0, 0, 0.2)'
-                        : '0 1px 4px rgba(139, 69, 19, 0.08)'
-                } : {}),
-                position: 'relative'
-            }}
-        >
-            <Typography variant="h6" sx={{ ...labelSx, fontWeight: 'bold' }}>
-                Difference
-            </Typography>
-            <Box sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 0.15
-            }}>
-                <Chip
-                    label={marketDiffLabel}
-                    color={diff > 0 ? 'primary' : diff < 0 ? 'success' : 'default'}
-                    variant="filled"
-                    size={chipSize}
-                />
-                {showLowDiff && (
-                    <Typography
-                        component="span"
-                        sx={{
-                            fontSize: isLandscape ? '0.6rem' : { xs: '0.55rem', sm: '0.65rem' },
-                            color: mutedColor,
-                            lineHeight: 1.1,
-                            whiteSpace: 'nowrap'
-                        }}
-                    >
-                        Low {lowDiffLabel}
-                    </Typography>
-                )}
-            </Box>
-            {hasLoadedFromURL && urlTradeData && (
-                <Tooltip title="Clear loaded trade data from URL">
-                    <IconButton
-                        size="small"
-                        onClick={() => setShowClearConfirm(true)}
-                        sx={{
-                            color: 'warning.main',
-                            p: 0.25,
-                            position: 'absolute',
-                            top: -2,
-                            right: -4
-                        }}
-                    >
-                        <ClearIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
-            )}
-        </Box>
-    );
-
-    const wantColumn = (
-        <Box sx={totalColumnSx}>
-            <Typography variant="h6" sx={labelSx}>
-                Their {wantCardCount} cards
-            </Typography>
-            <TotalStack
-                market={wantTotal}
-                low={wantLowTotal}
-                color="success"
-                size={chipSize}
-                isDark={isDark}
-                isLandscape={isLandscape}
-            />
-        </Box>
+    const confirmButton = user && (
+        <Tooltip title="Record the trade and update your Binder">
+            <span style={{ display: 'block' }}>
+                <Button
+                    variant="contained"
+                    size={isLandscape ? 'large' : 'small'}
+                    fullWidth={isLandscape}
+                    startIcon={<CheckCircleIcon />}
+                    onClick={handleOpenConfirmDialog}
+                    disabled={!canGenerateTradeOffer}
+                >
+                    Confirm Trade
+                </Button>
+            </span>
+        </Tooltip>
     );
 
     return (
         <>
-        <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: isLandscape ? 'flex-start' : 'center',
-            alignItems: 'center',
-            alignSelf: isLandscape ? 'flex-start' : 'stretch',
-            gap: 0,
-            p: isLandscape ? 1.25 : 0,
-            background: bgGradient,
-            borderTop: isLandscape ? 'none' : `3px solid #d4a574`,
-            borderBottom: isLandscape ? 'none' : `3px solid #d4a574`,
-            borderRadius: isLandscape ? 2 : 0,
-            border: isLandscape ? `1px solid ${isDark ? 'rgba(212, 165, 116, 0.28)' : 'rgba(139, 69, 19, 0.15)'}` : 'none',
-            width: isLandscape ? '320px' : '100%',
-            minWidth: isLandscape ? '300px' : 'auto',
-            maxWidth: isLandscape ? '360px' : '100%',
-            flexShrink: 0,
-            boxSizing: 'border-box',
-            boxShadow: isLandscape 
-                ? (isDark ? '0 4px 14px rgba(0, 0, 0, 0.25)' : '0 4px 14px rgba(139, 69, 19, 0.1)')
-                : (isDark ? '0 4px 12px rgba(0, 0, 0, 0.2)' : '0 4px 12px rgba(139, 69, 19, 0.08)')
-        }}>
-            {/* Totals: always left-to-right so My vs Their diffs scan in one glance */}
-            <Box sx={{
-                display: 'flex',
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                width: '100%',
-                gap: 0.5,
-                px: isLandscape ? 0.5 : { xs: 0.75, sm: 1 },
-                py: isLandscape ? 0.5 : { xs: 0.5, sm: 0.65 }
-            }}>
-                {haveColumn}
-                {differenceColumn}
-                {wantColumn}
-            </Box>
-
-            {/* URL Age Warning */}
-            {urlTradeData && urlTradeData.ageInDays > 7 && (
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    px: isLandscape ? 1 : { xs: 0.5, sm: 0.75, md: 1 },
-                    py: 0.5,
-                    backgroundColor: isDark ? 'rgba(212, 165, 116, 0.2)' : '#fff3cd',
-                    borderTop: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.3)' : '#ffeaa7'}`,
-                    borderBottom: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.3)' : '#ffeaa7'}`
-                }}>
-                    <WarningIcon fontSize="small" sx={{ color: isDark ? '#e4c09c' : '#856404' }} />
-                    <Typography variant="caption" sx={{ color: isDark ? '#e4c09c' : '#856404', fontSize: '0.7rem' }}>
-                        Trade data is {formatAge(urlTradeData.ageInDays)} old
-                    </Typography>
-                </Box>
-            )}
-
-            {/* Confirm (logged-in only) */}
-            {user && (
-                <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 0.75,
-                    px: isLandscape ? 0.75 : { xs: 1, sm: 1.5 },
-                    py: isLandscape ? 0.75 : { xs: 0.4, sm: 0.6 },
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    borderTop: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.12)'}`
-                }}>
-                    <Tooltip title="Record the trade and update your Binder">
-                        <span>
-                            <Button
-                                variant="contained"
-                                size="small"
-                                startIcon={<CheckCircleIcon />}
-                                onClick={handleOpenConfirmDialog}
-                                disabled={!canGenerateTradeOffer}
-                                sx={{
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    px: 1.5,
-                                    py: 0.25,
-                                    minHeight: 28,
-                                    background: 'linear-gradient(135deg, #8b4513 0%, #a0522d 100%)',
-                                    boxShadow: isDark
-                                        ? '0 1px 4px rgba(0, 0, 0, 0.35)'
-                                        : '0 1px 4px rgba(139, 69, 19, 0.25)',
-                                    '&:hover': {
-                                        background: 'linear-gradient(135deg, #7a3b10 0%, #8b4513 100%)',
-                                    },
-                                    '&.Mui-disabled': {
-                                        background: isDark ? 'rgba(212, 165, 116, 0.15)' : 'rgba(139, 69, 19, 0.12)',
-                                        color: mutedColor,
-                                    },
-                                }}
-                            >
-                                Confirm Trade
-                            </Button>
-                        </span>
-                    </Tooltip>
-                </Box>
-            )}
-
-            {/* Purple Discord trade offer — desktop/landscape only */}
-            {isLandscape && (
-                <Box sx={{
+        {isLandscape ? (
+            <Box
+                component="section"
+                aria-label="Trade balance"
+                sx={{
+                    alignSelf: 'flex-start',
+                    width: 312,
+                    flexShrink: 0,
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 0.4,
-                    px: 0.75,
-                    py: 0.75,
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    borderTop: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.12)'}`
-                }}>
+                    gap: 2,
+                    p: 2.5,
+                    borderRadius: '16px',
+                    border: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                    boxShadow: (t) => tk(t).shadowSm,
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="overline" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+                        Trade balance
+                    </Typography>
+                    {clearUrlButton}
+                </Box>
+
+                <Box>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                        Difference
+                    </Typography>
                     <Typography
-                        variant="caption"
+                        component="div"
                         sx={{
-                            color: mutedColor,
-                            fontSize: '0.65rem',
-                            textAlign: 'center',
-                            lineHeight: 1.2,
-                            flexShrink: 1
+                            fontFamily: (t) => t.typography.h1.fontFamily,
+                            fontWeight: 800,
+                            fontStretch: '112%',
+                            fontSize: '2.25rem',
+                            lineHeight: 1.1,
+                            letterSpacing: '-0.02em',
+                            color: 'text.primary',
+                            fontVariantNumeric: 'tabular-nums',
                         }}
                     >
+                        {even ? money(0) : marketDiffLabel}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.875rem', fontWeight: 650, color: verdictColor, mt: 0.25 }}>
+                        {verdict}
+                    </Typography>
+                    {showLowDiff && (
+                        <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.25, fontVariantNumeric: 'tabular-nums' }}>
+                            Low difference {lowDiffLabel}
+                        </Typography>
+                    )}
+                </Box>
+
+                <BalanceBar give={haveTotal} get={wantTotal} />
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                    <SideTotal label="You give" count={haveCardCount} market={haveTotal} low={haveLowTotal} tone="primary.main" />
+                    <SideTotal label="You get" count={wantCardCount} market={wantTotal} low={wantLowTotal} tone="success.main" align="right" />
+                </Box>
+
+                {ageWarning}
+
+                {confirmButton}
+
+                <Box sx={{ pt: 2, borderTop: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                         Replying to a Purple Discord trade?
                     </Typography>
                     <Button
-                        variant="contained"
-                        size="small"
+                        variant="outlined"
+                        color="inherit"
                         startIcon={<ForumIcon sx={{ fontSize: '1rem !important' }} />}
                         onClick={handleGenerateTradeOffer}
                         disabled={!canGenerateTradeOffer}
-                        sx={{
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            fontSize: '0.75rem',
-                            px: 1.25,
-                            py: 0.25,
-                            minHeight: 28,
-                            flexShrink: 0,
-                            background: 'linear-gradient(135deg, #8b4513 0%, #a0522d 100%)',
-                            boxShadow: isDark
-                                ? '0 1px 4px rgba(0, 0, 0, 0.35)'
-                                : '0 1px 4px rgba(139, 69, 19, 0.25)',
-                            '&:hover': {
-                                background: 'linear-gradient(135deg, #7a3b10 0%, #8b4513 100%)',
-                            },
-                            '&.Mui-disabled': {
-                                background: isDark ? 'rgba(212, 165, 116, 0.15)' : 'rgba(139, 69, 19, 0.12)',
-                                color: mutedColor
-                            }
-                        }}
+                        fullWidth
+                        sx={{ color: 'text.primary' }}
                     >
                         Generate Trade Offer
                     </Button>
                 </Box>
-            )}
-        </Box>
+            </Box>
+        ) : (
+            <Box
+                component="section"
+                aria-label="Trade balance"
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    px: 2,
+                    py: 1.5,
+                    bgcolor: 'background.paper',
+                    borderTop: 1,
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                }}
+            >
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 1 }}>
+                    <SideTotal label="Give" count={haveCardCount} market={haveTotal} low={haveLowTotal} tone="primary.main" compact />
+                    <Box sx={{ textAlign: 'center', minWidth: 0 }}>
+                        <Typography sx={{ fontSize: '0.6875rem', fontWeight: 600, color: 'text.secondary' }}>
+                            Difference
+                        </Typography>
+                        <Typography
+                            sx={{
+                                fontFamily: (t) => t.typography.h1.fontFamily,
+                                fontWeight: 800,
+                                fontStretch: '110%',
+                                fontSize: '1.125rem',
+                                lineHeight: 1.2,
+                                color: verdictColor,
+                                fontVariantNumeric: 'tabular-nums',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {even ? money(0) : `${diff > 0 ? '+' : '−'}${marketDiffLabel}`}
+                        </Typography>
+                        {showLowDiff && (
+                            <Typography sx={{ fontSize: '0.625rem', color: 'text.secondary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                Low {lowDiffLabel}
+                            </Typography>
+                        )}
+                    </Box>
+                    <SideTotal label="Get" count={wantCardCount} market={wantTotal} low={wantLowTotal} tone="success.main" align="right" compact />
+                </Box>
+                <BalanceBar give={haveTotal} get={wantTotal} height={4} />
+                {(ageWarning || confirmButton || clearUrlButton) && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
+                        {ageWarning}
+                        {confirmButton}
+                        {clearUrlButton}
+                    </Box>
+                )}
+            </Box>
+        )}
 
         {/* Clear Confirmation Dialog */}
         <Dialog open={showClearConfirm} onClose={() => setShowClearConfirm(false)}>
@@ -511,7 +439,7 @@ const TradeSummary = ({
                 </Typography>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => setShowClearConfirm(false)}>Cancel</Button>
+                <Button color="inherit" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
                 <Button onClick={handleClearTradeData} color="warning" variant="contained">
                     Clear
                 </Button>
@@ -539,7 +467,7 @@ const TradeSummary = ({
                     InputProps={{
                         readOnly: true,
                         sx: {
-                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                            fontFamily: fonts.mono,
                             fontSize: '0.85rem',
                             lineHeight: 1.45
                         }
@@ -547,19 +475,12 @@ const TradeSummary = ({
                     onFocus={(e) => e.target.select()}
                 />
             </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-                <Button onClick={() => setShowTradeOffer(false)}>Close</Button>
+            <DialogActions>
+                <Button color="inherit" onClick={() => setShowTradeOffer(false)}>Close</Button>
                 <Button
                     variant="contained"
                     startIcon={<ContentCopyIcon />}
                     onClick={handleCopyTradeOffer}
-                    sx={{
-                        textTransform: 'none',
-                        background: 'linear-gradient(135deg, #8b4513 0%, #a0522d 100%)',
-                        '&:hover': {
-                            background: 'linear-gradient(135deg, #7a3b10 0%, #8b4513 100%)',
-                        }
-                    }}
                 >
                     Copy to Clipboard
                 </Button>
@@ -609,8 +530,8 @@ const TradeSummary = ({
                     }
                 />
             </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button onClick={() => setShowConfirmDialog(false)} disabled={confirming}>
+            <DialogActions>
+                <Button color="inherit" onClick={() => setShowConfirmDialog(false)} disabled={confirming}>
                     Cancel
                 </Button>
                 <Button

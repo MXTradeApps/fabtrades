@@ -27,20 +27,22 @@ const cardMarketValue = (printing, baseKey, foilKey) => {
     return printing?.[baseKey];
 };
 
-const PriceRow = ({ label, value, currency, isDark }) => (
+const PriceRow = ({ label, value, currency, lead = false }) => (
     <Box
         sx={{
             display: 'flex',
             justifyContent: 'space-between',
+            alignItems: 'baseline',
             gap: 2,
-            py: 0.25,
+            py: 0.6,
+            '& + &': { borderTop: 1, borderColor: 'divider' },
         }}
     >
         <Typography
             component="dt"
             sx={{
-                fontSize: '0.8rem',
-                color: isDark ? 'rgba(212, 165, 116, 0.75)' : 'rgba(93, 58, 26, 0.7)',
+                fontSize: '0.8125rem',
+                color: 'text.secondary',
             }}
         >
             {label}
@@ -48,11 +50,11 @@ const PriceRow = ({ label, value, currency, isDark }) => (
         <Typography
             component="dd"
             sx={{
-                fontSize: '0.8rem',
-                fontWeight: 600,
+                fontSize: lead ? '1rem' : '0.84375rem',
+                fontWeight: lead ? 750 : 600,
                 fontVariantNumeric: 'tabular-nums',
                 m: 0,
-                color: isDark ? '#f5f1ed' : '#2c1810',
+                color: 'text.primary',
             }}
         >
             {formatCatalogPrice(value, currency)}
@@ -60,29 +62,32 @@ const PriceRow = ({ label, value, currency, isDark }) => (
     </Box>
 );
 
-const PriceGroup = ({ title, currency, rows, isDark }) => (
-    <Box sx={{ flex: 1, minWidth: 140 }}>
+const PriceGroup = ({ title, currency, rows }) => (
+    <Box
+        sx={{
+            flex: 1,
+            minWidth: 0,
+            px: 1.75,
+            py: 1.25,
+            borderRadius: '12px',
+            bgcolor: 'surface.sunken',
+        }}
+    >
         <Typography
-            variant="subtitle2"
-            sx={{
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                letterSpacing: 0.4,
-                textTransform: 'uppercase',
-                color: isDark ? '#e4c09c' : '#8b4513',
-                mb: 0.75,
-            }}
+            variant="overline"
+            component="h4"
+            sx={{ color: 'text.secondary', display: 'block', mb: 0.25 }}
         >
             {title}
         </Typography>
         <Box component="dl" sx={{ m: 0 }}>
-            {rows.map(([label, value]) => (
+            {rows.map(([label, value], idx) => (
                 <PriceRow
                     key={label}
                     label={label}
                     value={value}
                     currency={currency}
-                    isDark={isDark}
+                    lead={idx === 0}
                 />
             ))}
         </Box>
@@ -92,6 +97,7 @@ const PriceGroup = ({ title, currency, rows, isDark }) => (
 /**
  * Dual-marketplace Prices for the selected Printing. Unpriced is — never zero.
  */
+// eslint-disable-next-line no-unused-vars
 const CardDetailPrices = ({ printing, pricesUpdatedAt, isDark = false }) => {
     const tcgRows = [
         ['Market', printing?.marketPrice],
@@ -109,32 +115,29 @@ const CardDetailPrices = ({ printing, pricesUpdatedAt, isDark = false }) => {
     return (
         <Box>
             <Typography
-                variant="subtitle1"
-                sx={{
-                    fontWeight: 700,
-                    fontSize: '0.95rem',
-                    color: isDark ? '#f5f1ed' : '#2c1810',
-                    mb: 1,
-                }}
+                variant="h5"
+                component="h3"
+                sx={{ color: 'text.primary', mb: 1.25 }}
             >
                 Prices
             </Typography>
             <Box
                 sx={{
-                    display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    gap: { xs: 2, sm: 3 },
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                    gap: 1.25,
+                    alignItems: 'start',
                 }}
             >
-                <PriceGroup title="TCGplayer" currency="USD" rows={tcgRows} isDark={isDark} />
-                <PriceGroup title="CardMarket" currency="EUR" rows={cmRows} isDark={isDark} />
+                <PriceGroup title="TCGplayer" currency="USD" rows={tcgRows} />
+                <PriceGroup title="CardMarket" currency="EUR" rows={cmRows} />
             </Box>
             <Typography
                 sx={{
                     mt: 1.25,
-                    fontSize: '0.7rem',
-                    color: isDark ? 'rgba(212, 165, 116, 0.65)' : 'rgba(93, 58, 26, 0.55)',
-                    lineHeight: 1.35,
+                    fontSize: '0.72rem',
+                    color: 'text.secondary',
+                    lineHeight: 1.4,
                 }}
             >
                 Prices from the FAB Trades catalog (TCGplayer and CardMarket)

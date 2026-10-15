@@ -1,6 +1,5 @@
 import { Box, List, ListItemButton, Typography } from '@mui/material';
 import { useCardDetail } from '../../contexts/CardDetailContext.jsx';
-import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 import { usePriceType } from '../../contexts/PriceContext.jsx';
 import { formatCurrency } from '../../utils/helpers.js';
 
@@ -11,10 +10,9 @@ import { formatCurrency } from '../../utils/helpers.js';
  */
 const CatalogPrintingResults = ({ printings }) => {
     const { openDetail } = useCardDetail();
-    const { isDark } = useThemeMode();
     const { priceSource } = usePriceType();
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
+    const textColor = 'text.primary';
+    const mutedColor = 'text.secondary';
 
     const formatPrice = (printing) => {
         const amount = priceSource === 'cardmarket'
@@ -41,22 +39,31 @@ const CatalogPrintingResults = ({ printings }) => {
     }
 
     return (
-        <List disablePadding>
+        <List
+            disablePadding
+            sx={{
+                bgcolor: 'background.paper',
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: '14px',
+                p: 0.75,
+            }}
+        >
             {printings.map((printing) => (
                 <ListItemButton
                     key={printing._uniqueId}
                     onClick={() => openDetail(printing)}
-                    sx={{ px: 0.5, py: 1 }}
+                    sx={{ px: 1.5, py: 1 }}
                 >
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                        <Typography sx={{ color: textColor, fontWeight: 600 }}>
+                        <Typography noWrap sx={{ color: textColor, fontWeight: 600 }}>
                             {printing.name}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: mutedColor }}>
+                        <Typography variant="body2" noWrap sx={{ color: mutedColor }}>
                             {[printing._setName, printing.subTypeName].filter(Boolean).join(' · ')}
                         </Typography>
                     </Box>
-                    <Typography sx={{ color: textColor, fontWeight: 700, ml: 1 }}>
+                    <Typography sx={{ color: textColor, fontWeight: 700, ml: 1, fontVariantNumeric: 'tabular-nums' }}>
                         {formatPrice(printing)}
                     </Typography>
                 </ListItemButton>

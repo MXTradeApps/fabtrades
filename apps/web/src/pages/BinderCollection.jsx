@@ -5,7 +5,6 @@ import {
     Button,
     Chip,
     CircularProgress,
-    Container,
     Dialog,
     DialogActions,
     DialogContent,
@@ -16,14 +15,20 @@ import {
     IconButton,
     InputAdornment,
     MenuItem,
-    Paper,
     Select,
     Snackbar,
     Switch,
     TextField,
     Typography,
+    useTheme,
 } from '@mui/material';
 import {
+    BookmarkBorderRounded,
+    CollectionsBookmarkOutlined,
+    FileUploadOutlined,
+    InsightsOutlined,
+    SortRounded,
+    StyleOutlined,
     Add as AddIcon,
     ArrowBack as ArrowBackIcon,
     Clear as ClearIcon,
@@ -34,10 +39,11 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useEntitlement } from '../contexts/EntitlementContext.jsx';
-import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import Header from '../components/elements/Header.jsx';
+import { Page, Panel, EmptyState } from '../components/layout/Page.jsx';
+import { tk } from '../theme/tokens.js';
 import { SearchDialog } from '../components/search/index.js';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import FabraryImportDialog from './BinderSettings.jsx';
@@ -128,7 +134,6 @@ const BinderCollection = ({ isWanted = false }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { isPro } = useEntitlement();
-    const { isDark } = useThemeMode();
     const { openDetail } = useCardDetail();
     const { cards, cardGroups, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
@@ -165,14 +170,9 @@ const BinderCollection = ({ isWanted = false }) => {
     const listLabel = viewingWants ? 'Want List' : 'Binder';
     const pageTitle = isWanted ? 'Want List' : 'My Binders';
 
-    const bgGradient = isDark
-        ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
-        : 'linear-gradient(135deg, #f5f1ed 0%, #e8dfd6 50%, #f0e6dc 100%)';
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
-    const accentColor = isDark ? '#e4c09c' : '#8b4513';
-    const paperBg = isDark ? 'rgba(44, 24, 16, 0.6)' : '#ffffff';
-    const paperBorder = isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.15)';
+    const palette = tk(useTheme());
+    const textColor = palette.text;
+    const mutedColor = palette.textMuted;
 
     const loadEntries = useCallback(async () => {
         setError(null);
@@ -731,280 +731,190 @@ const BinderCollection = ({ isWanted = false }) => {
 
     if (!user) {
         return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: '100vh',
-                    background: bgGradient,
-                    backgroundAttachment: 'fixed',
-                }}
-            >
+            <>
                 <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
-                <Container maxWidth="sm" sx={{ mt: 8 }}>
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            p: 4,
-                            textAlign: 'center',
-                            backgroundColor: paperBg,
-                            border: `1px solid ${paperBorder}`,
-                            borderRadius: 3,
-                        }}
-                    >
-                        <Typography variant="h5" sx={{ mb: 2, color: accentColor, fontWeight: 700 }}>
-                            Sign In Required
-                        </Typography>
-                        <Typography variant="body1" sx={{ mb: 3, color: mutedColor }}>
+                <Page maxWidth={720}>
+                    <Panel sx={{ mt: { xs: 2, md: 6 } }}>
+                        <EmptyState
+                            icon={isWanted ? <BookmarkBorderRounded /> : <CollectionsBookmarkOutlined />}
+                            title="Sign In Required"
+                            actions={(
+                                <>
+                                    <Button variant="contained" size="large" onClick={() => setSignInOpen(true)}>
+                                        Sign in
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        color="inherit"
+                                        size="large"
+                                        startIcon={<ArrowBackIcon />}
+                                        onClick={() => navigate('/')}
+                                    >
+                                        Back to Trading
+                                    </Button>
+                                </>
+                            )}
+                        >
                             Sign in to sync your {listLabel.toLowerCase()} across devices.
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <Button variant="contained" onClick={() => setSignInOpen(true)}>
-                                Sign in
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                startIcon={<ArrowBackIcon />}
-                                onClick={() => navigate('/')}
-                                sx={{
-                                    color: accentColor,
-                                    borderColor: paperBorder,
-                                    '&:hover': {
-                                        borderColor: accentColor,
-                                        backgroundColor: isDark
-                                            ? 'rgba(200, 113, 55, 0.12)'
-                                            : 'rgba(139, 69, 19, 0.06)',
-                                    },
-                                }}
-                            >
-                                Back to Trading
-                            </Button>
-                        </Box>
-                    </Paper>
-                </Container>
+                        </EmptyState>
+                    </Panel>
+                </Page>
                 <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
-            </Box>
+            </>
         );
     }
 
+    const openCount = entries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+    const showBreadcrumb = !isWanted && Boolean(openBinderId);
+    const headerTitle = isWanted
+        ? pageTitle
+        : (openBinderId ? (openBinder?.name || (viewingWants ? 'Want List' : 'Binder')) : pageTitle);
+
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: '100vh',
-                background: bgGradient,
-                backgroundAttachment: 'fixed',
-            }}
-        >
+        <>
             <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
 
-            <Container maxWidth="xl" sx={{ flexGrow: 1, py: { xs: 1.5, sm: 2 } }}>
-                <Paper
-                    elevation={0}
+            <Page>
+                <Box
                     sx={{
-                        p: { xs: 1, sm: 1.5 },
-                        borderRadius: 1.5,
-                        backgroundColor: paperBg,
-                        border: `1px solid ${paperBorder}`,
-                        minHeight: '60vh',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'flex-end',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        mb: 3,
                     }}
                 >
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            mb: 1.25,
-                            pb: 1,
-                            borderBottom: `1px solid ${paperBorder}`,
-                            gap: 1,
-                            flexWrap: 'wrap',
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                            <Button
-                                variant="text"
-                                size="small"
-                                data-testid="binder-back"
-                                startIcon={<ArrowBackIcon sx={{ fontSize: '1rem !important' }} />}
-                                onClick={() => {
-                                    if (openBinderId) {
-                                        setOpenBinder(null);
-                                        return;
-                                    }
-                                    navigate('/');
-                                }}
-                                sx={{
-                                    color: accentColor,
-                                    fontSize: '0.75rem',
-                                    minHeight: 28,
-                                    px: 0.75,
-                                    flexShrink: 0,
-                                }}
-                            >
-                                Back
-                            </Button>
-                            <Typography
-                                component={!isWanted && openBinderId ? 'button' : 'h1'}
-                                type={!isWanted && openBinderId ? 'button' : undefined}
-                                data-testid="binder-home-title"
-                                onClick={
-                                    !isWanted && openBinderId
-                                        ? () => setOpenBinder(null)
-                                        : undefined
-                                }
-                                sx={{
-                                    fontWeight: 700,
-                                    fontSize: '1rem',
-                                    color: accentColor,
-                                    lineHeight: 1.2,
-                                    border: 'none',
-                                    background: 'transparent',
-                                    cursor: !isWanted && openBinderId ? 'pointer' : 'default',
-                                    p: 0,
-                                    fontFamily: 'inherit',
-                                    textAlign: 'left',
-                                }}
-                            >
-                                {pageTitle}
-                            </Typography>
-                            {!isWanted && openBinder?.name && (
+                    <Box sx={{ minWidth: 0, flex: '1 1 300px' }}>
+                        {showBreadcrumb && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1, ml: -0.75 }}>
+                                <IconButton
+                                    size="small"
+                                    data-testid="binder-back"
+                                    aria-label="Back to all binders"
+                                    onClick={() => setOpenBinder(null)}
+                                    sx={{ color: 'text.secondary' }}
+                                >
+                                    <ArrowBackIcon sx={{ fontSize: '1.1rem' }} />
+                                </IconButton>
                                 <Typography
-                                    data-testid="binder-open-name"
-                                    noWrap
+                                    component="button"
+                                    type="button"
+                                    data-testid="binder-home-title"
+                                    onClick={() => setOpenBinder(null)}
                                     sx={{
+                                        border: 0,
+                                        background: 'none',
+                                        p: 0,
+                                        fontFamily: 'inherit',
+                                        fontSize: '0.84375rem',
                                         fontWeight: 600,
-                                        fontSize: '0.9rem',
-                                        color: mutedColor,
-                                        lineHeight: 1.2,
+                                        color: 'text.secondary',
+                                        cursor: 'pointer',
+                                        '&:hover': { color: 'text.primary' },
                                     }}
                                 >
-                                    {openBinder.name}
+                                    {pageTitle}
                                 </Typography>
-                            )}
+                                <Typography component="span" sx={{ color: 'text.disabled', fontSize: '0.84375rem' }}>/</Typography>
+                            </Box>
+                        )}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+                            <Typography
+                                variant="h1"
+                                data-testid={showBreadcrumb ? 'binder-open-name' : 'binder-home-title'}
+                                noWrap={showBreadcrumb}
+                                sx={{ fontSize: { xs: '1.75rem', md: '2.25rem' }, color: 'text.primary', minWidth: 0 }}
+                            >
+                                {headerTitle}
+                            </Typography>
                             {isWanted && (
                                 <Chip
                                     data-testid="binder-count-chip"
                                     size="small"
                                     label={`${entries.length}`}
-                                    sx={{
-                                        height: 20,
-                                        fontSize: '0.7rem',
-                                        color: mutedColor,
-                                        borderColor: paperBorder,
-                                        '& .MuiChip-label': { px: 0.75 },
-                                    }}
-                                    variant="outlined"
+                                    sx={{ height: 24, fontSize: '0.75rem' }}
                                 />
                             )}
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                            {!viewingWants && !showingGrid && entries.length > 0 ? (
-                                <Button
-                                    data-testid="collection-stats"
-                                    onClick={() => {
-                                        setOpenBinderId(openBinderId);
-                                        navigate('/binder/stats');
-                                    }}
-                                    sx={{
-                                        color: mutedColor,
-                                        fontWeight: 700,
-                                        fontSize: '0.8rem',
-                                        minHeight: 28,
-                                        px: 1,
-                                        textTransform: 'none',
-                                    }}
-                                >
-                                    Collection Stats
-                                </Button>
-                            ) : viewingWants ? (
-                                <Typography
-                                    sx={{ color: mutedColor, fontWeight: 600, fontSize: '0.8rem' }}
-                                >
-                                    {formatCurrency(totalValue.toFixed(2))}
-                                </Typography>
-                            ) : null}
-                            {!showingGrid && entries.length > 0 && (
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    color="error"
-                                    data-testid="binder-clear"
-                                    onClick={() => handleClearBinder(
-                                        viewingWants
-                                            ? { clientId: WANT_BINDER_ID, name: 'Want List' }
-                                            : openBinder,
-                                    )}
-                                    sx={{
-                                        fontSize: '0.75rem',
-                                        minHeight: 28,
-                                        px: 0.75,
-                                        textTransform: 'none',
-                                    }}
-                                >
-                                    {viewingWants ? 'Clear Want List' : 'Clear Binder'}
-                                </Button>
-                            )}
-                            {!isWanted && openBinderId === TRADE_BINDER_ID && (
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    startIcon={<ShareIcon sx={{ fontSize: '1rem !important' }} />}
-                                    onClick={openShareDialog}
-                                    sx={{
-                                        color: accentColor,
-                                        borderColor: paperBorder,
-                                        fontSize: '0.75rem',
-                                        minHeight: 28,
-                                        px: 0.75,
-                                        '&:hover': {
-                                            borderColor: accentColor,
-                                            backgroundColor: isDark
-                                                ? 'rgba(200, 113, 55, 0.12)'
-                                                : 'rgba(139, 69, 19, 0.06)',
-                                        },
-                                    }}
-                                >
-                                    Share
-                                </Button>
-                            )}
-                            {showingGrid && (
-                                <>
+                        {(showingGrid || openBinderId || isWanted) && (
+                            <Typography variant="body1" sx={{ color: 'text.secondary', mt: 0.75 }}>
+                                {showingGrid
+                                    ? 'Organize your collection into binders. Open one to search, sort and edit its cards.'
+                                    : `${openCount} ${openCount === 1 ? 'card' : 'cards'}`}
+                                {!showingGrid && viewingWants && totalValue > 0 && (
+                                    <>
+                                        {' · '}
+                                        <Box component="span" sx={{ color: 'text.primary', fontWeight: 650, fontVariantNumeric: 'tabular-nums' }}>
+                                            {formatCurrency(totalValue.toFixed(2))}
+                                        </Box>
+                                    </>
+                                )}
+                            </Typography>
+                        )}
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        {!viewingWants && !showingGrid && entries.length > 0 && (
+                            <Button
+                                data-testid="collection-stats"
+                                variant="outlined"
+                                color="inherit"
+                                startIcon={<InsightsOutlined />}
+                                onClick={() => {
+                                    setOpenBinderId(openBinderId);
+                                    navigate('/binder/stats');
+                                }}
+                            >
+                                Collection Stats
+                            </Button>
+                        )}
+                        {!isWanted && openBinderId === TRADE_BINDER_ID && (
+                            <Button
+                                variant="outlined"
+                                color="inherit"
+                                startIcon={<ShareIcon />}
+                                onClick={openShareDialog}
+                            >
+                                Share
+                            </Button>
+                        )}
+                        {!showingGrid && entries.length > 0 && (
+                            <Button
+                                variant="text"
+                                color="error"
+                                data-testid="binder-clear"
+                                onClick={() => handleClearBinder(
+                                    viewingWants
+                                        ? { clientId: WANT_BINDER_ID, name: 'Want List' }
+                                        : openBinder,
+                                )}
+                            >
+                                {viewingWants ? 'Clear Want List' : 'Clear Binder'}
+                            </Button>
+                        )}
+                        {showingGrid && (
+                            <>
                                 <Button
                                     variant="outlined"
-                                    size="small"
+                                    color="inherit"
                                     data-testid="import-fabrary"
+                                    startIcon={<FileUploadOutlined />}
                                     onClick={() => setImportOpen(true)}
-                                    sx={{
-                                        color: accentColor,
-                                        borderColor: paperBorder,
-                                        fontSize: '0.75rem',
-                                        minHeight: 28,
-                                        px: 0.75,
-                                    }}
                                 >
                                     Import from Fabrary
                                 </Button>
                                 <Button
-                                    variant="outlined"
-                                    size="small"
+                                    variant="contained"
                                     data-testid="binder-create"
+                                    startIcon={<AddIcon />}
                                     onClick={handleCreateBinder}
-                                    sx={{
-                                        color: accentColor,
-                                        borderColor: paperBorder,
-                                        fontSize: '0.75rem',
-                                        minHeight: 28,
-                                        px: 0.75,
-                                    }}
                                 >
                                     New Binder
                                 </Button>
-                                </>
-                            )}
-                        </Box>
+                            </>
+                        )}
                     </Box>
+                </Box>
 
                     {showingGrid && (
                         <BinderGrid
@@ -1015,10 +925,6 @@ const BinderCollection = ({ isWanted = false }) => {
                             onRename={handleRenameBinder}
                             onDelete={handleDeleteBinder}
                             onClear={handleClearBinder}
-                            mutedColor={mutedColor}
-                            accentColor={accentColor}
-                            paperBg={paperBg}
-                            paperBorder={paperBorder}
                         />
                     )}
 
@@ -1026,12 +932,12 @@ const BinderCollection = ({ isWanted = false }) => {
                     <>
                     <Box
                         sx={{
-                            mb: 1.25,
+                            mb: 2,
                             position: 'relative',
                             zIndex: 2,
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 0.75,
+                            gap: 1,
                             flexWrap: { xs: 'wrap', sm: 'nowrap' },
                         }}
                     >
@@ -1046,31 +952,12 @@ const BinderCollection = ({ isWanted = false }) => {
                             sx={{
                                 flexGrow: 1,
                                 minWidth: { xs: '100%', sm: 0 },
-                                '& .MuiOutlinedInput-root': {
-                                    backgroundColor: isDark
-                                        ? 'rgba(26, 15, 10, 0.6)'
-                                        : 'rgba(255, 255, 255, 0.7)',
-                                    color: textColor,
-                                    fontSize: '0.8125rem',
-                                    minHeight: 36,
-                                    '& fieldset': { borderColor: paperBorder },
-                                    '&:hover fieldset': { borderColor: accentColor },
-                                    '& input': { py: 0.75 },
-                                },
-                                '& input::placeholder': {
-                                    color: isDark ? 'rgba(212, 165, 116, 0.7)' : 'rgba(93, 58, 26, 0.6)',
-                                    opacity: 1,
-                                },
+                                '& .MuiOutlinedInput-root': { minHeight: 40 },
                             }}
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
-                                        <SearchIcon
-                                            sx={{
-                                                fontSize: '1rem',
-                                                color: mutedColor,
-                                            }}
-                                        />
+                                        <SearchIcon sx={{ fontSize: '1.1rem', color: 'text.secondary' }} />
                                     </InputAdornment>
                                 ),
                                 endAdornment: searchQuery ? (
@@ -1079,48 +966,20 @@ const BinderCollection = ({ isWanted = false }) => {
                                             size="small"
                                             aria-label="clear search"
                                             onClick={() => setSearchQuery('')}
-                                            sx={{ p: 0.35 }}
+                                            sx={{ p: 0.35, color: 'text.secondary' }}
                                         >
-                                            <ClearIcon sx={{ fontSize: '0.95rem', color: mutedColor }} />
+                                            <ClearIcon sx={{ fontSize: '0.95rem' }} />
                                         </IconButton>
                                     </InputAdornment>
                                 ) : null,
                             }}
                         />
-                        <Button
-                            data-testid="add-card"
-                            variant="contained"
-                            size="small"
-                            startIcon={<AddIcon sx={{ fontSize: '1rem !important' }} />}
-                            onClick={() => setAddOpen(true)}
-                            sx={{
-                                flexShrink: 0,
-                                minHeight: 36,
-                                px: 1.25,
-                                fontSize: '0.75rem',
-                                textTransform: 'none',
-                                fontWeight: 700,
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            Add Card
-                        </Button>
                         <FormControl
                             size="small"
                             sx={{
-                                minWidth: { xs: 140, sm: 150 },
-                                flexShrink: 0,
-                                '& .MuiOutlinedInput-root': {
-                                    backgroundColor: isDark
-                                        ? 'rgba(26, 15, 10, 0.6)'
-                                        : 'rgba(255, 255, 255, 0.7)',
-                                    color: textColor,
-                                    fontSize: '0.8125rem',
-                                    minHeight: 36,
-                                    '& fieldset': { borderColor: paperBorder },
-                                    '&:hover fieldset': { borderColor: accentColor },
-                                    '& .MuiSelect-select': { py: 0.75 },
-                                },
+                                minWidth: { xs: 0, sm: 190 },
+                                flex: { xs: 1, sm: 'none' },
+                                '& .MuiOutlinedInput-root': { minHeight: 40 },
                             }}
                         >
                             <Select
@@ -1128,6 +987,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                 displayEmpty
                                 onChange={(e) => setSort(e.target.value)}
                                 aria-label="Sort binder"
+                                startAdornment={<SortRounded sx={{ fontSize: '1.1rem', color: 'text.secondary', mr: 1 }} />}
                                 renderValue={(value) => {
                                     const opt = SORT_OPTIONS.find((o) => o.id === value);
                                     return opt?.label || 'Sort';
@@ -1140,11 +1000,20 @@ const BinderCollection = ({ isWanted = false }) => {
                                 ))}
                             </Select>
                         </FormControl>
+                        <Button
+                            data-testid="add-card"
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={() => setAddOpen(true)}
+                            sx={{ flexShrink: 0, minHeight: 40, whiteSpace: 'nowrap' }}
+                        >
+                            Add Card
+                        </Button>
                     </Box>
 
                     {loading && (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                            <CircularProgress sx={{ color: accentColor }} />
+                            <CircularProgress />
                         </Box>
                     )}
 
@@ -1155,28 +1024,27 @@ const BinderCollection = ({ isWanted = false }) => {
                     )}
 
                     {!loading && !error && filtered.length === 0 && (
-                        <Box sx={{ textAlign: 'center', py: 6 }}>
-                            <Typography variant="h6" sx={{ color: textColor, mb: 1 }}>
-                                {searchQuery.trim()
+                        <Panel>
+                            <EmptyState
+                                icon={searchQuery.trim() ? <SearchIcon /> : <StyleOutlined />}
+                                title={searchQuery.trim()
                                     ? 'No matching cards in this list'
                                     : `${listLabel} is empty`}
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: mutedColor, mb: searchQuery.trim() ? 0 : 2 }}>
+                                actions={!searchQuery.trim() && (
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => setAddOpen(true)}
+                                    >
+                                        Add Card
+                                    </Button>
+                                )}
+                            >
                                 {searchQuery.trim()
                                     ? 'Clear the search or try a different name.'
                                     : `Use Add Card to add cards to this ${listLabel.toLowerCase()}.`}
-                            </Typography>
-                            {!searchQuery.trim() && (
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddIcon />}
-                                    onClick={() => setAddOpen(true)}
-                                    sx={{ textTransform: 'none', fontWeight: 700 }}
-                                >
-                                    Add Card
-                                </Button>
-                            )}
-                        </Box>
+                            </EmptyState>
+                        </Panel>
                     )}
 
                     {!loading && filtered.length > 0 && (
@@ -1194,17 +1062,11 @@ const BinderCollection = ({ isWanted = false }) => {
                             onUpdateQuantity={updateQuantity}
                             onRemove={handleRemove}
                             onMove={viewingWants ? undefined : handleMove}
-                            mutedColor={mutedColor}
-                            accentColor={accentColor}
-                            textColor={textColor}
-                            paperBorder={paperBorder}
-                            isDark={isDark}
                         />
                     )}
                     </>
                     )}
-                </Paper>
-            </Container>
+            </Page>
 
             <FabraryImportDialog
                 open={importOpen}
@@ -1239,7 +1101,7 @@ const BinderCollection = ({ isWanted = false }) => {
                     </Typography>
                     {shareBusy && !share ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                            <CircularProgress size={28} sx={{ color: accentColor }} />
+                            <CircularProgress size={28} />
                         </Box>
                     ) : (
                         <>
@@ -1290,7 +1152,7 @@ const BinderCollection = ({ isWanted = false }) => {
                         Copy Binder as Text
                     </Button>
                 </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
+                <DialogActions sx={{ justifyContent: 'space-between' }}>
                     <Button
                         onClick={handleRegenerateShare}
                         disabled={shareBusy || !share}
@@ -1320,8 +1182,9 @@ const BinderCollection = ({ isWanted = false }) => {
                             : 'This cannot be undone.'}
                     </Typography>
                 </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
+                <DialogActions>
                     <Button
+                        color="inherit"
                         data-testid="binder-clear-cancel"
                         onClick={() => setPendingClear(null)}
                         disabled={clearBusy}
@@ -1354,8 +1217,9 @@ const BinderCollection = ({ isWanted = false }) => {
                             : 'This cannot be undone.'}
                     </Typography>
                 </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
+                <DialogActions>
                     <Button
+                        color="inherit"
                         data-testid="binder-delete-cancel"
                         onClick={() => setPendingDelete(null)}
                     >
@@ -1387,7 +1251,7 @@ const BinderCollection = ({ isWanted = false }) => {
                     {toast}
                 </Alert>
             </Snackbar>
-        </Box>
+        </>
     );
 };
 

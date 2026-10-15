@@ -12,7 +12,6 @@ import {
     Typography,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
 import {
     applyImportAddsToEntries,
@@ -60,7 +59,6 @@ function unmatchedLabel(row) {
 }
 
 const FabraryImportDialog = ({ open, onClose, onImported }) => {
-    const { isDark } = useThemeMode();
     const { cards } = useCardData();
     const fileInputRef = useRef(null);
     const [working, setWorking] = useState(false);
@@ -69,9 +67,9 @@ const FabraryImportDialog = ({ open, onClose, onImported }) => {
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
 
-    const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
-    const accentColor = isDark ? '#e4c09c' : '#8b4513';
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
+    const mutedColor = 'text.secondary';
+    const accentColor = 'primary.main';
+    const textColor = 'text.primary';
 
     const catalogById = useMemo(() => {
         const map = new Map();
@@ -192,19 +190,13 @@ const FabraryImportDialog = ({ open, onClose, onImported }) => {
                     maxHeight: '85vh',
                     display: 'flex',
                     flexDirection: 'column',
-                    backgroundColor: isDark ? '#1a0f0a' : '#f5f1ed',
-                    backgroundImage: 'none',
-                    border: isDark
-                        ? '1px solid rgba(212, 165, 116, 0.25)'
-                        : '1px solid rgba(139, 69, 19, 0.18)',
                 },
             }}
         >
             <DialogTitle
                 id="fabrary-import-title"
                 sx={{
-                    color: accentColor,
-                    fontWeight: 700,
+                    color: textColor,
                     pr: 6,
                     flexShrink: 0,
                 }}
@@ -306,8 +298,8 @@ const FabraryImportDialog = ({ open, onClose, onImported }) => {
                                         overflowY: 'auto',
                                         maxHeight: { xs: 140, sm: 220 },
                                         pr: 0.5,
-                                        border: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.15)'}`,
-                                        borderRadius: 1,
+                                        bgcolor: 'surface.sunken',
+                                        borderRadius: '10px',
                                         px: 1.25,
                                         py: 1,
                                     }}

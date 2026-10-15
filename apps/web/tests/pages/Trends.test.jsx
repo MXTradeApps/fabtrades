@@ -109,9 +109,8 @@ describe('Trends', () => {
         getBinderEntries.mockResolvedValue({ data: { binder: [] }, error: null });
     });
 
-    test('hamburger has Trends and Browse Sets, not Home', () => {
+    test('navigation has Trends and Browse Sets, not Home', () => {
         wrap(<Header />, '/');
-        fireEvent.click(screen.getByLabelText('open drawer'));
         expect(screen.getAllByText('Trends').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Browse Sets').length).toBeGreaterThan(0);
         expect(screen.queryByText('Home')).not.toBeInTheDocument();
@@ -132,7 +131,7 @@ describe('Trends', () => {
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        expect(screen.getByText('Trends')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Trends' })).toBeInTheDocument();
         await screen.findByText('Catalog-wide recent movers');
         expect(await screen.findByText('Awakening')).toBeInTheDocument();
         expect(screen.getByText(/The Hunted/)).toBeInTheDocument();
@@ -260,8 +259,9 @@ describe('Trends', () => {
             </Routes>,
         );
         await screen.findByText('Catalog-wide recent movers');
-        expect(screen.queryByText('Want List')).not.toBeInTheDocument();
-        expect(screen.queryByText('Browse Sets')).not.toBeInTheDocument();
+        const main = screen.getByRole('main');
+        expect(within(main).queryByText('Want List')).not.toBeInTheDocument();
+        expect(within(main).queryByText('Browse Sets')).not.toBeInTheDocument();
     });
 
     test('search renders trend boxes, not a catalog list, including off-list matches', async () => {
@@ -421,7 +421,7 @@ describe('SetList Browse Sets', () => {
             </Routes>,
             '/sets',
         );
-        expect(screen.getByText('Browse Sets')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Browse Sets' })).toBeInTheDocument();
         expect(screen.getByText('Welcome to Rathe')).toBeInTheDocument();
         expect(screen.queryByText('Catalog-wide recent movers')).not.toBeInTheDocument();
         expect(screen.queryByText('Your recent movers')).not.toBeInTheDocument();
