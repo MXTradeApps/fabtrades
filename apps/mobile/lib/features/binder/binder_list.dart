@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/card_filter_bar.dart';
@@ -111,6 +112,7 @@ class _BinderListState extends ConsumerState<BinderList> {
 
     final filters = ref.watch(binderFiltersProvider);
     final visible = ref.watch(filteredBinderProvider);
+    final selection = ref.watch(binderSelectionProvider);
     final hasQuery = filters.query.trim().isNotEmpty;
     final pageRows = _pageSlice(visible);
 
@@ -159,6 +161,8 @@ class _BinderListState extends ConsumerState<BinderList> {
                       pricing: pricing,
                       binderId: widget.binderId,
                       liveBinders: binders,
+                      selecting: selection.isNotEmpty,
+                      selected: selection.contains(binderRowKey(pageRows[i])),
                     ),
                   ),
           ),
@@ -336,11 +340,22 @@ class _EntryRow extends ConsumerWidget {
     required this.pricing,
     required this.binderId,
     required this.liveBinders,
+    this.selecting = false,
+    this.selected = false,
   });
   final BinderEntry entry;
   final Pricing pricing;
   final String binderId;
   final List<Binder> liveBinders;
+
+  /// Selection mode is on: a tap toggles the row instead of acting on it.
+  final bool selecting;
+  final bool selected;
+
+  void _toggle(WidgetRef ref) {
+    HapticFeedback.selectionClick();
+    ref.read(binderSelectionProvider.notifier).toggle(binderRowKey(entry));
+  }
 
   void _openDetail(BuildContext context, CardModel card) {
     Navigator.of(context).push(MaterialPageRoute(
@@ -462,10 +477,14 @@ class _EntryRow extends ConsumerWidget {
         .where((b) => b.isLive && !b.isWant && b.clientId != binderId)
         .toList();
 
+    final t = context.tokens;
+    final rowKey = binderRowKey(entry);
+
     return Dismissible(
       key: ValueKey(
           '${card.id}_${entry.isWanted}_${entry.resolvedBinderId}_${entry.condition}'),
-      direction: DismissDirection.endToStart,
+      direction:
+          selecting ? DismissDirection.none : DismissDirection.endToStart,
       background: Container(
         color: context.tokens.loss,
         alignment: Alignment.centerRight,
@@ -473,90 +492,119 @@ class _EntryRow extends ConsumerWidget {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (_) => _removeWithUndo(context, ref),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-        child: Row(
-          children: [
-            GestureDetector(
-              key: Key('binderArt-${card.id}'),
-              onTap: () => _openDetail(context, card),
-              child: CardThumbnail(
-                url: card.imageUrl,
-                foil: card.isFoil,
-                width: 28,
-                height: 40,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: InkWell(
-                key: Key('binderRow-${card.id}'),
-                onTap: () => _pickVersion(context, ref, catalog),
-                child: Semantics(
-                  button: true,
-                  label: 'Change printing',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(card.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 1),
-                      CardMetaLine(card: card),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            if (dests.isNotEmpty)
-              TextButton(
-                key: Key('moveBinder-${card.id}'),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  textStyle: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-                onPressed: () => _move(context, ref),
-                child: const Text('Move'),
-              ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+      child: Material(
+        color: selected ? t.selected : Colors.transparent,
+        child: InkWell(
+          key: Key('binderSelectRow-$rowKey'),
+          // Outside selection mode the row's own targets handle taps, and a
+          // long-press anywhere starts selecting with this row picked.
+          onTap: selecting ? () => _toggle(ref) : null,
+          onLongPress: selecting ? null : () => _toggle(ref),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            child: Row(
               children: [
-                Text(lineLabel,
-                    key: Key('binderRowValue-${card.id}'),
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w800)),
-                if (pricing.lowPriceLabel(card) != null)
-                  Text(pricing.lowPriceLabel(card)!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant)),
-                const SizedBox(height: 2),
-                _MiniStepper(
-                  qty: entry.quantity,
-                  onInc: () => notifier.setQuantity(
-                    card.id,
-                    entry.isWanted,
-                    entry.quantity + 1,
-                    binderId: binderId,
+                if (selecting) ...[
+                  Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    key: Key('binderSelectMark-$rowKey'),
+                    size: 22,
+                    color: selected ? t.accent : t.textFaint,
                   ),
-                  onDec: () => entry.quantity <= 1
-                      ? _removeWithUndo(context, ref)
-                      : notifier.setQuantity(
+                  const SizedBox(width: 8),
+                ],
+                GestureDetector(
+                  key: Key('binderArt-${card.id}'),
+                  onTap: selecting ? null : () => _openDetail(context, card),
+                  child: CardThumbnail(
+                    url: card.imageUrl,
+                    foil: card.isFoil,
+                    width: 28,
+                    height: 40,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    key: Key('binderRow-${card.id}'),
+                    onTap: selecting
+                        ? null
+                        : () => _pickVersion(context, ref, catalog),
+                    onLongPress: selecting ? null : () => _toggle(ref),
+                    child: Semantics(
+                      button: true,
+                      label: 'Change printing',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(card.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 1),
+                          CardMetaLine(card: card),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                if (dests.isNotEmpty && !selecting)
+                  TextButton(
+                    key: Key('moveBinder-${card.id}'),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      textStyle: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    onPressed: () => _move(context, ref),
+                    child: const Text('Move'),
+                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(lineLabel,
+                        key: Key('binderRowValue-${card.id}'),
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w800)),
+                    if (pricing.lowPriceLabel(card) != null)
+                      Text(pricing.lowPriceLabel(card)!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    if (!selecting) ...[
+                      const SizedBox(height: 2),
+                      _MiniStepper(
+                        qty: entry.quantity,
+                        onInc: () => notifier.setQuantity(
                           card.id,
                           entry.isWanted,
-                          entry.quantity - 1,
+                          entry.quantity + 1,
                           binderId: binderId,
                         ),
+                        onDec: () => entry.quantity <= 1
+                            ? _removeWithUndo(context, ref)
+                            : notifier.setQuantity(
+                                card.id,
+                                entry.isWanted,
+                                entry.quantity - 1,
+                                binderId: binderId,
+                              ),
+                      ),
+                    ] else if (entry.quantity > 1)
+                      Text('×${entry.quantity}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: t.textMuted, fontWeight: FontWeight.w700)),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
