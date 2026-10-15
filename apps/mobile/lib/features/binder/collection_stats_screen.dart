@@ -93,29 +93,22 @@ class _CollectionStatsScreenState extends ConsumerState<CollectionStatsScreen> {
               children: [
                 Text(
                   'Total Value',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: theme.textTheme.titleSmall,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        usd.format(usdAmount),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: context.tokens.gain,
-                        ),
+                      child: _ValueStat(
+                        label: 'TCGplayer · USD',
+                        value: usd.format(usdAmount),
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        eur.format(eurAmount),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: context.tokens.gain,
-                        ),
+                      child: _ValueStat(
+                        label: 'CardMarket · EUR',
+                        value: eur.format(eurAmount),
                       ),
                     ),
                   ],
@@ -395,6 +388,47 @@ class _DirectionList extends StatelessWidget {
               onSelect: () => onSelect(row.cardId),
             ),
       ],
+    );
+  }
+}
+
+/// One headline figure in a sunken well with a small label above it.
+class _ValueStat extends StatelessWidget {
+  const _ValueStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = context.tokens;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: t.sunken,
+        borderRadius: AppRadii.lgAll,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(color: t.textMuted),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: AppType.tabular(theme.textTheme.headlineSmall),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

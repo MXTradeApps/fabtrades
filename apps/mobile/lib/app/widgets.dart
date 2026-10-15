@@ -6,6 +6,7 @@ import '../core/models/card_model.dart';
 import '../core/providers.dart';
 import 'fallback_network_image.dart';
 import 'theme.dart';
+import 'ui.dart';
 
 /// Official FAB set logo for browse lists. Falls back to [setName] when the
 /// logo URL is missing or fails to load (mirrors the web Browse Sets page).
@@ -353,13 +354,13 @@ class CardThumbnail extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
         border: foil
-            ? Border.all(color: const Color(0xFFB794F6), width: 1.5)
+            ? Border.all(color: AppTheme.tan, width: 1.5)
             : Border.all(color: scheme.outlineVariant, width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -440,11 +441,7 @@ class FinishBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = compact ? card.finishBadgeShort : card.finishBadgeLabel;
     if (label == null) return const SizedBox.shrink();
-    return PillBadge(
-      label: compact ? label : label.toUpperCase(),
-      color: colorFor(card),
-      icon: Icons.auto_awesome,
-    );
+    return FoilTag(subTypeName: card.subTypeName, label: label);
   }
 }
 
@@ -502,10 +499,15 @@ class CardRow extends ConsumerWidget {
 
     final ownership = <Widget>[
       if (owned > 0)
-        PillBadge(label: 'Own $owned', color: context.tokens.gain, icon: Icons.check),
+        PillBadge(
+            label: 'Own $owned',
+            color: context.tokens.gain,
+            icon: Icons.check),
       if (wanted)
         PillBadge(
-            label: 'Wanted', color: context.tokens.accent, icon: Icons.favorite),
+            label: 'Wanted',
+            color: theme.colorScheme.primary,
+            icon: Icons.favorite),
     ];
 
     return LayoutBuilder(
@@ -519,7 +521,7 @@ class CardRow extends ConsumerWidget {
         return InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
                 if (showThumbnail) ...[
@@ -579,8 +581,8 @@ class CardRow extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                        style: AppType.tabular(theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700)),
                       ),
                       if (secondaryLabel != null)
                         Text(
@@ -588,8 +590,8 @@ class CardRow extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant),
+                          style: AppType.tabular(theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
                         ),
                       if (priceSource != null) ...[
                         const SizedBox(height: 2),
@@ -698,7 +700,7 @@ class PriceSourceBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return PillBadge(
       label: source,
-      color: AppTheme.seed,
+      color: Theme.of(context).colorScheme.primary,
       icon: Icons.storefront_outlined,
     );
   }

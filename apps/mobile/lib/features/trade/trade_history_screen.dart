@@ -98,20 +98,20 @@ class _TradeCard extends ConsumerWidget {
                 Expanded(
                   child: _sideSummary(theme, 'Gave',
                       '${trade.haveCount} cards', trade.haveTotal, symbol,
-                      context.tokens.gain),
+                      context.tokens.text),
                 ),
                 Icon(Icons.arrow_forward,
                     color: theme.colorScheme.onSurfaceVariant),
                 Expanded(
                   child: _sideSummary(theme, 'Got',
                       '${trade.wantCount} cards', trade.wantTotal, symbol,
-                      context.tokens.accent, alignEnd: true),
+                      context.tokens.text, alignEnd: true),
                 ),
               ],
             ),
             if (trade.haveItems.isNotEmpty || trade.haveCash > 0) ...[
               const SizedBox(height: 12),
-              _sideLabel(theme, 'Gave', context.tokens.gain),
+              _sideLabel(theme, 'Gave', context.tokens.accent),
               const SizedBox(height: 4),
               for (final item in trade.haveItems)
                 _HistoryItemRow(item: item, symbol: symbol),
@@ -120,7 +120,7 @@ class _TradeCard extends ConsumerWidget {
             ],
             if (trade.wantItems.isNotEmpty || trade.wantCash > 0) ...[
               const SizedBox(height: 10),
-              _sideLabel(theme, 'Got', context.tokens.accent),
+              _sideLabel(theme, 'Got', context.tokens.gain),
               const SizedBox(height: 4),
               for (final item in trade.wantItems)
                 _HistoryItemRow(item: item, symbol: symbol),

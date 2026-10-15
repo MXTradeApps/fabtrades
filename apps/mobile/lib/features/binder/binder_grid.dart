@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme.dart';
 import '../../app/widgets.dart';
 import '../../core/logic/binder_cover.dart';
 import '../../core/logic/binder_value_snapshot.dart';
@@ -21,8 +22,9 @@ List<BinderEntry> ownedInBinder(
         .toList(growable: false);
   }
   return entries
-      .where((e) =>
-          !e.isWanted && e.resolvedBinderId == binderId && e.quantity > 0)
+      .where(
+        (e) => !e.isWanted && e.resolvedBinderId == binderId && e.quantity > 0,
+      )
       .toList(growable: false);
 }
 
@@ -84,32 +86,29 @@ class BinderGrid extends ConsumerWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 0.92,
+              childAspectRatio: 0.86,
             ),
-            delegate: SliverChildBuilderDelegate(
-              (context, i) {
-                final binder = binders[i];
-                return BinderTile(
-                  binder: binder,
-                  entries: entries,
-                  pricing: pricing,
-                  onOpen: () => onOpen?.call(binder.clientId),
-                  onRename: onRename == null
-                      ? null
-                      : () => onRename!(binder.clientId),
-                  onDelete: binder.isProtected || onDelete == null
-                      ? null
-                      : () => onDelete!(binder.clientId),
-                  onClear: onClear == null
-                      ? null
-                      : () => onClear!(binder.clientId),
-                  onSettings: onSettings == null
-                      ? null
-                      : () => onSettings!(binder.clientId),
-                );
-              },
-              childCount: binders.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, i) {
+              final binder = binders[i];
+              return BinderTile(
+                binder: binder,
+                entries: entries,
+                pricing: pricing,
+                onOpen: () => onOpen?.call(binder.clientId),
+                onRename: onRename == null
+                    ? null
+                    : () => onRename!(binder.clientId),
+                onDelete: binder.isProtected || onDelete == null
+                    ? null
+                    : () => onDelete!(binder.clientId),
+                onClear: onClear == null
+                    ? null
+                    : () => onClear!(binder.clientId),
+                onSettings: onSettings == null
+                    ? null
+                    : () => onSettings!(binder.clientId),
+              );
+            }, childCount: binders.length),
           ),
         ),
       ],
@@ -162,105 +161,149 @@ class BinderTile extends StatelessWidget {
       }
     }
 
+    final t = context.tokens;
+    final isWant = id == BinderIds.want;
     return Card(
       key: Key('binderTile-$id'),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onOpen,
         onLongPress: onRename,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: t.sunken,
+                  border: Border(bottom: BorderSide(color: t.border)),
+                ),
                 child: cover.printingId == null
-                    ? const SizedBox.expand()
+                    ? Center(
+                        child: Icon(
+                          isWant
+                              ? Icons.bookmark_border_rounded
+                              : Icons.collections_bookmark_outlined,
+                          size: 30,
+                          color: t.textFaint,
+                        ),
+                      )
                     : Center(
-                        child: CardThumbnail(
-                          key: Key('binderTileCover-$id'),
-                          url: imageUrl,
-                          fallbackUrl: fallbackUrl,
-                          width: 72,
-                          height: 100,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: CardThumbnail(
+                            key: Key('binderTileCover-$id'),
+                            url: imageUrl,
+                            fallbackUrl: fallbackUrl,
+                            width: 76,
+                            height: 106,
+                          ),
                         ),
                       ),
               ),
-              const SizedBox(height: 8),
-              Row(
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 4, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      binder.name,
-                      key: Key('binderTileName-$id'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          binder.name,
+                          key: Key('binderTileName-$id'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall,
+                        ),
+                      ),
+                      if (onRename != null ||
+                          onDelete != null ||
+                          onClear != null ||
+                          onSettings != null)
+                        PopupMenuButton<String>(
+                          key: Key('binderTileMenu-$id'),
+                          onSelected: (action) {
+                            if (action == 'settings') onSettings?.call();
+                            if (action == 'rename') onRename?.call();
+                            if (action == 'clear') onClear?.call();
+                            if (action == 'delete') onDelete?.call();
+                          },
+                          itemBuilder: (_) => [
+                            if (onSettings != null)
+                              PopupMenuItem(
+                                value: 'settings',
+                                child: Text(
+                                  'Settings',
+                                  key: Key('binderTileSettings-$id'),
+                                ),
+                              ),
+                            if (onRename != null)
+                              const PopupMenuItem(
+                                value: 'rename',
+                                child: Text('Rename'),
+                              ),
+                            if (onClear != null && copies > 0)
+                              PopupMenuItem(
+                                value: 'clear',
+                                child: Text(
+                                  'Clear',
+                                  key: Key('clearBinder-$id'),
+                                ),
+                              ),
+                            if (onDelete != null)
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text(
+                                  'Delete',
+                                  key: Key('deleteBinder-$id'),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
                   ),
-                  if (onRename != null ||
-                      onDelete != null ||
-                      onClear != null ||
-                      onSettings != null)
-                    PopupMenuButton<String>(
-                      key: Key('binderTileMenu-$id'),
-                      onSelected: (action) {
-                        if (action == 'settings') onSettings?.call();
-                        if (action == 'rename') onRename?.call();
-                        if (action == 'clear') onClear?.call();
-                        if (action == 'delete') onDelete?.call();
-                      },
-                      itemBuilder: (_) => [
-                        if (onSettings != null)
-                          PopupMenuItem(
-                            value: 'settings',
-                            child: Text(
-                              'Settings',
-                              key: Key('binderTileSettings-$id'),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '$copies',
+                          key: Key('binderTileCount-$id'),
+                          style: AppType.tabular(
+                            theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
                             ),
                           ),
-                        if (onRename != null)
-                          const PopupMenuItem(
-                            value: 'rename',
-                            child: Text('Rename'),
+                        ),
+                        Text(
+                          copies == 1 ? ' card' : ' cards',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
                           ),
-                        if (onClear != null && copies > 0)
-                          PopupMenuItem(
-                            value: 'clear',
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
                             child: Text(
-                              'Clear',
-                              key: Key('clearBinder-$id'),
+                              value,
+                              key: Key('binderTileValue-$id'),
+                              style: AppType.tabular(theme.textTheme.titleSmall),
                             ),
                           ),
-                        if (onDelete != null)
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text(
-                              'Delete',
-                              key: Key('deleteBinder-$id'),
-                            ),
-                          ),
+                        ),
                       ],
                     ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 2),
-              Text(
-                '$copies',
-                key: Key('binderTileCount-$id'),
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-              Text(
-                value,
-                key: Key('binderTileValue-$id'),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

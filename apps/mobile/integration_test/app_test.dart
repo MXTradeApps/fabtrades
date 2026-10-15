@@ -113,14 +113,14 @@ void main() {
     expect(find.text('Vex - Apathetic'), findsOneWidget);
   });
 
-  testWidgets('opening settings from the trade tab changes the price source',
+  testWidgets('opening settings from More changes the price source',
       (tester) async {
     final container = await launch(tester);
 
     await tester.tap(find.text('Trade'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Menu'));
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();

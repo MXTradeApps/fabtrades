@@ -8,9 +8,7 @@ import '../core/analytics/analytics.dart';
 import '../core/models/app_settings.dart';
 import '../core/providers.dart';
 import '../features/binder/binder_screen.dart';
-import '../features/binder/binder_settings_screen.dart';
 import '../features/lend/lend_screen.dart';
-import '../features/life_tracker/life_tracker_screen.dart';
 import '../features/onboarding/onboarding_keys.dart';
 import '../features/onboarding/onboarding_provider.dart';
 import '../features/onboarding/onboarding_repository.dart';
@@ -18,11 +16,10 @@ import '../features/onboarding/showcase_theme.dart';
 import '../features/onboarding/tour_controller.dart';
 import '../features/onboarding/welcome_carousel.dart';
 import '../features/search/search_screen.dart';
-import '../features/settings/account_screen.dart';
-import '../features/settings/settings_screen.dart';
 import '../features/sync/sync_host.dart';
 import '../features/trade/trade_screen.dart';
 import '../features/update/update_prompt.dart';
+import 'more_sheet.dart';
 import 'theme.dart';
 
 class FabTradesApp extends ConsumerWidget {
@@ -97,6 +94,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   static const _tabScreenNames = ['Home', 'Trade', 'Binder', 'Lend'];
 
+  /// The fifth destination is not a tab: it opens the More sheet.
+  static const _moreIndex = 4;
+
   @override
   void initState() {
     super.initState();
@@ -139,6 +139,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   NavigatorState? get _activeNav => _navKeys[_index].currentState;
 
   void _selectTab(int i) {
+    if (i == _moreIndex) {
+      HapticFeedback.selectionClick();
+      final ctx = _navKeys[_index].currentContext;
+      if (ctx != null) showMoreSheet(ctx);
+      return;
+    }
     if (i == _index) {
       // Re-tapping the current tab pops back to its root.
       _activeNav?.popUntil((r) => r.isFirst);
@@ -237,165 +243,49 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             ],
           ),
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: _selectTab,
-          destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Badge(
-                isLabelVisible: tradeCount > 0,
-                label: Text('$tradeCount'),
-                child: const Icon(Icons.swap_horiz_outlined),
+        bottomNavigationBar: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: context.tokens.border)),
+          ),
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: _selectTab,
+            destinations: [
+              const NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Home',
               ),
-              selectedIcon: Badge(
-                isLabelVisible: tradeCount > 0,
-                label: Text('$tradeCount'),
-                child: const Icon(Icons.swap_horiz),
+              NavigationDestination(
+                icon: Badge(
+                  isLabelVisible: tradeCount > 0,
+                  label: Text('$tradeCount'),
+                  child: const Icon(Icons.swap_horiz_rounded),
+                ),
+                selectedIcon: Badge(
+                  isLabelVisible: tradeCount > 0,
+                  label: Text('$tradeCount'),
+                  child: const Icon(Icons.swap_horiz_rounded),
+                ),
+                label: 'Trade',
               ),
-              label: 'Trade',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.menu_book_outlined),
-              selectedIcon: Icon(Icons.menu_book),
-              label: 'Binder',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.sync_alt_outlined),
-              selectedIcon: Icon(Icons.sync_alt),
-              label: 'Lend',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Shared app bar action that opens the account / settings menu.
-class AppMenuAction extends StatelessWidget {
-  const AppMenuAction({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.menu),
-      tooltip: 'Menu',
-      onPressed: () => _showAppMenu(context),
-    );
-  }
-}
-
-Future<void> _showAppMenu(BuildContext context) async {
-  // Capture the caller's navigator: the drawer's context is unmounted after pop.
-  final parentContext = context;
-  await showGeneralDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 250),
-    pageBuilder: (dialogContext, animation, secondaryAnimation) {
-      final width = MediaQuery.sizeOf(dialogContext).width;
-      return Align(
-        alignment: Alignment.centerRight,
-        child: Material(
-          color: Theme.of(dialogContext).colorScheme.surface,
-          elevation: 16,
-          child: SizedBox(
-            width: width < 360 ? width * 0.85 : 304,
-            height: double.infinity,
-            child: _AppMenuDrawer(parentContext: parentContext),
+              const NavigationDestination(
+                icon: Icon(Icons.collections_bookmark_outlined),
+                selectedIcon: Icon(Icons.collections_bookmark),
+                label: 'Binder',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.sync_alt_rounded),
+                selectedIcon: Icon(Icons.sync_alt_rounded),
+                label: 'Lend',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.more_horiz_rounded),
+                label: 'More',
+              ),
+            ],
           ),
         ),
-      );
-    },
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      return SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(1, 0),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        )),
-        child: child,
-      );
-    },
-  );
-}
-
-class _AppMenuDrawer extends ConsumerWidget {
-  const _AppMenuDrawer({required this.parentContext});
-
-  final BuildContext parentContext;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final signedIn = ref.watch(isSignedInProvider);
-
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ListTile(
-            leading: Icon(
-              signedIn ? Icons.person_outline : Icons.person_add_outlined,
-            ),
-            title: Text(signedIn ? 'My Account' : 'Sign up'),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(parentContext).push(
-                MaterialPageRoute(
-                  builder: (_) => const AccountScreen(),
-                  settings: const RouteSettings(name: 'Account'),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.favorite_outline),
-            title: const Text('Life Tracker'),
-            onTap: () {
-              Navigator.of(context).pop();
-              // Root navigator so the tracker covers the tab bar.
-              Navigator.of(parentContext, rootNavigator: true).push(
-                MaterialPageRoute(
-                  builder: (_) => const LifeTrackerScreen(),
-                  settings: const RouteSettings(name: 'Life Tracker'),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.upload_file),
-            title: const Text('Import from Fabrary'),
-            onTap: () {
-              Navigator.of(context).pop();
-              showDialog<void>(
-                context: parentContext,
-                builder: (_) => const BinderSettingsScreen(),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.tune),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(parentContext).push(
-                MaterialPageRoute(
-                  builder: (_) => const SettingsScreen(),
-                  settings: const RouteSettings(name: 'Settings'),
-                ),
-              );
-            },
-          ),
-        ],
       ),
     );
   }

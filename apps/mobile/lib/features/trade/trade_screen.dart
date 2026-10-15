@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../app/app.dart';
 import '../../app/printing_picker.dart';
 import '../../app/theme.dart';
+import '../../app/ui.dart';
 import '../../app/widgets.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/data/card_repository.dart';
@@ -27,8 +27,8 @@ import 'trade_history_screen.dart';
 const double _minFraction = 0.15;
 
 /// Reserved height for drag-fraction math. The bar itself sizes to content.
-const double _dragBarHeightCompact = 72;
-const double _dragBarHeightWithLow = 80;
+const double _dragBarHeightCompact = 104;
+const double _dragBarHeightWithLow = 104;
 
 class TradeScreen extends ConsumerStatefulWidget {
   const TradeScreen({super.key});
@@ -68,7 +68,6 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
               tooltip: 'Clear trade',
               onPressed: () => _confirmClear(context, notifier),
             ),
-          const AppMenuAction(),
         ],
       ),
       // Confirm Trade lives in a Column (not Scaffold.bottomNavigationBar) so
@@ -97,7 +96,7 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
                         child: _TradeSideList(
                           side: TradeSide.want,
                           title: 'Their cards',
-                          accent: context.tokens.accent,
+                          accent: context.tokens.gain,
                           items: trade.wantItems,
                           symbol: trade.currencySymbol,
                           addLabel: 'Add their cards',
@@ -129,7 +128,7 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
                         child: _TradeSideList(
                           side: TradeSide.have,
                           title: 'My cards',
-                          accent: context.tokens.gain,
+                          accent: Theme.of(context).colorScheme.primary,
                           items: trade.haveItems,
                           symbol: trade.currencySymbol,
                           addLabel: 'Add my cards',
@@ -378,6 +377,8 @@ class _TradeSideList extends ConsumerWidget {
     final notifier = ref.read(tradeDraftProvider.notifier);
     final catalog = ref.watch(catalogProvider).asData?.value ?? const [];
     final pricing = ref.watch(pricingProvider);
+    final theme = Theme.of(context);
+    final count = items.fold<int>(0, (s, i) => s + i.quantity);
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: accent, width: 3)),
@@ -385,6 +386,25 @@ class _TradeSideList extends ConsumerWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(13, 10, 16, 4),
+            child: Row(
+              children: [
+                ToneDot(color: accent),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (count > 0) ...[
+                  const SizedBox(width: 8),
+                  CountPill(count: count),
+                ],
+              ],
+            ),
+          ),
           for (final item in items)
             _TradeItemRow(
               item: item,
@@ -413,8 +433,9 @@ class _TradeSideList extends ConsumerWidget {
   }
 }
 
-/// The draggable summary bar between the two lists. Drag vertically to give
-/// more room to either side; shows each side's low total and the low delta.
+/// The draggable trade balance panel between the two lists. Leads with the
+/// difference and a plain verdict over a give/get balance bar (the web's
+/// TradeSummary pattern); drag it vertically to give either list more room.
 class _DragBar extends StatelessWidget {
   const _DragBar({
     required this.trade,
@@ -438,31 +459,34 @@ class _DragBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final symbol = trade.currencySymbol;
     final theirs = trade.wantTotal;
     final mine = trade.haveTotal;
     final theirLow = _lowTotal(trade.wantItems, trade.wantCash);
     final myLow = _lowTotal(trade.haveItems, trade.haveCash);
-    final diff = theirs - mine; // + => you gain value
-    final lowDiff = theirLow - myLow;
-    final balanced = diff.abs() < 0.01;
+    final balanced = (theirs - mine).abs() < 0.01;
+    // Low is the trading basis whenever any card has one: both the side
+    // totals and the difference switch to it together.
     final showLow = theirLow > 0 || myLow > 0;
-    final shownDiff = showLow ? lowDiff : diff;
+    final shownTheirs = showLow ? theirLow : theirs;
+    final shownMine = showLow ? myLow : mine;
+    final shownDiff = shownTheirs - shownMine; // + => you gain value
     final shownBalanced = shownDiff.abs() < 0.01;
+    final prefix = showLow ? 'Low ' : '';
+    String money(double v) => '$symbol${v.toStringAsFixed(2)}';
+
     final Color deltaColor = shownBalanced
-        ? theme.colorScheme.onSurfaceVariant
-        : (shownDiff >= 0 ? context.tokens.gain : context.tokens.loss);
+        ? scheme.onSurfaceVariant
+        : (shownDiff >= 0 ? context.tokens.gain : scheme.primary);
     final String deltaText = shownBalanced
-        ? (showLow ? 'Low Even' : 'Even')
-        : showLow
-            ? 'Low ${shownDiff >= 0 ? '+' : '-'}$symbol${shownDiff.abs().toStringAsFixed(2)}'
-            : '${shownDiff >= 0 ? '+' : '-'}$symbol${shownDiff.abs().toStringAsFixed(2)}';
-    final theirValue = showLow
-        ? 'Low $symbol${theirLow.toStringAsFixed(2)}'
-        : '$symbol${theirs.toStringAsFixed(2)}';
-    final myValue = showLow
-        ? 'Low $symbol${myLow.toStringAsFixed(2)}'
-        : '$symbol${mine.toStringAsFixed(2)}';
+        ? '${prefix}Even'
+        : '$prefix${shownDiff >= 0 ? '+' : '-'}${money(shownDiff.abs())}';
+    final String verdict = shownBalanced
+        ? 'Even trade'
+        : shownDiff > 0
+            ? 'You get ${money(shownDiff.abs())} more'
+            : 'You give ${money(shownDiff.abs())} more';
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -470,88 +494,173 @@ class _DragBar extends StatelessWidget {
       child: Container(
         key: const Key('tradeDragBar'),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHigh,
+          color: scheme.surface,
           border: Border.symmetric(
-            horizontal: BorderSide(color: theme.colorScheme.outlineVariant),
+            horizontal: BorderSide(color: scheme.outlineVariant),
           ),
-        ),
-        padding: const EdgeInsets.fromLTRB(16, 5, 16, 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 3,
-              margin: const EdgeInsets.only(bottom: 3),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            _summaryRow(
-              theme,
-              icon: Icons.south,
-              accent: context.tokens.accent,
-              label: 'Receiving',
-              value: theirValue,
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 1),
-              child: Row(
-                children: [
-                  // When the sides don't match, offer a shortcut to find cards
-                  // that fill the value gap.
-                  if (!balanced) _FindFillerButton(onTap: onFindFiller),
-                  const Spacer(),
-                  Icon(shownBalanced ? Icons.balance : Icons.trending_up,
-                      size: 14, color: deltaColor),
-                  const SizedBox(width: 4),
-                  Text(deltaText,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                          color: deltaColor,
-                          fontWeight: FontWeight.w800,
-                          height: 1.15)),
-                ],
-              ),
-            ),
-            _summaryRow(
-              theme,
-              icon: Icons.north,
-              accent: context.tokens.gain,
-              label: 'Giving',
-              value: myValue,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                  alpha: theme.brightness == Brightness.dark ? 0.35 : 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Semantics(
+          container: true,
+          label: 'Trade balance',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 32,
+                height: 3,
+                margin: const EdgeInsets.only(bottom: 4),
+                decoration: BoxDecoration(
+                  color: scheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: _SideTotal(
+                      label: 'You get',
+                      count: trade.wantCount,
+                      value: '$prefix${money(shownTheirs)}',
+                      tone: context.tokens.gain,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(
+                      children: [
+                        Text('Difference',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600)),
+                        Text(
+                          deltaText,
+                          style: AppType.tabular(theme.textTheme.titleMedium?.copyWith(
+                            color: deltaColor,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                          )),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: _SideTotal(
+                      label: 'You give',
+                      count: trade.haveCount,
+                      value: '$prefix${money(shownMine)}',
+                      tone: scheme.primary,
+                      alignEnd: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Bar reads left to right like the totals: get, then give.
+              Directionality(
+                textDirection: TextDirection.rtl,
+                child: BalanceBar(give: shownMine, get: shownTheirs, height: 4),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 26,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        verdict,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: deltaColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    // When the sides don't match, offer a shortcut to find
+                    // cards that fill the value gap.
+                    if (!balanced) _FindFillerButton(onTap: onFindFiller),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _summaryRow(
-    ThemeData theme, {
-    required IconData icon,
-    required Color accent,
-    required String label,
-    required String value,
-  }) {
-    return Row(
+/// One side's headline total in the balance panel: a tone dot, the label with
+/// its card count, and the value in tabular figures.
+class _SideTotal extends StatelessWidget {
+  const _SideTotal({
+    required this.label,
+    required this.count,
+    required this.value,
+    required this.tone,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final int count;
+  final String value;
+  final Color tone;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 15, color: accent),
-        const SizedBox(width: 6),
-        Text(label,
-            style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600, height: 1.15)),
-        const Spacer(),
-        Text(value,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(fontWeight: FontWeight.w800, height: 1.15)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ToneDot(color: tone),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                '$label · $count',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            style: AppType.tabular(theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+            )),
+          ),
+        ),
       ],
     );
   }
 }
 
-/// Compact "Find Trade Filler" pill shown in the drag bar's empty middle space
-/// whenever the two sides are not of equal value.
+/// Compact "Find Trade Filler" pill shown beside the verdict whenever the two
+/// sides are not of equal value.
 class _FindFillerButton extends StatelessWidget {
   const _FindFillerButton({required this.onTap});
   final VoidCallback onTap;
@@ -560,25 +669,24 @@ class _FindFillerButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.primaryContainer,
-      borderRadius: BorderRadius.circular(20),
+      color: context.tokens.accentSoft,
+      borderRadius: BorderRadius.circular(999),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.auto_fix_high,
-                  size: 14, color: scheme.onPrimaryContainer),
+              Icon(Icons.auto_fix_high, size: 14, color: scheme.primary),
               const SizedBox(width: 5),
               Text(
                 'Find Trade Filler',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: scheme.onPrimaryContainer,
+                  color: scheme.primary,
                 ),
               ),
             ],
@@ -613,7 +721,7 @@ class _TradeItemRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+        padding: const EdgeInsets.fromLTRB(13, 8, 4, 8),
         child: Row(
           children: [
             CardThumbnail(
@@ -642,19 +750,20 @@ class _TradeItemRow extends StatelessWidget {
                     ],
                   ),
                   CardMetaLine(card: item.card),
+                  const SizedBox(height: 2),
                   Text(
-                    '$symbol${item.priceEach.toStringAsFixed(2)} ea · $symbol${item.lineTotal.toStringAsFixed(2)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant),
+                    [
+                      '$symbol${item.priceEach.toStringAsFixed(2)} ea',
+                      if (lowEach != null)
+                        'Low $symbol${lowEach!.toStringAsFixed(2)}',
+                      if (item.quantity > 1)
+                        '$symbol${item.lineTotal.toStringAsFixed(2)} total',
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppType.tabular(theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant)),
                   ),
-                  if (lowEach != null)
-                    Text(
-                      'Low $symbol${lowEach!.toStringAsFixed(2)} ea',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: 11,
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -702,10 +811,10 @@ class _QtyStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
+        color: context.tokens.sunken,
+        border: Border.all(color: context.tokens.border),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(

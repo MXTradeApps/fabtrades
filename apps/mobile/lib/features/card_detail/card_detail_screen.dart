@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/fallback_network_image.dart';
 import '../../app/theme.dart';
+import '../../app/ui.dart';
 import '../../app/widgets.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/data/card_repository.dart';
@@ -17,7 +18,11 @@ import '../paywall/pro_limits.dart';
 import 'price_history_section.dart';
 
 class CardDetailScreen extends ConsumerStatefulWidget {
-  const CardDetailScreen({super.key, required this.card, this.source = 'unknown'});
+  const CardDetailScreen({
+    super.key,
+    required this.card,
+    this.source = 'unknown',
+  });
   final CardModel card;
 
   /// Where this screen was opened from (e.g. `search`, `set`, `scan`,
@@ -43,8 +48,9 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
 
   void _select(CardModel c) {
     setState(() => _selected = c);
-    ref.read(analyticsProvider).capture(
-        'card_printing_switched', {'card_id': c.id});
+    ref.read(analyticsProvider).capture('card_printing_switched', {
+      'card_id': c.id,
+    });
   }
 
   @override
@@ -52,85 +58,105 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
     final theme = Theme.of(context);
     final settings = ref.watch(settingsProvider);
     final pricing = ref.watch(pricingProvider);
-    final owned = ref.watch(binderProvider.select((entries) => entries
-        .where((e) => e.card.id == _selected.id && !e.isWanted)
-        .fold<int>(0, (s, e) => s + e.quantity)));
-    final wanted = ref.watch(binderProvider.select((entries) => entries.any(
-        (e) => e.card.id == _selected.id && e.isWanted && e.quantity > 0)));
-    final catalog = ref.watch(catalogProvider).maybeWhen(
-          data: (cards) => cards,
-          orElse: () => const <CardModel>[],
-        );
+    final owned = ref.watch(
+      binderProvider.select(
+        (entries) => entries
+            .where((e) => e.card.id == _selected.id && !e.isWanted)
+            .fold<int>(0, (s, e) => s + e.quantity),
+      ),
+    );
+    final wanted = ref.watch(
+      binderProvider.select(
+        (entries) => entries.any(
+          (e) => e.card.id == _selected.id && e.isWanted && e.quantity > 0,
+        ),
+      ),
+    );
+    final catalog = ref
+        .watch(catalogProvider)
+        .maybeWhen(data: (cards) => cards, orElse: () => const <CardModel>[]);
     final printings = printingsForCard(catalog, widget.card);
 
     return Scaffold(
-      appBar: AppBar(title: Text(_selected.name)),
+      appBar: AppBar(),
       body: Column(
         children: [
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _CardArtThumb(
-                      card: _selected,
-                      onTap: () => _openArtViewer(context, _selected),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(_selected.name,
-                              style: theme.textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 6),
-                          CardMetaLine(
+            // Not lazily built: the page is short, and building it all keeps
+            // the price history mounted however small the screen.
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _CardArtThumb(
+                        card: _selected,
+                        onTap: () => _openArtViewer(context, _selected),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selected.name,
+                              style: theme.textTheme.headlineSmall,
+                            ),
+                            const SizedBox(height: 6),
+                            CardMetaLine(
                               card: _selected,
                               style: theme.textTheme.bodyMedium,
-                              maxLines: 2),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              FinishBadge(card: _selected),
-                              if (owned > 0)
-                                GestureDetector(
-                                  onTap: () => _editBinderQty(context, owned),
-                                  child: PillBadge(
+                              maxLines: 2,
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                FinishBadge(card: _selected),
+                                if (owned > 0)
+                                  GestureDetector(
+                                    onTap: () => _editBinderQty(context, owned),
+                                    child: PillBadge(
                                       label: 'Own $owned',
                                       color: context.tokens.gain,
-                                      icon: Icons.check),
-                                ),
-                              if (wanted)
-                                PillBadge(
+                                      icon: Icons.check,
+                                    ),
+                                  ),
+                                if (wanted)
+                                  PillBadge(
                                     label: 'Wanted',
                                     color: context.tokens.accent,
-                                    icon: Icons.favorite),
-                            ],
-                          ),
-                          if (printings.length >= 2) ...[
-                            const SizedBox(height: 12),
-                            _PrintingSelector(
-                              printings: printings,
-                              selectedId: _selected.id,
-                              onSelect: _select,
+                                    icon: Icons.favorite,
+                                  ),
+                              ],
                             ),
+                            if (printings.length >= 2) ...[
+                              const SizedBox(height: 12),
+                              _PrintingSelector(
+                                printings: printings,
+                                selectedId: _selected.id,
+                                onSelect: _select,
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _PriceCard(
-                    card: _selected, settings: settings, pricing: pricing),
-                const SizedBox(height: 14),
-                PriceHistorySection(cardId: _selected.id),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _PriceCard(
+                    card: _selected,
+                    settings: settings,
+                    pricing: pricing,
+                  ),
+                  const SizedBox(height: 14),
+                  PriceHistorySection(cardId: _selected.id),
+                ],
+              ),
             ),
           ),
           // Column footer (not Scaffold.bottomNavigationBar) so it sits above
@@ -159,9 +185,12 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
                         : null,
                     icon: const Icon(Icons.remove_circle_outline),
                   ),
-                  Text('$qty',
-                      style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800)),
+                  Text(
+                    '$qty',
+                    style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   IconButton(
                     onPressed: () => setDialogState(() => qty++),
                     icon: const Icon(Icons.add_circle_outline),
@@ -170,11 +199,13 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
               ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Cancel')),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
                 FilledButton(
-                    onPressed: () => Navigator.pop(ctx, qty),
-                    child: const Text('Save')),
+                  onPressed: () => Navigator.pop(ctx, qty),
+                  child: const Text('Save'),
+                ),
               ],
             );
           },
@@ -182,7 +213,9 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
       },
     );
     if (saved == null || !mounted) return;
-    ref.read(binderProvider.notifier).setQuantity(
+    ref
+        .read(binderProvider.notifier)
+        .setQuantity(
           _selected.id,
           false,
           saved,
@@ -228,22 +261,22 @@ class _CardArtThumb extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadii.lgAll,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadii.lgAll,
             child: CachedNetworkImage(
               imageUrl: card.imageUrl ?? '',
-              height: 176,
-              width: 126,
+              height: 196,
+              width: 140,
               fit: BoxFit.cover,
-              placeholder: (_, _) => const SizedBox(
-                height: 176,
-                width: 126,
-                child: Center(child: CircularProgressIndicator.adaptive()),
+              placeholder: (_, _) => Container(
+                height: 196,
+                width: 140,
+                color: context.tokens.sunken,
               ),
               errorWidget: (_, _, _) => Container(
-                height: 176,
-                width: 126,
+                height: 196,
+                width: 140,
                 color: theme.colorScheme.surfaceContainerHighest,
                 child: const Icon(Icons.broken_image_outlined, size: 40),
               ),
@@ -394,8 +427,7 @@ class _PrintingSelector extends StatelessWidget {
     }
 
     return [
-      for (final set in order)
-        (set: set, items: _labelWithinSet(bySet[set]!)),
+      for (final set in order) (set: set, items: _labelWithinSet(bySet[set]!)),
     ];
   }
 
@@ -411,7 +443,8 @@ class _PrintingSelector extends StatelessWidget {
       for (final c in cards)
         (
           card: c,
-          label: (counts[_finishLabel(c)] ?? 0) > 1 &&
+          label:
+              (counts[_finishLabel(c)] ?? 0) > 1 &&
                   (c.collectorNumber?.trim().isNotEmpty ?? false)
               ? '${_finishLabel(c)} · #${c.collectorNumber!.trim()}'
               : _finishLabel(c),
@@ -431,13 +464,19 @@ class _PrintingSelector extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Versions',
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Versions',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(width: 6),
-            Text('(${printings.length})',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            Text(
+              '(${printings.length})',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -491,54 +530,150 @@ class _PriceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final usd = NumberFormat.currency(locale: 'en_US', symbol: '\$');
     final eur = NumberFormat.currency(locale: 'en_US', symbol: '€');
     String f(NumberFormat nf, double? v) => v == null ? '—' : nf.format(v);
+    final activeTcg = settings.source == PriceSource.tcgplayer;
 
-    final tcgRows = <MapEntry<String, String>>[
-      MapEntry('Market', f(usd, card.tcgMarket)),
-      MapEntry('Low', f(usd, card.tcgLow)),
-      MapEntry('Mid', f(usd, card.tcgMid)),
-      MapEntry('High', f(usd, card.tcgHigh)),
-      MapEntry('Direct low', f(usd, card.tcgDirectLow)),
-    ];
-    final cmRows = <MapEntry<String, String>>[
-      MapEntry('Trend', f(eur, card.isFoil ? card.cmTrendFoil : card.cmTrend)),
-      MapEntry('Low', f(eur, card.isFoil ? card.cmLowFoil : card.cmLow)),
-      MapEntry('Avg', f(eur, card.isFoil ? card.cmAvgFoil : card.cmAvg)),
-    ];
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.sell_outlined,
-                    size: 18, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text('Prices',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(width: 8),
-                Text(settings.source.label,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant)),
-                const Spacer(),
-                PriceSourceBadge(source: settings.source.label),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _PriceGroup(title: 'TCGplayer (USD)', rows: tcgRows),
-            const SizedBox(height: 10),
-            _PriceGroup(title: 'CardMarket (EUR)', rows: cmRows),
-            const SizedBox(height: 10),
-            _PriceAttribution(updatedAt: card.priceUpdatedAt),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionTitle(
+          'Prices',
+          icon: Icons.sell_outlined,
+          padding: const EdgeInsets.only(bottom: 10),
+          trailing: PriceSourceBadge(source: settings.source.label),
         ),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _MarketBox(
+                  title: 'TCGplayer',
+                  active: activeTcg,
+                  headlineLabel: 'Market',
+                  headline: f(usd, card.tcgMarket),
+                  rows: [
+                    MapEntry('Low', f(usd, card.tcgLow)),
+                    MapEntry('Mid', f(usd, card.tcgMid)),
+                    MapEntry('High', f(usd, card.tcgHigh)),
+                    MapEntry('Direct low', f(usd, card.tcgDirectLow)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MarketBox(
+                  title: 'CardMarket',
+                  active: !activeTcg,
+                  headlineLabel: 'Trend',
+                  headline: f(
+                    eur,
+                    card.isFoil ? card.cmTrendFoil : card.cmTrend,
+                  ),
+                  rows: [
+                    MapEntry(
+                      'Low',
+                      f(eur, card.isFoil ? card.cmLowFoil : card.cmLow),
+                    ),
+                    MapEntry(
+                      'Avg',
+                      f(eur, card.isFoil ? card.cmAvgFoil : card.cmAvg),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        _PriceAttribution(updatedAt: card.priceUpdatedAt),
+      ],
+    );
+  }
+}
+
+/// One marketplace's prices: a headline figure over a small label/value list,
+/// like the per-marketplace price boxes in the web card detail modal. The
+/// marketplace the app prices trades with is outlined in the accent.
+class _MarketBox extends StatelessWidget {
+  const _MarketBox({
+    required this.title,
+    required this.active,
+    required this.headlineLabel,
+    required this.headline,
+    required this.rows,
+  });
+
+  final String title;
+  final bool active;
+  final String headlineLabel;
+  final String headline;
+  final List<MapEntry<String, String>> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = context.tokens;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: AppRadii.xlAll,
+        border: Border.all(
+          color: active ? t.accent.withValues(alpha: 0.55) : t.border,
+          width: active ? 1.2 : 1,
+        ),
+        boxShadow: t.shadowSm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.labelMedium?.copyWith(color: t.textMuted),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            headlineLabel,
+            style: theme.textTheme.bodySmall?.copyWith(color: t.textFaint),
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              headline,
+              style: AppType.tabular(theme.textTheme.headlineSmall),
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final r in rows)
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      r.key,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: t.textMuted,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    r.value,
+                    style: AppType.tabular(
+                      theme.textTheme.bodySmall?.copyWith(
+                        color: t.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -553,66 +688,26 @@ class _PriceAttribution extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = theme.textTheme.bodySmall
-        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
     final updated = updatedAt == null
         ? null
         : DateFormat('MMM d, yyyy').format(updatedAt!.toLocal());
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.storefront_outlined,
-            size: 14, color: theme.colorScheme.onSurfaceVariant),
+        Icon(
+          Icons.storefront_outlined,
+          size: 14,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             'Price data from TCGplayer & CardMarket'
             '${updated == null ? '' : ' · updated $updated'}',
             style: style,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PriceGroup extends StatelessWidget {
-  const _PriceGroup({required this.title, required this.rows});
-  final String title;
-  final List<MapEntry<String, String>> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 6),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final r in rows)
-                Padding(
-                  padding: const EdgeInsets.only(right: 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(r.key,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant)),
-                      const SizedBox(height: 2),
-                      Text(r.value,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-                ),
-            ],
           ),
         ),
       ],
@@ -630,22 +725,25 @@ class _ActionBar extends ConsumerWidget {
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
         ..showSnackBar(
-            SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+          SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+        );
     }
 
-    return Material(
-      elevation: 2,
-      color: Theme.of(context).colorScheme.surface,
+    final t = context.tokens;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: t.surface,
+        border: Border(top: BorderSide(color: t.border)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
         child: Row(
           children: [
             Expanded(
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    backgroundColor: context.tokens.accent.withValues(alpha: 0.15),
-                    foregroundColor: context.tokens.accent),
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
                 icon: const Icon(Icons.favorite_border),
                 label: const Text('Want List'),
                 onPressed: () => addToBinderOrUpsell(
@@ -658,12 +756,13 @@ class _ActionBar extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
-              child: FilledButton.tonalIcon(
-                style:
-                    FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                icon: const Icon(Icons.swap_horiz),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                icon: const Icon(Icons.swap_horiz_rounded),
                 label: const Text('Add to trade'),
                 onPressed: () {
                   ref

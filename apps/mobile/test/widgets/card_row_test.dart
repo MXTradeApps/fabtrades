@@ -39,7 +39,7 @@ void main() {
       expect(find.text('Low \$1.25'), findsOneWidget);
     });
 
-    testWidgets('shows FOIL badge for foil printings', (tester) async {
+    testWidgets('shows Foil tag for foil printings', (tester) async {
       await pumpRow(
         tester,
         CardRow(
@@ -47,10 +47,10 @@ void main() {
           priceLabel: '\$2.00',
         ),
       );
-      expect(find.text('FOIL'), findsOneWidget);
+      expect(find.text('Foil'), findsOneWidget);
     });
 
-    testWidgets('hides FOIL badge for non-foil printings', (tester) async {
+    testWidgets('hides Foil tag for non-foil printings', (tester) async {
       await pumpRow(
         tester,
         CardRow(
@@ -58,7 +58,7 @@ void main() {
           priceLabel: '\$2.00',
         ),
       );
-      expect(find.text('FOIL'), findsNothing);
+      expect(find.text('Foil'), findsNothing);
     });
 
     testWidgets('calls onAdd when the add button is tapped', (tester) async {

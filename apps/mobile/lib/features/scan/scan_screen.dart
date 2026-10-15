@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:showcaseview/showcaseview.dart';
 
-import '../../app/app.dart';
 import '../../app/card_actions.dart';
 import '../../app/widgets.dart';
 import '../../core/analytics/analytics.dart';
@@ -1059,7 +1058,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
             tooltip: 'Scan diagnostics',
             onPressed: _toggleDiag,
           ),
-          const AppMenuAction(),
         ],
       ),
       body: _buildBody(),

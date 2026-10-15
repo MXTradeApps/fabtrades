@@ -149,7 +149,6 @@ void main() {
     expect(find.text('My Binders'), findsNothing);
     expect(find.widgetWithText(Tab, 'Want List (0)'), findsNothing);
     expect(find.widgetWithText(Tab, 'Binder (1)'), findsNothing);
-    expect(find.byTooltip('Menu'), findsNothing);
     expect(find.byKey(const Key('binderOverflow')), findsOneWidget);
     expect(find.byKey(const Key('clearBinder')), findsNothing);
 
@@ -180,7 +179,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Alpha'), findsOneWidget);
     expect(find.byKey(const Key('clearBinder')), findsNothing);
-    expect(find.byTooltip('Menu'), findsNothing);
 
     await tester.tap(find.byKey(const Key('binderOverflow')));
     await tester.pumpAndSettle();
@@ -554,15 +552,13 @@ void main() {
     expect(find.byKey(const Key('binderRow-c000-Normal')), findsNothing);
   });
 
-  testWidgets('grid keeps the hamburger; empty open Binder still shares',
+  testWidgets('grid has no Binder actions; empty open Binder still shares',
       (tester) async {
     await pumpGrid(tester);
-    expect(find.byTooltip('Menu'), findsOneWidget);
     expect(find.byKey(const Key('binderOverflow')), findsNothing);
 
     await tester.tap(find.byKey(const Key('binderTile-system:trade')));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Menu'), findsNothing);
     expect(find.byKey(const Key('binderOverflow')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('binderOverflow')));

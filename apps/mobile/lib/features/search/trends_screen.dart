@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme.dart';
+import '../../app/ui.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/providers.dart';
 import 'recent_movers_section.dart';
@@ -11,29 +13,48 @@ class SeeTrendingTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ListTile(
-          key: const Key('seeTrending'),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          leading: Icon(Icons.trending_up, color: scheme.primary),
-          title: const Text('See Trending'),
-          trailing: Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-          onTap: () {
-            ref.read(analyticsProvider).capture('trending_opened');
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                settings: const RouteSettings(name: 'Trending'),
-                builder: (_) => const TrendsScreen(),
-              ),
-            );
-          },
-        ),
-        const Divider(height: 1, indent: 16),
-      ],
+    final theme = Theme.of(context);
+    final t = context.tokens;
+    return Panel(
+      key: const Key('seeTrending'),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      onTap: () {
+        ref.read(analyticsProvider).capture('trending_opened');
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            settings: const RouteSettings(name: 'Trending'),
+            builder: (_) => const TrendsScreen(),
+          ),
+        );
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: t.accentSoft,
+              borderRadius: AppRadii.mdAll,
+            ),
+            child: Icon(Icons.trending_up_rounded, color: t.accentText),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('See Trending', style: theme.textTheme.titleSmall),
+                Text(
+                  'Biggest price movers this week',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: t.textFaint),
+        ],
+      ),
     );
   }
 }
