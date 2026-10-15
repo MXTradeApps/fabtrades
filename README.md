@@ -138,9 +138,9 @@ git tag mobile-v1.2.0
 git push origin mobile-v1.2.0
 ```
 
-That drives the Android workflow and the Codemagic iOS workflow from the same commit,
-so the two stores cannot carry different code under one version string. CI refuses a
-tag that disagrees with `apps/mobile/pubspec.yaml`. The full runbook, including
+That drives the Android workflow; iOS is archived and uploaded to TestFlight locally in
+Xcode from the same tagged commit, so the two stores carry the same code under one
+version string. CI refuses a tag that disagrees with `apps/mobile/pubspec.yaml`. The full runbook, including
 non-release builds against staging, is in [docs/RELEASING.md](./docs/RELEASING.md).
 
 ## License

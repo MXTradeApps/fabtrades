@@ -134,7 +134,7 @@ build or in this repository.
 | Build | Environment |
 | --- | --- |
 | Android (`release-android-closed.yml`) | `environment` workflow input, default `production` |
-| iOS (`codemagic.yaml`) | `APP_ENVIRONMENT` variable, default `production` |
+| iOS (local Xcode / `flutter build ipa`) | `--dart-define-from-file=env/<name>.json`, use `production` for TestFlight |
 | Netlify production | `production` |
 | Netlify previews | `production` today; optionally `staging` (fabloodle) |
 

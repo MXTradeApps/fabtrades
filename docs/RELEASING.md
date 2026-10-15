@@ -23,26 +23,27 @@ git tag mobile-v1.2.0
 git push origin mobile-v1.2.0
 ```
 
-That single tag drives both stores:
+That single tag marks the commit both stores ship:
 
-| Pipeline | Trigger | Result |
+| Platform | How | Result |
 | --- | --- | --- |
-| `.github/workflows/release-android-closed.yml` | `mobile-v*` tag | Signed AAB → Play closed testing (`alpha`) |
-| `codemagic.yaml` → `ios-testflight` | `mobile-v*` tag | Signed IPA → TestFlight |
+| Android | `.github/workflows/release-android-closed.yml`, triggered by the `mobile-v*` tag | Signed AAB → Play closed testing (`alpha`) |
+| iOS | Local Xcode archive of the tagged commit (Product → Archive → Distribute App) | Signed IPA → TestFlight |
 
 ### Why one tag
 
-The two stores used to ship from a Codemagic UI button and a manual dispatch, which
-meant they could carry **different commits under the same version string**. That was
+The two stores used to ship from separate, untagged builds, which meant they could
+carry **different commits under the same version string**. That was
 tolerable for a free calculator. It is not once a subscription decides what the code
 does: a customer reporting that Pro does not unlock on Android, at version 1.2.0,
 tells you nothing if Android's 1.2.0 is not the same code as iOS's.
 
 ### What the tag must not disagree with
 
-`apps/mobile/pubspec.yaml` is the source of truth for the version name. Both pipelines
-run `scripts/check-release-tag.sh` before doing any real work, and both fail if the tag
-does not name the pubspec version.
+`apps/mobile/pubspec.yaml` is the source of truth for the version name. The Android
+workflow runs `scripts/check-release-tag.sh` before doing any real work and fails if
+the tag does not name the pubspec version. Before archiving iOS, run the same check
+locally: `scripts/check-release-tag.sh mobile-v1.2.0`.
 
 The check exists because nothing downstream performs it. Play and App Store Connect
 each take whatever version they are handed, so `mobile-v1.2.0` carrying a binary that
@@ -50,28 +51,28 @@ says `1.1.0` ships silently and is then permanent — neither store lets a versi
 reused. `scripts/check-release-tag.test.sh` covers the check itself, and CI runs it.
 
 Build numbers are deliberately absent from the tag. Play auto-increments from the
-highest `versionCode` it has seen, and Codemagic from the latest TestFlight build, so
+highest `versionCode` it has seen, and the iOS build number is bumped in Xcode (or
+`--build-number`) above the latest TestFlight build, so
 they are properties of an upload rather than of a release.
 
 ### Builds that are not releases
 
-Both pipelines still build on demand:
+Both platforms still build on demand:
 
 - **Android** — run the workflow manually (Actions → Release Android → Run workflow).
   Choose the track, and choose `staging` to point the build at the staging Supabase
   project. On a tag, the inputs are absent and it defaults to `alpha`, `completed`, and
   `production`, so a sandbox purchase can never reach production entitlements by
   accident.
-- **iOS** — start a build in Codemagic. With no tag, the version check reports that
-  there is nothing to check and the build proceeds. Override `APP_ENVIRONMENT` in the
-  UI for a staging TestFlight build.
+- **iOS** — archive locally in Xcode from any commit. For a staging TestFlight build,
+  build with `--dart-define-from-file=env/staging.json` instead of `production`.
 
 A manual build has no tag, so nothing enforces that the two stores agree. That is fine
 for a test build and is the reason releases go through the tag.
 
 ### After the tag
 
-1. Watch both pipelines. The Android upload and the TestFlight submission are the two
+1. Watch the Android workflow and the TestFlight upload. They are the two
    places a release actually fails.
 2. Bump `version:` in `apps/mobile/pubspec.yaml` for the next release, so `main` is
    never sitting on a version that has already shipped.
