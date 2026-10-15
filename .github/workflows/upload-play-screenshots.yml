@@ -1,0 +1,95 @@
+name: Upload Play screenshots
+
+# Replaces the Google Play phone screenshots with screenshots/final/play/*.jpg,
+# in file-name order. It touches the default language's listing and any other
+# language that already has phone screenshots, and nothing else on the listing.
+#
+# Runs on dispatch, or once when this file changes on a store-screenshots branch
+# (dispatch only works for workflows already on the default branch).
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'claude/store-screenshots*'
+    paths:
+      - .github/workflows/upload-play-screenshots.yml
+
+concurrency:
+  group: upload-play-screenshots
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Replace phone screenshots on Google Play
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          PACKAGE_NAME: fabtrades.myapp
+        run: |
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "Missing secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
+            exit 1
+          fi
+          python3 -m pip install --quiet google-api-python-client google-auth
+          python3 <<'PY'
+          import glob
+          import json
+          import os
+
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+          from googleapiclient.http import MediaFileUpload
+
+          package = os.environ["PACKAGE_NAME"]
+          files = sorted(glob.glob("screenshots/final/play/*.jpg"))
+          if not 2 <= len(files) <= 8:
+              raise SystemExit(f"Play takes 2-8 phone screenshots; found {len(files)}")
+
+          creds = service_account.Credentials.from_service_account_info(
+              json.loads(os.environ["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]),
+              scopes=["https://www.googleapis.com/auth/androidpublisher"],
+          )
+          edits = build("androidpublisher", "v3", credentials=creds, cache_discovery=False).edits()
+          edit_id = edits.insert(packageName=package, body={}).execute()["id"]
+          try:
+              default = edits.details().get(packageName=package, editId=edit_id).execute()["defaultLanguage"]
+              listings = edits.listings().list(packageName=package, editId=edit_id).execute().get("listings", [])
+              languages = {default}
+              for listing in listings:
+                  lang = listing["language"]
+                  shots = edits.images().list(
+                      packageName=package, editId=edit_id, language=lang, imageType="phoneScreenshots"
+                  ).execute().get("images", [])
+                  print(f"{lang}: {len(shots)} phone screenshots now")
+                  if shots:
+                      languages.add(lang)
+
+              for lang in sorted(languages):
+                  edits.images().deleteall(
+                      packageName=package, editId=edit_id, language=lang, imageType="phoneScreenshots"
+                  ).execute()
+                  for f in files:
+                      edits.images().upload(
+                          packageName=package, editId=edit_id, language=lang, imageType="phoneScreenshots",
+                          media_body=MediaFileUpload(f, mimetype="image/jpeg"),
+                      ).execute()
+                  print(f"{lang}: uploaded {len(files)} ({', '.join(os.path.basename(f) for f in files)})")
+
+              try:
+                  edits.commit(packageName=package, editId=edit_id).execute()
+                  print("Committed the edit and sent it for review")
+              except Exception as e:
+                  if "changesNotSentForReview" not in str(e):
+                      raise
+                  edits.commit(packageName=package, editId=edit_id, changesNotSentForReview=True).execute()
+                  print("Committed the edit; send it for review in Play Console (Publishing overview)")
+          except Exception:
+              edits.delete(packageName=package, editId=edit_id).execute()
+              raise
+          PY
