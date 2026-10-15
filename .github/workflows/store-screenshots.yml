@@ -65,11 +65,18 @@ jobs:
           name: store-screenshots
           path: apps/mobile/tool/store_screenshots/out
 
+      # Commits whatever was produced, so one broken screen doesn't lose the rest.
       - name: Commit to the branch
+        if: always()
         run: |
           mkdir -p screenshots/final/play
-          cp apps/mobile/tool/store_screenshots/out/ios/*.jpg screenshots/final/
-          cp apps/mobile/tool/store_screenshots/out/android/*.jpg screenshots/final/play/
+          cp apps/mobile/tool/store_screenshots/out/ios/*.jpg screenshots/final/ || true
+          cp apps/mobile/tool/store_screenshots/out/android/*.jpg screenshots/final/play/ || true
+          if ls apps/mobile/tool/store_screenshots/out/raw/debug-*.png >/dev/null 2>&1; then
+            mkdir -p screenshots/debug
+            cp apps/mobile/tool/store_screenshots/out/raw/debug-*.png screenshots/debug/
+            git add screenshots/debug
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git add screenshots/final
