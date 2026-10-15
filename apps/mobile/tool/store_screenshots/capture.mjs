@@ -114,12 +114,31 @@ async function recordBox(name, locator) {
 
 // Taps the smallest semantics node containing [text], for rows whose
 // semantics role changes with what they contain.
-async function tapText(text) {
-  const nodes = await page.locator('flt-semantics').filter({ hasText: text }).all();
-  const boxes = (await Promise.all(nodes.map((n) => n.boundingBox()))).filter((b) => b && b.width > 0);
-  if (!boxes.length) throw new Error(`nothing on screen says "${text}"`);
-  const b = boxes.sort((a, c) => a.width * a.height - c.width * c.height)[0];
-  await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+async function tapText(text, timeout = 15000) {
+  const end = Date.now() + timeout;
+  while (true) {
+    // Flutter puts a node's text either in its content or in aria-label.
+    const nodes = await page
+      .locator('flt-semantics')
+      .filter({ hasText: text })
+      .or(page.locator(`flt-semantics[aria-label*="${text}"]`))
+      .all();
+    const boxes = (await Promise.all(nodes.map((n) => n.boundingBox()))).filter((b) => b && b.width > 0);
+    if (boxes.length) {
+      const b = boxes.sort((a, c) => a.width * a.height - c.width * c.height)[0];
+      await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+      return;
+    }
+    if (Date.now() > end) {
+      const labels = await page.evaluate(() =>
+        [...document.querySelectorAll('flt-semantics')]
+          .map((e) => (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 40))
+          .filter(Boolean),
+      );
+      throw new Error(`nothing on screen says "${text}"; saw: ${JSON.stringify(labels.slice(0, 30))}`);
+    }
+    await page.waitForTimeout(500);
+  }
 }
 
 async function search(query) {
