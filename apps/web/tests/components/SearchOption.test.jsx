@@ -50,11 +50,12 @@ describe('SearchOption', () => {
         mockOpenDetail.mockClear();
     });
 
-    test('activating the name opens details and does not add', () => {
+    test('clicking the name adds the card and does not open details', () => {
         const { onClick } = renderOption();
-        fireEvent.click(screen.getByRole('button', { name: /View details for Lightning Press/ }));
-        expect(mockOpenDetail).toHaveBeenCalledWith(pricedPrinting);
-        expect(onClick).not.toHaveBeenCalled();
+        expect(screen.queryByRole('button', { name: /View details for/ })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByText(/Lightning Press/, { selector: 'span span' }));
+        expect(onClick).toHaveBeenCalledTimes(1);
+        expect(mockOpenDetail).not.toHaveBeenCalled();
     });
 
     test('activating the thumbnail opens details and does not add', () => {

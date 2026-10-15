@@ -118,11 +118,10 @@ const SearchOption = ({
                     gap: 0.75,
                     minWidth: 0
                 }}>
+                    {/* Plain text: a tap on the name falls through to the row and adds
+                        the card. The thumbnail is the shortcut to details. */}
                     <Typography
-                        component={printing ? 'button' : 'span'}
-                        type={printing ? 'button' : undefined}
-                        onClick={printing ? openPrinting : undefined}
-                        aria-label={printing ? `View details for ${option.card?.name || option.label}` : undefined}
+                        component="span"
                         sx={{
                             fontSize: '0.84375rem',
                             fontWeight: 550,
@@ -131,13 +130,6 @@ const SearchOption = ({
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             lineHeight: 1.3,
-                            border: 0,
-                            background: 'none',
-                            p: 0,
-                            m: 0,
-                            textAlign: 'left',
-                            fontFamily: 'inherit',
-                            cursor: printing ? 'pointer' : 'inherit',
                         }}
                     >
                         {textSegments.map((segment, index) => (
