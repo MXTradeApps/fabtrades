@@ -610,7 +610,7 @@ class _CollectionStatsButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.positive,
+                    color: context.tokens.gain,
                   ),
                 ),
               ),

@@ -35,7 +35,7 @@ class MoverBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = (percentChange ?? 0) > 0 ? AppTheme.positive : AppTheme.negative;
+    final color = (percentChange ?? 0) > 0 ? context.tokens.gain : context.tokens.loss;
     final pct = (percentChange ?? 0) * 100;
     final pctLabel =
         '${pct >= 0 ? '+' : ''}${pct.abs() >= 10 ? pct.toStringAsFixed(0) : pct.toStringAsFixed(1)}%';

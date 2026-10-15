@@ -105,7 +105,7 @@ class _CollectionStatsScreenState extends ConsumerState<CollectionStatsScreen> {
                         usd.format(usdAmount),
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.positive,
+                          color: context.tokens.gain,
                         ),
                       ),
                     ),
@@ -114,7 +114,7 @@ class _CollectionStatsScreenState extends ConsumerState<CollectionStatsScreen> {
                         eur.format(eurAmount),
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.positive,
+                          color: context.tokens.gain,
                         ),
                       ),
                     ),
@@ -360,7 +360,7 @@ class _DirectionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = up ? AppTheme.positive : AppTheme.negative;
+    final color = up ? context.tokens.gain : context.tokens.loss;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

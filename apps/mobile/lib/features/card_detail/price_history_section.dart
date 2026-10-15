@@ -124,9 +124,9 @@ class _HistoryBody extends ConsumerWidget {
     final theme = Theme.of(context);
     final delta = series.delta!;
     final changeColor = delta > 0
-        ? AppTheme.positive
+        ? context.tokens.gain
         : delta < 0
-            ? AppTheme.negative
+            ? context.tokens.loss
             : theme.colorScheme.onSurfaceVariant;
 
     return Column(

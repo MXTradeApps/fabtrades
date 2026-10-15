@@ -53,8 +53,8 @@ class _TradeCard extends ConsumerWidget {
     final delta = trade.delta;
     final balanced = delta.abs() < 0.01;
     final color = balanced
-        ? AppTheme.positive
-        : (delta > 0 ? AppTheme.negative : AppTheme.positive);
+        ? context.tokens.gain
+        : (delta > 0 ? context.tokens.loss : context.tokens.gain);
     final dateStr = DateFormat.yMMMd().add_jm().format(trade.createdAt);
 
     return Card(
@@ -98,20 +98,20 @@ class _TradeCard extends ConsumerWidget {
                 Expanded(
                   child: _sideSummary(theme, 'Gave',
                       '${trade.haveCount} cards', trade.haveTotal, symbol,
-                      AppTheme.haveAccent),
+                      context.tokens.gain),
                 ),
                 Icon(Icons.arrow_forward,
                     color: theme.colorScheme.onSurfaceVariant),
                 Expanded(
                   child: _sideSummary(theme, 'Got',
                       '${trade.wantCount} cards', trade.wantTotal, symbol,
-                      AppTheme.wantAccent, alignEnd: true),
+                      context.tokens.accent, alignEnd: true),
                 ),
               ],
             ),
             if (trade.haveItems.isNotEmpty || trade.haveCash > 0) ...[
               const SizedBox(height: 12),
-              _sideLabel(theme, 'Gave', AppTheme.haveAccent),
+              _sideLabel(theme, 'Gave', context.tokens.gain),
               const SizedBox(height: 4),
               for (final item in trade.haveItems)
                 _HistoryItemRow(item: item, symbol: symbol),
@@ -120,7 +120,7 @@ class _TradeCard extends ConsumerWidget {
             ],
             if (trade.wantItems.isNotEmpty || trade.wantCash > 0) ...[
               const SizedBox(height: 10),
-              _sideLabel(theme, 'Got', AppTheme.wantAccent),
+              _sideLabel(theme, 'Got', context.tokens.accent),
               const SizedBox(height: 4),
               for (final item in trade.wantItems)
                 _HistoryItemRow(item: item, symbol: symbol),

@@ -438,7 +438,7 @@ class _EntryRow extends ConsumerWidget {
           '${card.id}_${entry.isWanted}_${entry.resolvedBinderId}_${entry.condition}'),
       direction: DismissDirection.endToStart,
       background: Container(
-        color: AppTheme.negative,
+        color: context.tokens.loss,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.white),

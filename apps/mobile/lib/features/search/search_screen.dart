@@ -664,7 +664,8 @@ Future<void> refreshPricesWithToast(BuildContext context, WidgetRef ref) async {
         duration: const Duration(seconds: 3),
         content: Row(
           children: [
-            const Icon(Icons.schedule, size: 18, color: Colors.white),
+            Icon(Icons.schedule,
+                size: 18, color: Theme.of(context).colorScheme.onInverseSurface),
             const SizedBox(width: 10),
             Expanded(
               child: Text('${_priceUpdatedLabel(updatedAt)} · $source pricing'),

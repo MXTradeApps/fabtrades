@@ -177,7 +177,7 @@ class _DirectionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = up ? AppTheme.positive : AppTheme.negative;
+    final color = up ? context.tokens.gain : context.tokens.loss;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
