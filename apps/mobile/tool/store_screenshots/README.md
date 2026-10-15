@@ -28,11 +28,12 @@ It does not upload anything to either store.
 
 ## Limits
 
-- **Scan** can't be captured: the scanner needs a real camera and ML Kit, neither of
-  which runs on the web. `compose.mjs` frames `scan.png` instead, a phone screenshot
-  of a scan with the match sheet up. To replace it, crop the status bar off a new
-  iPhone screenshot, scale it to 1290px wide, save it over `scan.png`, and adjust the
-  lifted-out box on the `01-scan` entry in `compose.mjs` if the results moved.
+- **Device captures win.** `compose.mjs` uses `sim/<screen>.png` over the web
+  capture when one exists. These are iOS screenshots (simulator, or a phone for
+  Scan) with the status bar cropped off: the top 162px of a 1290×2796 iPhone
+  screenshot, saved at 1290px wide. `sim/boxes.json` holds their lifted-out panels
+  in points. Scan always comes from here, since the scanner needs a real camera and
+  ML Kit, neither of which runs on the web. Browse comes from the web capture.
 - The web build uses Chromium's text rendering, so it is close to, but not
   pixel-identical with, the iOS build.
 

@@ -18,16 +18,8 @@ const BRAND = '#8B4513';
 const STATUS_BAR = 54; // points; matches the height capture.mjs leaves free
 
 // Same captions and order as the previous listing.
-// Scan needs a real camera, so it comes from a phone screenshot kept next to
-// this script (see README), with the match results lifted out.
 const screens = [
-  {
-    raw: '01-scan',
-    out: '01-scan-cards-instantly',
-    title: ['SCAN', 'CARDS INSTANTLY'],
-    fallback: 'scan.png',
-    box: { x: 8, y: 428, w: 414, h: 176 },
-  },
+  { raw: '01-scan', out: '01-scan-cards-instantly', title: ['SCAN', 'CARDS INSTANTLY'] },
   { raw: '02-trade', out: '02-balance-fair-trades', title: ['BALANCE', 'FAIR TRADES'] },
   { raw: '03-browse', out: '03-browse-live-prices', title: ['BROWSE', 'LIVE PRICES'] },
   { raw: '04-binder', out: '04-build-your-binder', title: ['BUILD', 'YOUR BINDER'] },
@@ -41,8 +33,15 @@ const targets = [
 ];
 
 const exists = (p) => access(p).then(() => true, () => false);
-const boxesFile = path.join(rawDir, 'boxes.json');
-const boxes = (await exists(boxesFile)) ? JSON.parse(await readFile(boxesFile, 'utf8')) : {};
+const readBoxes = async (dir) => {
+  const file = path.join(dir, 'boxes.json');
+  return (await exists(file)) ? JSON.parse(await readFile(file, 'utf8')) : {};
+};
+const boxes = await readBoxes(rawDir);
+// Device captures (status bar cropped off, 1290px wide) win over the web
+// captures; Scan can only come from a real phone. See README.
+const simDir = path.join(here, 'sim');
+const simBoxes = await readBoxes(simDir);
 
 function html({ width, height, device }, screen, dataUrl, box) {
   // Phone geometry, in canvas points. The screen keeps the capture's aspect.
@@ -133,14 +132,15 @@ for (const target of targets) {
     deviceScaleFactor: 3,
   });
   for (const screen of screens) {
-    let rawFile = path.join(rawDir, `${screen.raw}.png`);
-    if (!(await exists(rawFile)) && screen.fallback) rawFile = path.join(here, screen.fallback);
+    const simFile = path.join(simDir, `${screen.raw}.png`);
+    const fromSim = await exists(simFile);
+    const rawFile = fromSim ? simFile : path.join(rawDir, `${screen.raw}.png`);
     if (!(await exists(rawFile))) {
       console.warn('skipping', screen.raw, '(no capture)');
       continue;
     }
     const dataUrl = `data:image/png;base64,${(await readFile(rawFile)).toString('base64')}`;
-    await page.setContent(html(target, screen, dataUrl, boxes[screen.raw] ?? screen.box), { waitUntil: 'networkidle' });
+    await page.setContent(html(target, screen, dataUrl, (fromSim ? simBoxes : boxes)[screen.raw]), { waitUntil: 'networkidle' });
     // Match the status bar to the app's top edge, and shrink long headlines to fit.
     await page.evaluate(async () => {
       for (const line of document.querySelectorAll('.title > div')) {
