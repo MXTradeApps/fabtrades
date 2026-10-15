@@ -794,6 +794,20 @@ final binderShareRepositoryProvider = Provider<BinderShareRepository>(
 );
 
 /// Currently drilled-in Binder, or null when the grid is showing.
+/// A request from inside a tab to switch the shell's bottom tab. HomeShell
+/// listens, switches, then clears it.
+final shellTabProvider =
+    NotifierProvider<ShellTabNotifier, int?>(ShellTabNotifier.new);
+
+class ShellTabNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  void go(int index) => state = index;
+
+  void clear() => state = null;
+}
+
 final openBinderIdProvider = NotifierProvider<OpenBinderIdNotifier, String?>(
     OpenBinderIdNotifier.new);
 

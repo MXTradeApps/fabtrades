@@ -218,6 +218,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int?>(shellTabProvider, (_, next) {
+      if (next == null) return;
+      ref.read(shellTabProvider.notifier).clear();
+      if (next != _index) _selectTab(next);
+    });
     final draft = ref.watch(tradeDraftProvider);
     final tradeCount = draft.haveCount + draft.wantCount;
 

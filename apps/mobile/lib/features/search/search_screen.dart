@@ -21,10 +21,12 @@ import '../../core/models/card_model.dart';
 import '../../core/providers.dart';
 import '../card_detail/card_detail_screen.dart';
 import '../scan/scan_screen.dart';
+import 'home_dashboard.dart';
 import 'mover_box.dart';
 import 'trends_screen.dart';
 
-/// Top-level Home tab: a See Trending row, then the set list. Searching
+/// Top-level Home tab: the personal dashboard, a See Trending row, then the
+/// set list. Searching
 /// short-circuits both and shows every matching printing across the whole catalog.
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
@@ -115,6 +117,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                   : CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
+                        const SliverToBoxAdapter(child: HomeDashboard()),
                         const SliverToBoxAdapter(
                           child: SeeTrendingTile(),
                         ),
