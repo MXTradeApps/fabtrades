@@ -44,6 +44,17 @@ if (process.env.MOCK_ROUTES) {
   await install(context);
 }
 
+// Flutter web decodes card art in WebGL, which needs CORS, and the card CDN
+// doesn't always send the header. Fetch the art here and add it.
+await context.route(/tcgplayer-cdn\.tcgplayer\.com|legendstory-production/, async (route) => {
+  try {
+    const response = await route.fetch();
+    await route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } });
+  } catch {
+    await route.abort();
+  }
+});
+
 const page = await context.newPage();
 page.on('console', (m) => process.env.DEBUG && console.log('console:', m.text().slice(0, 200)));
 page.on('pageerror', (e) => console.error('page error:', e.message.slice(0, 300)));
@@ -99,6 +110,16 @@ async function recordBox(name, locator) {
   const b = await locator.boundingBox().catch(() => null);
   if (b) boxes[name] = { x: b.x, y: b.y, w: b.width, h: b.height };
   else console.warn('no breakout panel found for', name);
+}
+
+// Taps the smallest semantics node containing [text], for rows whose
+// semantics role changes with what they contain.
+async function tapText(text) {
+  const nodes = await page.locator('flt-semantics').filter({ hasText: text }).all();
+  const boxes = (await Promise.all(nodes.map((n) => n.boundingBox()))).filter((b) => b && b.width > 0);
+  if (!boxes.length) throw new Error(`nothing on screen says "${text}"`);
+  const b = boxes.sort((a, c) => a.width * a.height - c.width * c.height)[0];
+  await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
 }
 
 async function search(query) {
@@ -217,7 +238,7 @@ await settle();
 try {
   await tab('Lend').tap();
   await settle();
-  await page.getByRole('button').filter({ hasText: seed.lend[0].person }).first().tap();
+  await tapText(seed.lend[0].person);
   await settle(3000);
   await shot('05-lend');
   // The value card has no semantics node of its own, so grow its label's box
