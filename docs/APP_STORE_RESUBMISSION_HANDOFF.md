@@ -92,9 +92,8 @@ Previously pointed at RevenueCat’s own legal pages. Updated and **published**:
 
 - `apps/mobile/pubspec.yaml` → `1.0.2+5`
 - Commit on `main`: `9aee6c81` — *Bump mobile to 1.0.2 for App Store resubmission.*
-- Tag `mobile-v1.0.2` was pushed (triggers Codemagic + Android closed release).
-  **Owner prefers local Xcode/Flutter builds, not Codemagic.** Ignore/cancel
-  Codemagic if it runs from that tag.
+- Tag `mobile-v1.0.2` was pushed (triggers the Android closed release).
+  iOS is built locally in Xcode/Flutter.
 
 ### 7. Local signing convenience (uncommitted)
 
@@ -119,7 +118,7 @@ review.
 
 ## Local iOS build status
 
-A **local** App Store IPA was built successfully (not via Codemagic):
+A **local** App Store IPA was built successfully:
 
 ```bash
 cd apps/mobile
@@ -201,8 +200,6 @@ If a new archive is needed with Distribution signing for Organizer:
 - [ ] Submit for review
 - [ ] Optionally commit the `DEVELOPMENT_TEAM` / `CODE_SIGN_STYLE` pbxproj
       changes if the team wants local Xcode signing baked in
-- [ ] Optionally delete or ignore tag `mobile-v1.0.2` if Codemagic should not
-      build (owner preference: **local builds only**)
 - [ ] Android closed-track workflow may have been triggered by that tag — check
       https://github.com/Max-Escaler/fabtrades/actions if unintended
 - [ ] Launch image warning from Flutter IPA validation: default placeholder
@@ -242,7 +239,7 @@ docs/PRODUCT.md
 | [APP_STORE_REVIEW.md](./APP_STORE_REVIEW.md) | ASC fields + Notes for Review paste text |
 | [STORE_SETUP.md](./STORE_SETUP.md) | ASC / Play / RevenueCat product IDs |
 | [AUTH_PROVIDERS.md](./AUTH_PROVIDERS.md) | OAuth + email provider setup |
-| [RELEASING.md](./RELEASING.md) | Tag-based release (Codemagic + Android) — owner currently prefers local IPA |
+| [RELEASING.md](./RELEASING.md) | Tag-based release (Android CI + local iOS build) |
 
 ## Do / don’t for the next agent
 
@@ -255,7 +252,6 @@ docs/PRODUCT.md
 
 **Don’t**
 
-- Re-trigger Codemagic unless the owner asks
 - Point paywall Terms/Privacy back at revenuecat.com
 - Commit demo account passwords
 - Assume Organizer “Distribute App” works for CLI Flutter archives on this Mac

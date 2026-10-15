@@ -1,10 +1,8 @@
 name: Release Android (Play Closed Testing)
 
-# Releases are cut from one tag, `mobile-v1.2.0`, which triggers this workflow and
-# the Codemagic iOS workflow from the same commit. Before that, iOS shipped from a
-# Codemagic UI button and Android from a manual dispatch, so the two stores could
-# carry different code under the same version string — tolerable for a free
-# calculator, not once a subscription decides what the code does.
+# Releases are cut from one tag, `mobile-v1.2.0`, which triggers this workflow. iOS
+# is built and uploaded to TestFlight locally in Xcode from the same tagged commit,
+# so both stores carry the same code under one version string.
 #
 # workflow_dispatch stays for builds that are not releases: a one-off staging
 # bundle, or a rebuild of a track after a failed upload.
