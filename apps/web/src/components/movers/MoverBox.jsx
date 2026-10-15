@@ -38,15 +38,12 @@ const MoverBox = ({
     amountChange,
     copies,
     onSelect,
-    isDark,
-    textColor,
-    mutedColor,
     priceSource,
 }) => {
     const showChange = percentChange != null
         && amountChange != null
         && percentChange !== 0;
-    const changeColor = percentChange > 0 ? '#2E7D32' : '#C62828';
+    const changeColor = percentChange > 0 ? 'success.main' : 'error.main';
     const amountLabel = showChange
         ? `${amountChange >= 0 ? '+' : '−'}${formatMoverMoney(Math.abs(amountChange), priceSource)}`
         : null;
@@ -67,21 +64,17 @@ const MoverBox = ({
                 py: 1,
                 minWidth: 0,
                 textAlign: 'left',
-                borderRadius: 1.5,
-                border: isDark
-                    ? '1px solid rgba(200, 113, 55, 0.22)'
-                    : '1px solid rgba(139, 69, 19, 0.14)',
-                backgroundColor: isDark ? 'rgba(44, 24, 16, 0.55)' : '#ffffff',
-                boxShadow: isDark
-                    ? '0 1px 3px rgba(0, 0, 0, 0.25)'
-                    : '0 1px 3px rgba(44, 24, 16, 0.06)',
-                transition: 'border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease',
+                borderRadius: '12px',
+                border: 1,
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                transition: 'border-color 120ms ease, background-color 120ms ease',
                 '&:hover': {
-                    borderColor: isDark ? 'rgba(212, 165, 116, 0.5)' : 'rgba(139, 69, 19, 0.35)',
-                    boxShadow: isDark
-                        ? '0 4px 12px rgba(0, 0, 0, 0.35)'
-                        : '0 4px 12px rgba(44, 24, 16, 0.1)',
-                    transform: 'translateY(-1px)',
+                    borderColor: 'text.disabled',
+                    bgcolor: 'action.hover',
+                },
+                '&.Mui-focusVisible': {
+                    borderColor: 'primary.main',
                 },
             }}
         >
@@ -89,9 +82,9 @@ const MoverBox = ({
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                 <Typography
                     sx={{
-                        color: textColor,
+                        color: 'text.primary',
                         fontWeight: 600,
-                        fontSize: '0.9rem',
+                        fontSize: '0.875rem',
                         lineHeight: 1.3,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -103,7 +96,7 @@ const MoverBox = ({
                 <Typography
                     variant="body2"
                     sx={{
-                        color: mutedColor,
+                        color: 'text.secondary',
                         fontSize: '0.75rem',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -114,11 +107,11 @@ const MoverBox = ({
                 </Typography>
             </Box>
             <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 0.5 }}>
-                <Typography sx={{ color: textColor, fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3 }}>
+                <Typography sx={{ color: 'text.primary', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3, fontVariantNumeric: 'tabular-nums' }}>
                     {priced ? formatMoverMoney(currentLow, priceSource) : unpricedLabel}
                 </Typography>
                 {showChange ? (
-                    <Typography variant="body2" sx={{ color: changeColor, fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ color: changeColor, fontWeight: 600, fontSize: '0.75rem', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                         {`${formatMoverPercent(percentChange)} · ${amountLabel}`}
                     </Typography>
                 ) : null}

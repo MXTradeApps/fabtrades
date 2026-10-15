@@ -5,7 +5,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from './SearchDropdown';
-import { useThemeMode } from '../../contexts/ThemeContext.jsx';
 
 /**
  * SearchInput Component
@@ -27,7 +26,6 @@ const SearchInput = ({
   /** 'small' for denser chrome (binder toolbar); default matches trade calculator. */
   size = 'medium',
 }) => {
-  const { isDark } = useThemeMode();
   const [justAdded, setJustAdded] = useState(false);
   const dense = size === 'small';
 
@@ -85,8 +83,8 @@ const SearchInput = ({
               <SearchIcon
                 color="action"
                 sx={{
-                  fontSize: dense ? '1rem' : '1.25rem',
-                  color: isDark ? 'rgba(212, 165, 116, 0.9)' : 'rgba(93, 58, 26, 0.7)'
+                  fontSize: dense ? '1.05rem' : '1.25rem',
+                  color: 'text.secondary'
                 }}
               />
             </InputAdornment>
@@ -98,7 +96,7 @@ const SearchInput = ({
                   <CheckCircleIcon
                     sx={{
                       fontSize: dense ? '0.95rem' : '1.1rem',
-                      color: isDark ? '#a7e3b7' : '#2e7d32'
+                      color: 'success.main'
                     }}
                   />
                 )}
@@ -110,15 +108,13 @@ const SearchInput = ({
                     aria-label="clear search"
                     sx={{
                       p: dense ? 0.35 : 0.5,
-                      '&:hover': {
-                        backgroundColor: isDark ? 'rgba(212, 165, 116, 0.12)' : 'rgba(0, 0, 0, 0.04)'
-                      }
+                      color: 'text.secondary',
+                      '&:hover': { color: 'text.primary', bgcolor: 'action.hover' }
                     }}
                   >
                     <ClearIcon
                       sx={{
-                        fontSize: dense ? '0.95rem' : '1.1rem',
-                        color: isDark ? 'rgba(212, 165, 116, 0.9)' : 'rgba(93, 58, 26, 0.7)'
+                        fontSize: dense ? '0.95rem' : '1.1rem'
                       }}
                     />
                   </IconButton>
@@ -129,38 +125,14 @@ const SearchInput = ({
         }}
         sx={{
           '& .MuiOutlinedInput-root': {
-            backgroundColor: disabled
-              ? (isDark ? 'rgba(26, 15, 10, 0.5)' : 'rgba(0, 0, 0, 0.02)')
-              : (isDark ? '#1a0f0a' : '#ffffff'),
-            transition: 'all 0.2s ease',
-            ...(dense ? { minHeight: 36 } : {}),
-            '&:hover': {
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: disabled
-                  ? (isDark ? 'rgba(212, 165, 116, 0.3)' : 'rgba(0, 0, 0, 0.23)')
-                  : (isDark ? 'rgba(212, 165, 116, 0.6)' : 'rgba(139, 69, 19, 0.5)')
-              }
-            },
-            '&.Mui-focused': {
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: isDark ? '#d4a574' : '#8b4513',
-                borderWidth: dense ? '1px' : '2px'
-              }
-            }
+            ...(dense ? { minHeight: 40 } : {}),
           },
           '& .MuiOutlinedInput-input': {
-            color: isDark ? '#f5f1ed' : '#2c1810',
-            fontSize: dense ? '0.8125rem' : undefined,
-            py: dense ? 0.75 : undefined,
+            fontSize: dense ? '0.875rem' : undefined,
+            py: dense ? 1 : undefined,
             '&::placeholder': {
-              color: isDark ? 'rgba(212, 165, 116, 0.7)' : 'rgba(93, 58, 26, 0.6)',
+              color: 'text.secondary',
               opacity: 1
-            }
-          },
-          '& .MuiInputLabel-root': {
-            color: isDark ? 'rgba(212, 165, 116, 0.8)' : 'rgba(93, 58, 26, 0.7)',
-            '&.Mui-focused': {
-              color: isDark ? '#d4a574' : '#8b4513'
             }
           }
         }}

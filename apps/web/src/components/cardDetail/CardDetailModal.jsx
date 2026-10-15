@@ -9,8 +9,14 @@ import {
     IconButton,
     Snackbar,
     Typography,
+    useMediaQuery,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import {
+    SwapHorizRounded,
+    BookmarkBorderRounded,
+    CollectionsBookmarkOutlined,
+} from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import { useCardDetail } from '../../contexts/CardDetailContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
@@ -44,6 +50,7 @@ export function CardDetailModal({
     const { user } = useAuth();
     const { cards, pricesUpdatedAt } = useCardData();
     const { isDark } = useThemeMode();
+    const isPhone = useMediaQuery((t) => t.breakpoints.down('sm'));
 
     const [selected, setSelected] = useState(printing);
     const [zoomOpen, setZoomOpen] = useState(false);
@@ -181,26 +188,18 @@ export function CardDetailModal({
         showSuccess(`Added ${shown.name} to Binder`);
     };
 
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const muted = isDark ? 'rgba(212, 165, 116, 0.75)' : 'rgba(93, 58, 26, 0.7)';
-
     return (
         <>
             <Dialog
                 open={Boolean(open && shown)}
                 onClose={onClose}
-                maxWidth="sm"
+                maxWidth="md"
                 fullWidth
+                fullScreen={isPhone}
                 disableRestoreFocus={false}
                 aria-labelledby="card-detail-title"
                 PaperProps={{
-                    sx: {
-                        backgroundColor: isDark ? '#1a0f0a' : '#f5f1ed',
-                        backgroundImage: 'none',
-                        border: isDark
-                            ? '1px solid rgba(212, 165, 116, 0.25)'
-                            : '1px solid rgba(139, 69, 19, 0.18)',
-                    },
+                    sx: isPhone ? { borderRadius: 0, border: 0 } : { maxWidth: 820 },
                 }}
             >
                 <Box
@@ -208,175 +207,178 @@ export function CardDetailModal({
                         display: 'flex',
                         alignItems: 'flex-start',
                         justifyContent: 'space-between',
-                        px: 2,
-                        pt: 1.5,
+                        gap: 1,
+                        px: { xs: 2, sm: 3 },
+                        pt: { xs: 'calc(12px + env(safe-area-inset-top, 0px))', sm: 2.5 },
                         pb: 0,
                     }}
                 >
-                    <Typography
-                        id="card-detail-title"
-                        variant="h6"
-                        sx={{ fontWeight: 700, color: textColor, pr: 1, lineHeight: 1.3 }}
-                    >
-                        {shown?.name || 'Card'}
-                    </Typography>
-                    <IconButton
-                        aria-label="Close card details"
-                        onClick={onClose}
-                        size="small"
-                        sx={{ color: muted }}
-                    >
-                        <CloseIcon />
-                    </IconButton>
-                </Box>
-
-                <DialogContent sx={{ pt: 1.5 }}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            gap: 2,
-                            alignItems: 'flex-start',
-                            mb: 2,
-                        }}
-                    >
-                        {hasArt ? (
-                            <Box
-                                component="button"
-                                type="button"
-                                onClick={() => setZoomOpen(true)}
-                                aria-label={`Zoom art for ${shown.name}`}
-                                sx={{
-                                    p: 0,
-                                    border: 0,
-                                    background: 'none',
-                                    cursor: 'pointer',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <CardThumbnail
-                                    imageUrl={shown.imageUrl}
-                                    fallbackUrl={shown.imageUrlFallback}
-                                    alt={shown.name}
-                                    size={88}
-                                />
-                            </Box>
-                        ) : (
-                            <Box
-                                aria-label="No art"
-                                sx={{
-                                    width: 88,
-                                    height: 88 * 1.4,
-                                    borderRadius: 1,
-                                    flexShrink: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    backgroundColor: isDark
-                                        ? 'rgba(200, 113, 55, 0.15)'
-                                        : 'rgba(139, 69, 19, 0.1)',
-                                    border: isDark
-                                        ? '1px solid rgba(200, 113, 55, 0.2)'
-                                        : '1px solid rgba(139, 69, 19, 0.15)',
-                                }}
-                            >
-                                <Typography sx={{ fontSize: '0.7rem', color: muted, textAlign: 'center', px: 0.5 }}>
-                                    No art
-                                </Typography>
-                            </Box>
-                        )}
-
-                        <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Typography sx={{ fontSize: '0.85rem', color: muted, mb: 0.75 }}>
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                            id="card-detail-title"
+                            variant="h3"
+                            component="h2"
+                            sx={{ color: 'text.primary', textWrap: 'balance' }}
+                        >
+                            {shown?.name || 'Card'}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 0.75 }}>
+                            <Typography sx={{ fontSize: '0.84375rem', color: 'text.secondary' }}>
                                 {identityLine || 'Printing'}
                             </Typography>
                             {user && ownQty != null && ownQty > 0 && (
                                 <Chip
                                     size="small"
+                                    color="primary"
                                     label={`Own ${ownQty}`}
-                                    sx={{
-                                        height: 22,
-                                        fontWeight: 700,
-                                        fontSize: '0.7rem',
-                                        mb: 0.75,
-                                        backgroundColor: isDark
-                                            ? 'rgba(212, 165, 116, 0.2)'
-                                            : 'rgba(139, 69, 19, 0.12)',
-                                        color: isDark ? '#e4c09c' : '#8b4513',
-                                    }}
+                                    sx={{ height: 22, fontSize: '0.72rem' }}
                                 />
                             )}
                         </Box>
                     </Box>
+                    <IconButton
+                        aria-label="Close card details"
+                        onClick={onClose}
+                        size="small"
+                        sx={{ color: 'text.secondary', mt: -0.25, mr: -1 }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
 
-                    {siblings.length >= 2 && (
-                        <Box sx={{ mb: 2 }}>
-                            <Typography
-                                variant="subtitle2"
-                                sx={{
-                                    fontWeight: 700,
-                                    fontSize: '0.75rem',
-                                    letterSpacing: 0.4,
-                                    textTransform: 'uppercase',
-                                    color: isDark ? '#e4c09c' : '#8b4513',
-                                    mb: 0.75,
-                                }}
-                            >
-                                Versions
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                {siblings.map((sib) => {
-                                    const active = sib._uniqueId === shown._uniqueId;
-                                    return (
-                                        <Chip
-                                            key={sib._uniqueId}
-                                            label={versionLabel(sib)}
-                                            onClick={() => setSelected(sib)}
-                                            variant={active ? 'filled' : 'outlined'}
-                                            color={active ? 'primary' : 'default'}
-                                            sx={{ fontWeight: active ? 700 : 500 }}
-                                        />
-                                    );
-                                })}
-                            </Box>
+                <DialogContent sx={{ px: { xs: 2, sm: 3 }, pt: 2.5, pb: { xs: 3, sm: 3 } }}>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '112px minmax(0, 1fr)', sm: '200px minmax(0, 1fr)' },
+                            gridTemplateAreas: {
+                                xs: '"art actions" "info info"',
+                                sm: '"art info" "actions info"',
+                            },
+                            gridTemplateRows: { sm: 'auto 1fr' },
+                            columnGap: { xs: 2, sm: 3 },
+                            rowGap: { xs: 2.5, sm: 2 },
+                            alignItems: 'start',
+                        }}
+                    >
+                        <Box sx={{ gridArea: 'art' }}>
+                            {hasArt ? (
+                                <Box
+                                    component="button"
+                                    type="button"
+                                    onClick={() => setZoomOpen(true)}
+                                    aria-label={`Zoom art for ${shown.name}`}
+                                    sx={{
+                                        p: 0,
+                                        border: 0,
+                                        background: 'none',
+                                        cursor: 'zoom-in',
+                                        flexShrink: 0,
+                                        width: { xs: 112, sm: 200 },
+                                        display: 'block',
+                                    }}
+                                >
+                                    <CardThumbnail
+                                        imageUrl={shown.imageUrl}
+                                        fallbackUrl={shown.imageUrlFallback}
+                                        alt={shown.name}
+                                        size={isPhone ? 112 : 200}
+                                    />
+                                </Box>
+                            ) : (
+                                <Box
+                                    aria-label="No art"
+                                    sx={{
+                                        width: { xs: 112, sm: 200 },
+                                        aspectRatio: '5 / 7',
+                                        borderRadius: '8px',
+                                        flexShrink: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        bgcolor: 'surface.sunken',
+                                        border: 1,
+                                        borderColor: 'divider',
+                                    }}
+                                >
+                                    <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled', textAlign: 'center', px: 0.5 }}>
+                                        No art
+                                    </Typography>
+                                </Box>
+                            )}
+
                         </Box>
-                    )}
 
-                    <CardDetailPrices
-                        printing={shown}
-                        pricesUpdatedAt={pricesUpdatedAt}
-                        isDark={isDark}
-                    />
+                        <Box sx={{ gridArea: 'info', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            {siblings.length >= 2 && (
+                                <Box>
+                                    <Typography variant="overline" component="h3" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+                                        Versions
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                        {siblings.map((sib) => {
+                                            const active = sib._uniqueId === shown._uniqueId;
+                                            return (
+                                                <Chip
+                                                    key={sib._uniqueId}
+                                                    label={versionLabel(sib)}
+                                                    onClick={() => setSelected(sib)}
+                                                    variant={active ? 'filled' : 'outlined'}
+                                                    color={active ? 'primary' : 'default'}
+                                                    sx={{ fontWeight: active ? 700 : 500 }}
+                                                />
+                                            );
+                                        })}
+                                    </Box>
+                                </Box>
+                            )}
 
-                    {shown?._uniqueId && (
-                        <PriceHistorySection
-                            printingId={shown._uniqueId}
-                            isDark={isDark}
-                        />
-                    )}
+                            <CardDetailPrices
+                                printing={shown}
+                                pricesUpdatedAt={pricesUpdatedAt}
+                                isDark={isDark}
+                            />
 
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2.5 }}>
-                        {showAddToTrade && (
-                            <Button
-                                variant="contained"
-                                onClick={handleAddToTrade}
-                            >
-                                Add to trade
-                            </Button>
-                        )}
-        <Button
-                            variant={showAddToTrade ? 'outlined' : 'contained'}
-                            onClick={handleWantList}
-                            disabled={wantBusy}
-                        >
-                            Want List
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            onClick={handleAddToBinder}
-                            disabled={wantBusy}
-                        >
-                            Binder
-                        </Button>
+                            {shown?._uniqueId && (
+                                <PriceHistorySection
+                                    printingId={shown._uniqueId}
+                                    isDark={isDark}
+                                />
+                            )}
+                        </Box>
+
+                            <Box sx={{ gridArea: 'actions', display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0, alignSelf: { xs: 'center', sm: 'start' } }}>
+                                {showAddToTrade && (
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<SwapHorizRounded />}
+                                        onClick={handleAddToTrade}
+                                        fullWidth
+                                    >
+                                        Add to trade
+                                    </Button>
+                                )}
+                                <Button
+                                    variant={showAddToTrade ? 'outlined' : 'contained'}
+                                    color={showAddToTrade ? 'inherit' : 'primary'}
+                                    startIcon={<BookmarkBorderRounded />}
+                                    onClick={handleWantList}
+                                    disabled={wantBusy}
+                                    fullWidth
+                                >
+                                    Want List
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    color="inherit"
+                                    startIcon={<CollectionsBookmarkOutlined />}
+                                    onClick={handleAddToBinder}
+                                    disabled={wantBusy}
+                                    fullWidth
+                                >
+                                    Binder
+                                </Button>
+                            </Box>
                     </Box>
                 </DialogContent>
             </Dialog>

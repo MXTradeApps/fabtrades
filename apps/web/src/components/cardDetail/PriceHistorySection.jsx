@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
     Box,
     Button,
@@ -6,7 +6,9 @@ import {
     ToggleButton,
     ToggleButtonGroup,
     Typography,
+    useTheme,
 } from '@mui/material';
+import { tk } from '../../theme/tokens.js';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import { useEntitlement } from '../../contexts/EntitlementContext.jsx';
 import { usePriceType } from '../../contexts/PriceContext.jsx';
@@ -20,15 +22,38 @@ import {
     priceHistorySeries,
 } from '../../utils/priceHistorySeries.js';
 
-const PLOT = { width: 320, height: 168, left: 8, right: 8, top: 28, bottom: 26 };
+const BASE_PLOT = { width: 320, height: 168, left: 8, right: 52, top: 16, bottom: 26 };
 
-const tooltipShift = (x) => {
+const tooltipShift = (x, width) => {
     if (x < 48) return 'translate(0, calc(-100% - 8px))';
-    if (x > PLOT.width - 48) return 'translate(-100%, calc(-100% - 8px))';
+    if (x > width - 48) return 'translate(-100%, calc(-100% - 8px))';
     return 'translate(-50%, calc(-100% - 8px))';
 };
 
-const LowChart = ({ series, source, isDark, muted }) => {
+// Track the container width so the chart fills its column at 1:1 scale
+// (labels stay legible instead of stretching with the viewBox).
+const useMeasuredWidth = (fallback) => {
+    const ref = useRef(null);
+    const [width, setWidth] = useState(fallback);
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el || typeof ResizeObserver === 'undefined') return undefined;
+        const update = () => {
+            const next = Math.round(el.getBoundingClientRect().width);
+            if (next > 0) setWidth(next);
+        };
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+    return [ref, width];
+};
+
+const LowChart = ({ series, source }) => {
+    const theme = useTheme();
+    const [containerRef, measuredWidth] = useMeasuredWidth(BASE_PLOT.width);
+    const PLOT = { ...BASE_PLOT, width: measuredWidth };
     const [inspectIndex, setInspectIndex] = useState(null);
     const points = series.points;
     const lows = points.map((p) => p.low);
@@ -49,14 +74,18 @@ const LowChart = ({ series, source, isDark, muted }) => {
     const line = points
         .map((p, i) => `${xAt(i)},${yAt(p.low)}`)
         .join(' ');
-    const stroke = isDark ? '#e4c09c' : '#8b4513';
-    const labelFill = muted;
+    const stroke = theme.palette.primary.main;
+    const labelFill = theme.palette.text.secondary;
+    const gridStroke = theme.palette.divider;
+    const area = `${xAt(0)},${PLOT.top + plotH} ${line} ${xAt(points.length - 1)},${PLOT.top + plotH}`;
+    const lastIdx = points.length - 1;
+    const gradientId = `low-fill-${points[0].date}-${points.length}`;
     const inspect = inspectIndex == null ? null : points[inspectIndex];
     const inspectX = inspectIndex == null ? 0 : xAt(inspectIndex);
     const inspectY = inspect ? yAt(inspect.low) : 0;
 
     return (
-        <Box sx={{ position: 'relative' }}>
+        <Box ref={containerRef} sx={{ position: 'relative' }}>
             <Box
                 component="svg"
                 data-testid="price-history-chart"
@@ -66,11 +95,40 @@ const LowChart = ({ series, source, isDark, muted }) => {
                 sx={{ width: '100%', height: 168, display: 'block' }}
                 onMouseLeave={() => setInspectIndex(null)}
             >
+                <defs>
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={stroke} stopOpacity="0.22" />
+                        <stop offset="100%" stopColor={stroke} stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                {[maxLow, minLow].map((v, i) => (
+                    <g key={i}>
+                        <line
+                            x1={PLOT.left}
+                            x2={PLOT.width - PLOT.right}
+                            y1={yAt(v)}
+                            y2={yAt(v)}
+                            stroke={gridStroke}
+                            strokeDasharray="3 4"
+                        />
+                        <text
+                            x={PLOT.width - PLOT.right + 6}
+                            y={yAt(v) + 4}
+                            fill={labelFill}
+                            fontSize="10.5"
+                            style={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
+                            {formatObservedLow(v, source)}
+                        </text>
+                    </g>
+                )).slice(0, span === 0 ? 1 : 2)}
+                <polygon fill={`url(#${gradientId})`} points={area} />
                 <polyline
                     fill="none"
                     stroke={stroke}
                     strokeWidth="2"
                     strokeLinejoin="round"
+                    strokeLinecap="round"
                     points={line}
                 />
                 {points.map((p, i) => (
@@ -85,13 +143,17 @@ const LowChart = ({ series, source, isDark, muted }) => {
                             onClick={() => setInspectIndex(i)}
                             style={{ cursor: 'pointer' }}
                         />
-                        <circle
-                            cx={xAt(i)}
-                            cy={yAt(p.low)}
-                            r="3.2"
-                            fill={stroke}
-                            pointerEvents="none"
-                        />
+                        {(i === lastIdx || i === inspectIndex) && (
+                            <circle
+                                cx={xAt(i)}
+                                cy={yAt(p.low)}
+                                r="4"
+                                fill={stroke}
+                                stroke={theme.palette.background.paper}
+                                strokeWidth="2"
+                                pointerEvents="none"
+                            />
+                        )}
                     </g>
                 ))}
                 <text
@@ -120,24 +182,21 @@ const LowChart = ({ series, source, isDark, muted }) => {
                         position: 'absolute',
                         left: `${(inspectX / PLOT.width) * 100}%`,
                         top: `${(inspectY / PLOT.height) * 100}%`,
-                        transform: tooltipShift(inspectX),
+                        transform: tooltipShift(inspectX, PLOT.width),
                         pointerEvents: 'none',
-                        px: 0.75,
-                        py: 0.35,
-                        borderRadius: 1,
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: '8px',
                         whiteSpace: 'nowrap',
                         fontSize: '0.75rem',
                         fontWeight: 600,
                         fontVariantNumeric: 'tabular-nums',
                         lineHeight: 1.2,
-                        color: isDark ? '#f5f1ed' : '#2c1810',
-                        backgroundColor: isDark ? '#2c1810' : '#f5f1ed',
-                        border: isDark
-                            ? '1px solid rgba(212, 165, 116, 0.45)'
-                            : '1px solid rgba(139, 69, 19, 0.28)',
-                        boxShadow: isDark
-                            ? '0 2px 8px rgba(0, 0, 0, 0.45)'
-                            : '0 2px 8px rgba(44, 24, 16, 0.12)',
+                        color: 'text.primary',
+                        bgcolor: 'background.paper',
+                        border: 1,
+                        borderColor: 'divider',
+                        boxShadow: (t) => tk(t).shadowMd,
                     }}
                 >
                     {formatHistoryDate(inspect.date)}
@@ -149,24 +208,22 @@ const LowChart = ({ series, source, isDark, muted }) => {
     );
 };
 
-const HistoryHeader = ({ isDark, children }) => {
-    const title = isDark ? '#f5f1ed' : '#2c1810';
-    const accent = isDark ? '#e4c09c' : '#8b4513';
-    return (
-        <>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
-                <ShowChartIcon sx={{ fontSize: 18, color: accent }} />
-                <Typography
-                    variant="subtitle1"
-                    sx={{ fontWeight: 700, fontSize: '0.95rem', color: title }}
-                >
-                    Price history
-                </Typography>
-            </Box>
-            {children}
-        </>
-    );
-};
+// eslint-disable-next-line no-unused-vars
+const HistoryHeader = ({ isDark, children }) => (
+    <>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
+            <ShowChartIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+            <Typography
+                variant="h5"
+                component="h3"
+                sx={{ color: 'text.primary' }}
+            >
+                Price history
+            </Typography>
+        </Box>
+        {children}
+    </>
+);
 
 /**
  * Low-only history for one Printing, shown under the Prices box in the overlay.
@@ -216,8 +273,8 @@ const PriceHistorySection = ({ printingId, isDark = false }) => {
         [snapshots, source, isPro, window],
     );
 
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const muted = isDark ? 'rgba(212, 165, 116, 0.75)' : 'rgba(93, 58, 26, 0.7)';
+    const textColor = 'text.primary';
+    const muted = 'text.secondary';
 
     let body;
     if (error) {
@@ -258,9 +315,9 @@ const PriceHistorySection = ({ printingId, isDark = false }) => {
     } else {
         const delta = series.delta;
         const changeColor = delta > 0
-            ? '#2E7D32'
+            ? 'success.main'
             : delta < 0
-                ? '#C62828'
+                ? 'error.main'
                 : muted;
         body = (
             <HistoryHeader isDark={isDark}>
@@ -278,15 +335,13 @@ const PriceHistorySection = ({ printingId, isDark = false }) => {
                     key={`${printingId}-${window}`}
                     series={series}
                     source={source}
-                    isDark={isDark}
-                    muted={muted}
                 />
                 <Typography
                     sx={{
                         mt: 1,
                         fontSize: '0.7rem',
-                        color: isDark ? 'rgba(212, 165, 116, 0.65)' : 'rgba(93, 58, 26, 0.55)',
-                        lineHeight: 1.35,
+                        color: 'text.secondary',
+                        lineHeight: 1.4,
                     }}
                 >
                     Observed catalog Low — the same source as today’s prices, not an appraisal.
@@ -319,11 +374,9 @@ const PriceHistorySection = ({ printingId, isDark = false }) => {
         <Box
             data-testid="price-history-section"
             sx={{
-                mt: 2,
-                pt: 1.5,
-                borderTop: isDark
-                    ? '1px solid rgba(212, 165, 116, 0.18)'
-                    : '1px solid rgba(139, 69, 19, 0.12)',
+                pt: 2.5,
+                borderTop: 1,
+                borderColor: 'divider',
             }}
         >
             {body}

@@ -298,7 +298,7 @@ FabraryMatch matchFabraryRow(
   final index = catalog is Map<String, List<dynamic>>
       ? catalog
       : buildFabrarySetIndex(
-          catalog is Iterable ? catalog as Iterable<dynamic> : const <dynamic>[],
+          catalog is Iterable ? catalog : const <dynamic>[],
         );
   final pool = index[key] ?? const <dynamic>[];
   final pitched = pool

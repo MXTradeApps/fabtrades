@@ -2,18 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box,
     Button,
-    Container,
     TextField,
     InputAdornment,
     Typography,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import Header from '../components/elements/Header.jsx';
+import { Page, PageHeader } from '../components/layout/Page.jsx';
 import RecentMoversSection from '../components/movers/RecentMoversSection.jsx';
 import MoverBox from '../components/movers/MoverBox.jsx';
 import { moverBoxGridSx } from '../components/movers/moverBoxStyles.js';
 import { useCardData } from '../hooks/useCardData.jsx';
-import { useThemeMode } from '../contexts/ThemeContext.jsx';
 import { usePriceType } from '../contexts/PriceContext.jsx';
 import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import { useDocumentHead } from '../utils/seo.js';
@@ -26,7 +25,6 @@ const catalogLow = (printing, priceSource) => (
 
 const Trends = () => {
     const { cards, cardIdLookup, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
-    const { isDark } = useThemeMode();
     const { priceSource } = usePriceType();
     const { openDetail } = useCardDetail();
     const [query, setQuery] = useState('');
@@ -91,11 +89,8 @@ const Trends = () => {
         return map;
     }, [overlays]);
 
-    const bgGradient = isDark
-        ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
-        : 'linear-gradient(135deg, #f5f1ed 0%, #e8dfd6 50%, #f0e6dc 100%)';
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
+    const textColor = 'text.primary';
+    const mutedColor = 'text.secondary';
 
     const openPrinting = (printing) => {
         const snapshot = cardIdLookup?.[printing._uniqueId] || printing;
@@ -110,47 +105,21 @@ const Trends = () => {
     };
 
     return (
-        <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '100vh',
-            background: bgGradient,
-            backgroundAttachment: 'fixed',
-        }}>
+        <>
             <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
-            <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, pb: 8 }}>
-                <Box sx={{ mb: 3 }}>
-                    <Typography
-                        variant="h4"
-                        sx={{
-                            fontWeight: 700,
-                            color: textColor,
-                            mb: 0.5,
-                            fontSize: { xs: '1.5rem', md: '2rem' },
-                        }}
-                    >
-                        Trends
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: mutedColor }}>
-                        Recent movers across the catalog, from observed Lows.
-                    </Typography>
-                </Box>
+            <Page>
+                <PageHeader
+                    title="Trends"
+                    subtitle="Recent movers across the catalog, from observed Lows."
+                />
 
                 <TextField
                     fullWidth
                     placeholder="Search all cards…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    sx={{
-                        mb: 2,
-                        '& .MuiOutlinedInput-root': {
-                            backgroundColor: isDark ? 'rgba(44, 24, 16, 0.6)' : '#ffffff',
-                            '& fieldset': {
-                                borderColor: isDark ? 'rgba(212, 165, 116, 0.3)' : 'rgba(139, 69, 19, 0.3)',
-                            },
-                        },
-                        '& input': { color: textColor },
-                    }}
+                    inputProps={{ 'aria-label': 'Search all cards' }}
+                    sx={{ mb: 3, maxWidth: 640 }}
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
@@ -204,9 +173,6 @@ const Trends = () => {
                                             percentChange={overlay?.percent_change}
                                             amountChange={overlay?.amount_change}
                                             onSelect={() => openPrinting(printing)}
-                                            isDark={isDark}
-                                            textColor={textColor}
-                                            mutedColor={mutedColor}
                                             priceSource={priceSource}
                                         />
                                     );
@@ -215,8 +181,8 @@ const Trends = () => {
                         </Box>
                     )
                 ) : null}
-            </Container>
-        </Box>
+            </Page>
+        </>
     );
 };
 

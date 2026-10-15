@@ -18,6 +18,7 @@ import 'data/binders_repository.dart';
 import 'data/entitlement_repository.dart';
 import 'data/lend_repository.dart';
 import 'data/purchases_repository.dart';
+import 'data/review_prompt_repository.dart';
 import 'data/set_logo_cache.dart';
 import 'data/set_logos.dart';
 import 'data/set_published_on.dart';
@@ -68,6 +69,12 @@ final appUpdateRepositoryProvider = Provider<AppUpdateRepository>(
     ref.watch(supabaseClientProvider),
     ref.watch(sharedPreferencesProvider),
   ),
+);
+
+/// App Store / Play Store rating prompt, asked only after positive moments.
+/// Local-only state; see `ReviewPromptPolicy`.
+final reviewPromptRepositoryProvider = Provider<ReviewPromptRepository>(
+  (ref) => ReviewPromptRepository(ref.watch(sharedPreferencesProvider)),
 );
 
 /// Soft update prompt when the installed version/build is behind `fab_app_config`.

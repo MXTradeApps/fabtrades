@@ -67,6 +67,9 @@ dependencies:
   stop_watch_timer: ^3.2.2
   # Local Fabrary collection export picker (Binder settings import).
   file_picker: ^12.2.0
+  # System rating sheet (SKStoreReviewController / Play In-App Review), asked
+  # only after positive moments — see lib/core/logic/review_prompt.dart.
+  in_app_review: ^2.0.12
 
 dev_dependencies:
   flutter_test:

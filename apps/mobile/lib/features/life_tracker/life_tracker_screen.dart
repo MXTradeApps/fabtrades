@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../app/theme.dart';
@@ -75,10 +77,7 @@ class _LifeTrackerScreenState extends ConsumerState<LifeTrackerScreen> {
             : Column(
                 children: [
                   Expanded(
-                    child: RotatedBox(
-                      quarterTurns: 2,
-                      child: opponentPanel,
-                    ),
+                    child: RotatedBox(quarterTurns: 2, child: opponentPanel),
                   ),
                   centerBar,
                   Expanded(child: youPanel),
@@ -119,8 +118,8 @@ class _CenterBar extends StatelessWidget {
     final timerColor = expired
         ? scheme.error
         : running
-            ? scheme.onSurface
-            : scheme.onSurfaceVariant;
+        ? scheme.onSurface
+        : scheme.onSurfaceVariant;
 
     final historyBtn = IconButton(
       tooltip: 'History',
@@ -191,10 +190,14 @@ class _CenterBar extends StatelessWidget {
         color: scheme.surfaceContainerHighest,
         border: axis == Axis.vertical
             ? Border.symmetric(
-                vertical: BorderSide(color: scheme.outline, width: 3),
+                vertical: BorderSide(
+                  color: scheme.outline.withValues(alpha: 0.5),
+                ),
               )
             : Border.symmetric(
-                horizontal: BorderSide(color: scheme.outline, width: 3),
+                horizontal: BorderSide(
+                  color: scheme.outline.withValues(alpha: 0.5),
+                ),
               ),
       ),
       child: axis == Axis.vertical
@@ -272,8 +275,7 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
     final pending = player.pendingDelta;
     final lifeSize = widget.landscape ? 96.0 : 120.0;
 
-    final deltaColor =
-        pending >= 0 ? AppTheme.positive : AppTheme.negative;
+    final deltaColor = pending >= 0 ? AppTheme.positive : AppTheme.negative;
     final deltaText = pending > 0 ? '+$pending' : '$pending';
 
     return ColoredBox(
@@ -293,20 +295,11 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                   onLongPressStart: (_) => _startHold(-5),
                   onLongPressEnd: (_) => _endHold(),
                   onLongPressCancel: _endHold,
-                  child: const Align(
+                  child: Align(
                     alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: EdgeInsets.only(left: 16),
-                      child: Opacity(
-                        opacity: 0.35,
-                        child: Text(
-                          '−',
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ),
+                      padding: const EdgeInsets.only(left: 14),
+                      child: _ZoneSign(icon: Icons.remove_rounded),
                     ),
                   ),
                 ),
@@ -321,39 +314,39 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                   onLongPressStart: (_) => _startHold(5),
                   onLongPressEnd: (_) => _endHold(),
                   onLongPressCancel: _endHold,
-                  child: const Align(
+                  child: Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
-                      padding: EdgeInsets.only(right: 16),
-                      child: Opacity(
-                        opacity: 0.35,
-                        child: Text(
-                          '+',
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ),
+                      padding: const EdgeInsets.only(right: 14),
+                      child: _ZoneSign(icon: Icons.add_rounded),
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          // Center divider marking − (left) vs + (right) tap zones.
+          // Center divider marking − (left) vs + (right) tap zones. It breaks
+          // around the total so it reads as a seam between zones rather than
+          // a line struck through the number.
           IgnorePointer(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  Container(
-                    width: 3,
-                    color: scheme.outline.withValues(alpha: 0.85),
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: LayoutBuilder(
+                builder: (context, constraints) => Center(
+                  child: Column(
+                    children: [
+                      const Expanded(child: _ZoneSeam()),
+                      // Room for the pending delta above the total.
+                      SizedBox(
+                        height: math.min(
+                          lifeSize * 1.7,
+                          constraints.maxHeight * 0.7,
+                        ),
+                      ),
+                      const Expanded(child: _ZoneSeam()),
+                    ],
                   ),
-                  const Spacer(),
-                ],
+                ),
               ),
             ),
           ),
@@ -381,12 +374,16 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
                   ),
                   Text(
                     '${player.life}',
-                    style: theme.textTheme.displayLarge?.copyWith(
+                    // Ask google_fonts for the real ExtraBold file. A weight
+                    // copied onto the theme's Outfit Regular is synthesised,
+                    // which notches the joins at this size. Proportional
+                    // figures: Outfit's tabular ones collide at heavy weights.
+                    style: GoogleFonts.outfit(
+                      textStyle: theme.textTheme.displayLarge,
                       fontSize: lifeSize,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w800,
                       height: 1.0,
-                      letterSpacing: -1.5,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                      letterSpacing: 0,
                     ),
                   ),
                 ],
@@ -395,6 +392,42 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// One half of the tap-zone divider: a solid rounded bar, bright enough to
+/// read at arm's length across a play table.
+class _ZoneSeam extends StatelessWidget {
+  const _ZoneSeam();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      width: 4,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+}
+
+/// The − / + marker at the outer edge of each tap zone.
+class _ZoneSign extends StatelessWidget {
+  const _ZoneSign({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      icon,
+      size: 48,
+      color: Theme.of(
+        context,
+      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
     );
   }
 }

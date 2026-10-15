@@ -1,12 +1,10 @@
 import {
     Box,
-    Container,
-    Paper,
     Typography,
     Link as MuiLink
 } from '@mui/material';
 import Header from '../components/elements/Header.jsx';
-import { useThemeMode } from '../contexts/ThemeContext.jsx';
+import { Page, PageHeader, Panel } from '../components/layout/Page.jsx';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useDocumentHead } from '../utils/seo.js';
 import {
@@ -39,7 +37,6 @@ const linkify = (text, linkColor) => {
 };
 
 const TermsOfUse = () => {
-    const { isDark } = useThemeMode();
     const { pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
     useDocumentHead({
@@ -50,57 +47,23 @@ const TermsOfUse = () => {
         canonicalPath: '/terms'
     });
 
-    const bgGradient = isDark
-        ? 'linear-gradient(135deg, #0d0806 0%, #1a0f0a 50%, #2c1810 100%)'
-        : 'linear-gradient(135deg, #f5f1ed 0%, #e8dfd6 50%, #f0e6dc 100%)';
-    const textColor = isDark ? '#f5f1ed' : '#2c1810';
-    const mutedColor = isDark ? '#d4a574' : '#5d3a1a';
-    const linkColor = isDark ? '#e4c09c' : '#8b4513';
+    const textColor = 'text.primary';
+    const linkColor = 'primary.main';
 
     return (
-        <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '100vh',
-            background: bgGradient,
-            backgroundAttachment: 'fixed'
-        }}>
+        <>
             <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
 
-            <Container maxWidth="md" sx={{ py: { xs: 2, md: 4 } }}>
-                <Box sx={{ mb: 3 }}>
-                    <Typography
-                        variant="h4"
-                        component="h1"
-                        sx={{
-                            fontWeight: 700,
-                            color: textColor,
-                            mb: 0.5,
-                            fontSize: { xs: '1.5rem', md: '2rem' }
-                        }}
-                    >
-                        Terms of Use
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: mutedColor }}>
-                        Effective date: {TERMS_EFFECTIVE_DATE}
-                    </Typography>
-                </Box>
+            <Page maxWidth={820}>
+                <PageHeader title="Terms of Use" subtitle={`Effective date: ${TERMS_EFFECTIVE_DATE}`} />
 
-                <Paper
-                    elevation={0}
-                    sx={{
-                        backgroundColor: isDark ? 'rgba(44, 24, 16, 0.6)' : '#ffffff',
-                        border: `1px solid ${isDark ? 'rgba(212, 165, 116, 0.2)' : 'rgba(139, 69, 19, 0.15)'}`,
-                        borderRadius: 2,
-                        p: { xs: 2.5, md: 4 }
-                    }}
-                >
+                <Panel component="article" sx={{ p: { xs: 2.5, md: 5 } }}>
                     {termsSections.map((section) => (
-                        <Box key={section.heading} sx={{ mb: 3.5, '&:last-child': { mb: 0 } }}>
+                        <Box key={section.heading} component="section" sx={{ mb: 4, '&:last-child': { mb: 0 } }}>
                             <Typography
-                                variant="h6"
+                                variant="h4"
                                 component="h2"
-                                sx={{ color: textColor, fontWeight: 700, mb: 1 }}
+                                sx={{ color: textColor, mb: 1.25 }}
                             >
                                 {section.heading}
                             </Typography>
@@ -112,7 +75,7 @@ const TermsOfUse = () => {
                                                 component="li"
                                                 variant="body2"
                                                 key={liIdx}
-                                                sx={{ color: textColor, mb: 1, lineHeight: 1.7 }}
+                                                sx={{ color: textColor, mb: 1, lineHeight: 1.7, maxWidth: '68ch' }}
                                             >
                                                 {linkify(li, linkColor)}
                                             </Typography>
@@ -122,7 +85,7 @@ const TermsOfUse = () => {
                                     <Typography
                                         variant="body2"
                                         key={idx}
-                                        sx={{ color: textColor, mb: 1.5, lineHeight: 1.7 }}
+                                        sx={{ color: textColor, mb: 1.5, lineHeight: 1.75, maxWidth: '68ch' }}
                                     >
                                         {linkify(item.text, linkColor)}
                                     </Typography>
@@ -130,9 +93,9 @@ const TermsOfUse = () => {
                             )}
                         </Box>
                     ))}
-                </Paper>
-            </Container>
-        </Box>
+                </Panel>
+            </Page>
+        </>
     );
 };
 

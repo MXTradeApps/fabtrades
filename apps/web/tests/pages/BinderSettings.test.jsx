@@ -185,7 +185,7 @@ describe('Fabrary import', () => {
                 </ThemeModeProvider>
             </ThemeProvider>,
         );
-        await waitFor(() => screen.getByText('Want List'));
+        await waitFor(() => screen.getByRole('heading', { name: 'Want List' }));
         expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
         expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
 
@@ -198,7 +198,6 @@ describe('Fabrary import', () => {
                 </ThemeProvider>
             </MemoryRouter>,
         );
-        fireEvent.click(screen.getAllByLabelText('open drawer')[0]);
         expect(screen.queryByText('Import from Fabrary')).not.toBeInTheDocument();
         expect(screen.queryByRole('link', { name: /Settings/i })).not.toBeInTheDocument();
     });
@@ -234,7 +233,7 @@ describe('Fabrary import', () => {
         expect(screen.getByText(/Unknown Junk/)).toBeInTheDocument();
         expect(screen.getByText(/Cards we couldn't match/)).toBeInTheDocument();
         expect(screen.getByText(/aren't in the FAB Trades catalog/)).toBeInTheDocument();
-        expect(screen.getByText(/adds Have copies to Collection/)).toBeInTheDocument();
+        expect(screen.getByText(/Haves will be added to the Collection Binder/)).toBeInTheDocument();
         expect(screen.getByTestId('fabrary-unmatched')).toBeInTheDocument();
         expect(screen.getByTestId('fabrary-confirm')).not.toBeDisabled();
 

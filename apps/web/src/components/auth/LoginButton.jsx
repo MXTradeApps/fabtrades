@@ -18,13 +18,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import SignInDialog from './SignInDialog.jsx';
 
-const LoginButton = () => {
+const LoginButton = ({ variant = 'compact' }) => {
     const navigate = useNavigate();
     const { user, loading, signOut, authError } = useAuth();
     const [anchorEl, setAnchorEl] = useState(null);
     const [signingOut, setSigningOut] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
     const open = Boolean(anchorEl);
+    const isSidebar = variant === 'sidebar';
 
     // After a failed OAuth redirect (common for misconfigured Apple), open the
     // dialog so the error is visible instead of a silent unsigned-in landing.
@@ -58,8 +59,8 @@ const LoginButton = () => {
 
     if (loading) {
         return (
-            <Box sx={{ display: 'flex', alignItems: 'center', px: 1 }}>
-                <CircularProgress size={24} sx={{ color: 'white' }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', px: 1, height: 36 }}>
+                <CircularProgress size={20} sx={{ color: 'text.secondary' }} />
             </Box>
         );
     }
@@ -78,19 +79,18 @@ const LoginButton = () => {
                     <Button
                         onClick={handleClick}
                         size="small"
+                        color="inherit"
                         sx={{
-                            color: 'white',
-                            textTransform: 'none',
+                            color: 'text.primary',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 0.75,
-                            minHeight: 32,
-                            px: { xs: 0.5, sm: 1 },
-                            py: 0.25,
-                            '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            },
-                            transition: 'all 0.15s ease-in-out',
+                            justifyContent: 'flex-start',
+                            gap: 1,
+                            minHeight: 36,
+                            minWidth: 0,
+                            px: isSidebar ? 0.75 : 0.5,
+                            flex: isSidebar ? 1 : 'none',
+                            overflow: 'hidden',
                         }}
                         disabled={signingOut}
                     >
@@ -98,20 +98,20 @@ const LoginButton = () => {
                             src={avatarUrl}
                             alt={displayName}
                             sx={{
-                                width: 26,
-                                height: 26,
-                                border: '1.5px solid #d4a574',
-                            }}
-                        />
-                        <Typography
-                            sx={{
-                                display: { xs: 'none', sm: 'block' },
-                                fontWeight: 600,
+                                width: 28,
+                                height: 28,
                                 fontSize: '0.8rem',
+                                bgcolor: 'primary.main',
+                                color: 'primary.contrastText',
                             }}
                         >
-                            {displayName}
-                        </Typography>
+                            {displayName.charAt(0).toUpperCase()}
+                        </Avatar>
+                        {isSidebar && (
+                            <Typography noWrap sx={{ fontWeight: 600, fontSize: '0.8125rem', minWidth: 0 }}>
+                                {displayName}
+                            </Typography>
+                        )}
                     </Button>
                 </Tooltip>
             ) : (
@@ -119,34 +119,17 @@ const LoginButton = () => {
                     <Button
                         onClick={handleClick}
                         size="small"
+                        variant={isSidebar ? 'contained' : 'outlined'}
+                        color={isSidebar ? 'primary' : 'inherit'}
                         startIcon={<LoginIcon sx={{ fontSize: '1rem !important' }} />}
                         sx={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                            color: 'white',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            fontSize: '0.8rem',
-                            px: { xs: 1.25, sm: 1.5 },
-                            py: 0.4,
-                            minHeight: 32,
-                            borderRadius: 1.5,
-                            border: '1px solid rgba(212, 165, 116, 0.5)',
-                            boxShadow: 'none',
-                            '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                            },
-                            transition: 'all 0.15s ease',
-                            '& .MuiButton-startIcon': {
-                                marginRight: { xs: 0.35, sm: 0.5 },
-                            },
+                            minHeight: 36,
+                            flex: isSidebar ? 1 : 'none',
+                            px: 1.5,
+                            ...(isSidebar ? {} : { color: 'text.primary' }),
                         }}
                     >
-                        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                            Sign in
-                        </Box>
-                        <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                            Login
-                        </Box>
+                        Sign in
                     </Button>
                 </Tooltip>
             )}
@@ -164,42 +147,22 @@ const LoginButton = () => {
                     horizontal: 'right',
                 }}
                 PaperProps={{
-                    sx: {
-                        mt: 1,
-                        minWidth: 180,
-                        borderRadius: 2,
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                    },
+                    sx: { mt: 1, minWidth: 190 },
                 }}
             >
                 <MenuItem
                     onClick={handleViewHistory}
-                    sx={{
-                        py: 1.5,
-                        px: 2,
-                        gap: 1.5,
-                        '&:hover': {
-                            backgroundColor: 'rgba(139, 69, 19, 0.08)',
-                        },
-                    }}
+                    sx={{ gap: 1.5 }}
                 >
                     <HistoryIcon fontSize="small" />
-                    <Typography>View History</Typography>
+                    <Typography fontSize="inherit">View History</Typography>
                 </MenuItem>
                 <MenuItem
                     onClick={handleSignOut}
-                    sx={{
-                        py: 1.5,
-                        px: 2,
-                        gap: 1.5,
-                        color: 'error.main',
-                        '&:hover': {
-                            backgroundColor: 'rgba(211, 47, 47, 0.08)',
-                        },
-                    }}
+                    sx={{ gap: 1.5, color: 'error.main' }}
                 >
                     <LogoutIcon fontSize="small" />
-                    <Typography>Sign Out</Typography>
+                    <Typography fontSize="inherit">Sign Out</Typography>
                 </MenuItem>
             </Menu>
 

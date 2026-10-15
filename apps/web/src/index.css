@@ -1,11 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
-
 * {
     box-sizing: border-box;
 }
 
 :root {
-    font-family: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Onest', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.5;
     font-weight: 400;
 
@@ -14,9 +12,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
-    
-    /* Color scheme support */
-    color-scheme: light dark;
 
     /* FAB brand tokens — keep in step with packages/contracts/brand_palette.json
        and apps/mobile/lib/app/theme.dart */
@@ -29,6 +24,51 @@
     --fab-cream: #F5F1ED;
     --fab-espresso: #2C1810;
     --fab-espresso-deep: #1A0F0A;
+
+    /* Runtime palette. ThemeContext overwrites these from src/theme/tokens.js
+       on mount; the values here only cover the first paint. Dark is the default. */
+    --c-bg: #131110;
+    --c-surface: #1B1816;
+    --c-sunken: #24201C;
+    --c-border: rgba(243, 237, 231, 0.09);
+    --c-borderStrong: rgba(243, 237, 231, 0.17);
+    --c-text: #F3EDE7;
+    --c-textMuted: #B5A99E;
+    --c-textFaint: #7F746B;
+    --c-accent: #D8834A;
+
+    /* App shell offsets; Header sets the mobile values via media queries. */
+    --shell-top: 0px;
+    --shell-bottom: 0px;
+    --shell-left: 0px;
+
+    color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+    --c-bg: #F6F3EF;
+    --c-surface: #FFFFFF;
+    --c-sunken: #F0EBE5;
+    --c-border: rgba(44, 24, 16, 0.10);
+    --c-borderStrong: rgba(44, 24, 16, 0.18);
+    --c-text: #1E1612;
+    --c-textMuted: #6A5A4E;
+    --c-textFaint: #9A8C80;
+    --c-accent: #8B4513;
+    color-scheme: light;
+}
+
+@media (max-width: 899.95px) {
+    :root {
+        --shell-top: calc(56px + env(safe-area-inset-top, 0px));
+        --shell-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+@media (min-width: 900px) {
+    :root {
+        --shell-left: 248px;
+    }
 }
 
 body {
@@ -39,93 +79,81 @@ body {
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
-    /* Default light mode gradient - will be overridden by React theme */
-    background: linear-gradient(135deg, var(--fab-cream) 0%, #e8dfd6 50%, #f0e6dc 100%);
-    background-attachment: fixed;
-    transition: background 0.3s ease;
-}
-
-/* Dark mode background via media query fallback */
-@media (prefers-color-scheme: dark) {
-    body {
-        background: linear-gradient(135deg, #0d0806 0%, var(--fab-espresso-deep) 50%, var(--fab-espresso) 100%);
-    }
+    background: var(--c-bg);
+    color: var(--c-text);
 }
 
 #root {
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
-    /* Room for the fixed "Prices updated" footer in Header */
-    padding-bottom: 28px;
+    /* Room for the fixed sidebar (desktop) or bottom tab bar (mobile) in Header */
+    padding-top: var(--shell-top);
+    padding-left: var(--shell-left);
+    padding-bottom: var(--shell-bottom);
 }
 
-/* Scrollbar Styling - FAB earthy theme */
+/* Numbers that line up: prices, counts, deltas. */
+.tnum {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbars follow the palette */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-borderStrong) transparent;
+}
+
 ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f5f1ed;
-    border-radius: 10px;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #8b4513 0%, #a0643f 100%);
+    background: var(--c-borderStrong);
     border-radius: 10px;
-    border: 2px solid #f5f1ed;
+    border: 2px solid transparent;
+    background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #5d2f0d 0%, #8b4513 100%);
+    background: var(--c-textFaint);
+    background-clip: padding-box;
 }
 
-/* Dark mode scrollbar */
-@media (prefers-color-scheme: dark) {
-    ::-webkit-scrollbar-track {
-        background: #1a0f0a;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, #c87137 0%, #d4a574 100%);
-        border: 2px solid #1a0f0a;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, #e09050 0%, #e4c09c 100%);
-    }
-}
-
-/* Selection Styling */
 ::selection {
-    background-color: #d4a574;
-    color: #2c1810;
+    background-color: #D4A574;
+    color: #2C1810;
 }
 
-::-moz-selection {
-    background-color: #d4a574;
-    color: #2c1810;
-}
-
-/* Smooth scrolling */
 html {
     scroll-behavior: smooth;
 }
 
-/* Focus outline for accessibility */
 *:focus-visible {
-    outline: 2px solid #8b4513;
+    outline: 2px solid var(--c-accent);
     outline-offset: 2px;
 }
 
-@media (prefers-color-scheme: dark) {
-    *:focus-visible {
-        outline-color: #c87137;
-    }
+.MuiButtonBase-root:focus-visible,
+.MuiInputBase-input:focus-visible {
+    outline: none;
 }
 
-/* Smooth transitions for all interactive elements */
-button, a, .MuiPaper-root, .MuiChip-root {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

@@ -78,7 +78,7 @@ describe('SetList', () => {
 
     test('empty search shows the set list and no movers', () => {
         wrap();
-        expect(screen.getByText('Browse Sets')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Browse Sets' })).toBeInTheDocument();
         expect(screen.getByText('Welcome to Rathe')).toBeInTheDocument();
         expect(screen.queryByText('Catalog-wide recent movers')).not.toBeInTheDocument();
         expect(screen.queryByText('Recent movers')).not.toBeInTheDocument();

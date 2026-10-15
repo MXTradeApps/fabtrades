@@ -192,7 +192,7 @@ describe('Collection Stats entry and page', () => {
         });
         expect(screen.getByTestId('collection-stats-headline')).toHaveTextContent('€10.20');
         expect(screen.getByText('Total Value')).toBeInTheDocument();
-        expect(screen.getByText('Collection Stats', { selector: 'h4' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Collection Stats' })).toBeInTheDocument();
         expect(screen.getByText('Trade Binder')).toBeInTheDocument();
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(screen.queryByTestId('binder-value-headline')).not.toBeInTheDocument();

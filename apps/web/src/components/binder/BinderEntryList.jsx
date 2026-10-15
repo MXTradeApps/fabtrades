@@ -12,10 +12,11 @@ import {
 } from '@mui/material';
 import {
     Add as AddIcon,
-    Delete as DeleteIcon,
+    DeleteOutline as DeleteIcon,
     Remove as RemoveIcon,
 } from '@mui/icons-material';
 import { CardThumbnail } from '../ui/CardImagePreview.jsx';
+import { tk } from '../../theme/tokens.js';
 import { formatCurrency } from '../../utils/helpers.js';
 import {
     BINDER_PAGE_SIZE,
@@ -44,11 +45,6 @@ export default function BinderEntryList({
     onRemove,
     onMove,
     onAddToTrade,
-    mutedColor,
-    accentColor,
-    textColor,
-    paperBorder,
-    isDark,
 }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(BINDER_PAGE_SIZE);
@@ -79,8 +75,7 @@ export default function BinderEntryList({
     const showPager = sliced.total > BINDER_PAGE_SIZE_OPTIONS[0];
 
     const pagerSx = {
-        color: mutedColor,
-        borderTop: `1px solid ${paperBorder}`,
+        color: 'text.secondary',
         overflow: 'hidden',
         '.MuiTablePagination-toolbar': {
             minHeight: 40,
@@ -89,16 +84,16 @@ export default function BinderEntryList({
             justifyContent: 'flex-end',
         },
         '.MuiTablePagination-displayedRows, .MuiTablePagination-selectLabel': {
-            color: mutedColor,
-            fontSize: '0.75rem',
+            color: 'text.secondary',
+            fontSize: '0.8125rem',
             m: 0,
+            fontVariantNumeric: 'tabular-nums',
         },
         '.MuiTablePagination-select': {
-            color: textColor,
-            fontSize: '0.75rem',
+            color: 'text.primary',
+            fontSize: '0.8125rem',
         },
-        '.MuiIconButton-root': { color: accentColor },
-        '.MuiIconButton-root.Mui-disabled': { color: paperBorder },
+        '.MuiTablePagination-input .MuiOutlinedInput-notchedOutline': { border: 0 },
     };
 
     return (
@@ -109,12 +104,12 @@ export default function BinderEntryList({
                     listStyle: 'none',
                     m: 0,
                     p: 0,
-                    border: `1px solid ${paperBorder}`,
-                    borderRadius: 1,
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: '14px',
                     overflow: 'hidden',
-                    backgroundColor: isDark
-                        ? 'rgba(26, 15, 10, 0.35)'
-                        : 'rgba(255, 255, 255, 0.72)',
+                    bgcolor: 'background.paper',
+                    boxShadow: (t) => tk(t).shadowSm,
                 }}
             >
                 {sliced.rows.map((entry, index) => {
@@ -136,22 +131,26 @@ export default function BinderEntryList({
                                 display: 'flex',
                                 alignItems: 'center',
                                 flexWrap: 'wrap',
-                                gap: 0.75,
-                                minHeight: 44,
-                                px: 0.75,
-                                py: 0.4,
-                                borderTop: index === 0 ? 0 : `1px solid ${paperBorder}`,
+                                columnGap: 1.5,
+                                rowGap: 0.75,
+                                minHeight: 60,
+                                px: { xs: 1.5, sm: 2 },
+                                py: 1,
+                                borderTop: index === 0 ? 0 : 1,
+                                borderColor: 'divider',
+                                transition: 'background-color 120ms ease',
+                                '&:hover': { bgcolor: 'action.hover' },
                             }}
                         >
                             <CardThumbnail
                                 imageUrl={card.imageUrl}
                                 fallbackUrl={card.imageUrlFallback}
                                 alt={card.name}
-                                size={28}
+                                size={34}
                                 onClick={canOpen ? () => onOpenDetail?.(entry) : undefined}
                             />
 
-                            <Box sx={{ flex: '1 1 140px', minWidth: 0 }}>
+                            <Box sx={{ flex: '1 1 160px', minWidth: 0 }}>
                                 <Typography
                                     component={canOpen ? 'button' : 'span'}
                                     type={canOpen ? 'button' : undefined}
@@ -160,10 +159,10 @@ export default function BinderEntryList({
                                     sx={{
                                         display: 'block',
                                         width: '100%',
-                                        fontWeight: 700,
-                                        fontSize: '0.8rem',
-                                        lineHeight: 1.2,
-                                        color: textColor,
+                                        fontWeight: 600,
+                                        fontSize: '0.875rem',
+                                        lineHeight: 1.3,
+                                        color: 'text.primary',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap',
@@ -174,15 +173,17 @@ export default function BinderEntryList({
                                         textAlign: 'left',
                                         fontFamily: 'inherit',
                                         cursor: canOpen ? 'pointer' : 'default',
+                                        '&:hover': canOpen ? { color: 'primary.main' } : undefined,
                                     }}
                                 >
                                     {card.name}
                                 </Typography>
                                 <Typography
                                     sx={{
-                                        color: mutedColor,
-                                        fontSize: '0.65rem',
-                                        lineHeight: 1.2,
+                                        color: 'text.secondary',
+                                        fontSize: '0.75rem',
+                                        lineHeight: 1.35,
+                                        mt: 0.25,
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap',
@@ -193,21 +194,18 @@ export default function BinderEntryList({
                             </Box>
 
                             {canChangeVersion && (
-                                <FormControl size="small" sx={{ minWidth: 88, flexShrink: 0 }}>
+                                <FormControl size="small" sx={{ minWidth: 104, flexShrink: 0 }}>
                                     <Select
                                         value={entry.cardId}
                                         disabled={busy}
                                         onChange={(e) => onChangeVersion?.(entry, e.target.value)}
                                         aria-label={`Version of ${card.name}`}
                                         sx={{
-                                            color: mutedColor,
-                                            fontSize: '0.65rem',
+                                            color: 'text.secondary',
+                                            fontSize: '0.75rem',
                                             fontWeight: 600,
-                                            height: 26,
-                                            '& .MuiSelect-select': { py: 0.25, px: 0.75 },
-                                            '& .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: paperBorder,
-                                            },
+                                            height: 30,
+                                            '& .MuiSelect-select': { py: 0.25, px: 1 },
                                         }}
                                     >
                                         {editions.map((edition) => (
@@ -228,14 +226,14 @@ export default function BinderEntryList({
                                 sx={{
                                     flexShrink: 0,
                                     textAlign: 'right',
-                                    minWidth: 52,
+                                    minWidth: 64,
                                 }}
                             >
                                 <Typography
                                     sx={{
-                                        color: accentColor,
+                                        color: priced ? 'text.primary' : 'text.disabled',
                                         fontWeight: 700,
-                                        fontSize: '0.75rem',
+                                        fontSize: '0.9375rem',
                                         fontVariantNumeric: 'tabular-nums',
                                         lineHeight: 1.2,
                                     }}
@@ -245,10 +243,10 @@ export default function BinderEntryList({
                                 {variant === 'shared' && (
                                     <Typography
                                         sx={{
-                                            color: mutedColor,
-                                            fontSize: '0.65rem',
+                                            color: 'text.secondary',
+                                            fontSize: '0.75rem',
                                             fontVariantNumeric: 'tabular-nums',
-                                            lineHeight: 1.2,
+                                            lineHeight: 1.3,
                                         }}
                                     >
                                         {qty}×
@@ -262,49 +260,61 @@ export default function BinderEntryList({
                                         display: 'flex',
                                         alignItems: 'center',
                                         flexShrink: 0,
-                                        gap: 0,
+                                        gap: 0.75,
                                     }}
                                 >
-                                    <IconButton
-                                        size="small"
-                                        disabled={busy}
-                                        onClick={() => onUpdateQuantity?.(entry, qty - 1)}
-                                        aria-label="decrease quantity"
-                                        sx={{ p: 0.25 }}
-                                    >
-                                        <RemoveIcon sx={{ fontSize: 16 }} />
-                                    </IconButton>
-                                    <Typography
+                                    <Box
                                         sx={{
-                                            minWidth: 16,
-                                            textAlign: 'center',
-                                            fontWeight: 700,
-                                            fontSize: '0.75rem',
-                                            color: textColor,
-                                            fontVariantNumeric: 'tabular-nums',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            height: 30,
+                                            borderRadius: '9px',
+                                            bgcolor: 'surface.sunken',
                                         }}
                                     >
-                                        {qty}
-                                    </Typography>
-                                    <IconButton
-                                        size="small"
-                                        disabled={busy}
-                                        onClick={() => onUpdateQuantity?.(entry, qty + 1)}
-                                        aria-label="increase quantity"
-                                        sx={{ p: 0.25 }}
-                                    >
-                                        <AddIcon sx={{ fontSize: 16 }} />
-                                    </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            disabled={busy}
+                                            onClick={() => onUpdateQuantity?.(entry, qty - 1)}
+                                            aria-label="decrease quantity"
+                                            sx={{ p: 0.5, color: 'text.secondary' }}
+                                        >
+                                            <RemoveIcon sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                        <Typography
+                                            sx={{
+                                                minWidth: 20,
+                                                textAlign: 'center',
+                                                fontWeight: 700,
+                                                fontSize: '0.8125rem',
+                                                color: 'text.primary',
+                                                fontVariantNumeric: 'tabular-nums',
+                                            }}
+                                        >
+                                            {qty}
+                                        </Typography>
+                                        <IconButton
+                                            size="small"
+                                            disabled={busy}
+                                            onClick={() => onUpdateQuantity?.(entry, qty + 1)}
+                                            aria-label="increase quantity"
+                                            sx={{ p: 0.5, color: 'text.secondary' }}
+                                        >
+                                            <AddIcon sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </Box>
                                     {!isWanted && onMove && (
                                         <Button
                                             size="small"
                                             data-testid={`binder-move-${entry.cardId}`}
                                             onClick={() => onMove(entry)}
+                                            color="inherit"
                                             sx={{
-                                                fontSize: '0.7rem',
+                                                fontSize: '0.75rem',
                                                 minWidth: 0,
-                                                px: 0.5,
-                                                minHeight: 24,
+                                                px: 1,
+                                                minHeight: 30,
+                                                color: 'text.secondary',
                                             }}
                                         >
                                             Move
@@ -315,12 +325,12 @@ export default function BinderEntryList({
                                         disabled={busy}
                                         onClick={() => onRemove?.(entry)}
                                         aria-label="remove card"
-                                        sx={{ color: 'error.main', p: 0.25 }}
+                                        sx={{ color: 'text.disabled', p: 0.6, '&:hover': { color: 'error.main' } }}
                                     >
                                         {busy ? (
-                                            <CircularProgress size={12} />
+                                            <CircularProgress size={14} />
                                         ) : (
-                                            <DeleteIcon sx={{ fontSize: 16 }} />
+                                            <DeleteIcon sx={{ fontSize: 18 }} />
                                         )}
                                     </IconButton>
                                 </Box>
@@ -331,20 +341,7 @@ export default function BinderEntryList({
                                     size="small"
                                     variant="contained"
                                     onClick={() => onAddToTrade?.(entry)}
-                                    sx={{
-                                        flexShrink: 0,
-                                        minHeight: 26,
-                                        py: 0.25,
-                                        px: 0.75,
-                                        fontSize: '0.65rem',
-                                        fontWeight: 700,
-                                        textTransform: 'none',
-                                        backgroundColor: accentColor,
-                                        color: isDark ? '#1a0f0a' : '#ffffff',
-                                        '&:hover': {
-                                            backgroundColor: isDark ? '#d4a574' : '#5d2f0d',
-                                        },
-                                    }}
+                                    sx={{ flexShrink: 0 }}
                                 >
                                     Add to trade
                                 </Button>

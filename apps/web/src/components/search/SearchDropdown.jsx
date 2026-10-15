@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Paper, Box, Typography } from '@mui/material';
 import SearchOption from './SearchOption';
-import { useThemeMode } from '../../contexts/ThemeContext.jsx';
+import { tk } from '../../theme/tokens.js';
 
 /**
  * SearchDropdown Component
@@ -18,7 +18,6 @@ const SearchDropdown = ({
     placement = 'bottom',
     keepOpenOnSelect = false
 }) => {
-    const { isDark } = useThemeMode();
     const highlightedRef = useRef(null);
 
     // Scroll highlighted item into view
@@ -36,46 +35,28 @@ const SearchDropdown = ({
     return (
         <Paper
             ref={dropdownRef}
-            elevation={8}
             sx={{
                 position: 'absolute',
-                top: placement === 'bottom' ? 'calc(100% + 4px)' : 'auto',
-                bottom: placement === 'top' ? 'calc(100% + 4px)' : 'auto',
+                top: placement === 'bottom' ? 'calc(100% + 6px)' : 'auto',
+                bottom: placement === 'top' ? 'calc(100% + 6px)' : 'auto',
                 left: 0,
                 right: 0,
                 zIndex: 1300,
-                maxHeight: '320px',
+                maxHeight: '360px',
                 overflowY: 'auto',
-                borderRadius: 2,
-                boxShadow: isDark 
-                    ? '0 8px 24px rgba(0, 0, 0, 0.5)' 
-                    : '0 8px 24px rgba(139, 69, 19, 0.2)',
-                border: isDark 
-                    ? '1px solid rgba(212, 165, 116, 0.3)' 
-                    : '1px solid rgba(139, 69, 19, 0.3)',
-                background: isDark ? '#2c1810' : '#ffffff',
-                // Custom scrollbar
-                '&::-webkit-scrollbar': {
-                    width: '8px'
-                },
-                '&::-webkit-scrollbar-track': {
-                    background: isDark ? '#1a0f0a' : '#f5f1ed',
-                    borderRadius: '4px'
-                },
-                '&::-webkit-scrollbar-thumb': {
-                    background: 'linear-gradient(180deg, #8b4513 0%, #d4a574 100%)',
-                    borderRadius: '4px',
-                    '&:hover': {
-                        background: 'linear-gradient(180deg, #a0643f 0%, #e4c09c 100%)'
-                    }
-                }
+                p: 0.75,
+                borderRadius: '14px',
+                border: 1,
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                boxShadow: (t) => tk(t).shadowLg,
             }}
         >
             {items.length === 0 ? (
                 <Box sx={{ px: 2, py: 3, textAlign: 'center' }}>
                     <Typography 
                         variant="body2" 
-                        sx={{ color: isDark ? '#d4a574' : '#5d3a1a' }}
+                        sx={{ color: 'text.secondary' }}
                     >
                         {searchTerm ? 'No cards found' : 'Start typing to search...'}
                     </Typography>

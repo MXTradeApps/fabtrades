@@ -234,7 +234,7 @@ describe('BinderGrid', () => {
             error: null,
         });
         renderCollection(true, { path: '/wants' });
-        await waitFor(() => screen.getByText('Want List'));
+        await waitFor(() => screen.getByRole('heading', { name: 'Want List' }));
         expect(screen.queryByTestId('binder-grid')).not.toBeInTheDocument();
         expect(screen.queryByTestId('binder-move-' + pricedPrinting._uniqueId)).not.toBeInTheDocument();
     });
@@ -256,7 +256,6 @@ describe('BinderGrid', () => {
                 </ThemeProvider>
             </MemoryRouter>,
         );
-        fireEvent.click(screen.getByLabelText('open drawer'));
         expect(screen.getByRole('link', { name: /Want List/i })).toHaveAttribute('href', '/wants');
         expect(screen.getAllByRole('link', { name: /My Binders/i })[0]).toHaveAttribute('href', '/binder');
     });
@@ -476,7 +475,7 @@ describe('BinderGrid', () => {
 
     test('/wants has no Binder Settings control', async () => {
         renderCollection(true, { path: '/wants' });
-        await waitFor(() => screen.getByText('Want List'));
+        await waitFor(() => screen.getByRole('heading', { name: 'Want List' }));
         expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
         expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
     });
