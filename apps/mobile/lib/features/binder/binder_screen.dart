@@ -11,6 +11,7 @@ import '../../core/logic/binder_text.dart';
 import '../../core/logic/free_limits.dart';
 import '../../core/models/binder.dart';
 import '../../core/models/binder_entry.dart';
+import '../../core/models/trade.dart';
 import '../../core/providers.dart';
 import '../auth/sign_in_sheet.dart';
 import '../onboarding/onboarding_keys.dart';
@@ -91,133 +92,277 @@ class _BinderScreenState extends ConsumerState<BinderScreen> {
         : ownedInBinder(entries, openId);
     final title = _appBarTitle(openId: openId, binders: binders);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: inBinder
-            ? IconButton(
-                key: const Key('binderBackToGrid'),
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Back to Binders',
-                onPressed: () {
-                  ref.read(binderFiltersProvider.notifier).clear();
-                  ref.read(openBinderIdProvider.notifier).close();
-                },
-              )
-            : null,
-        title: ShowcaseTheme.mark(
-          key: OnboardingKeys.binderTabs,
-          title: TourCopy.binderTabsTitle,
-          description: TourCopy.binderTabsBody,
-          child: Text(title, key: const Key('binderHomeTitle')),
-        ),
-        actions: [
-          if (openId == null)
-            TextButton.icon(
-              key: const Key('createBinder'),
-              onPressed: () => _createBinder(context),
-              icon: const Icon(Icons.add_box_outlined),
-              label: const Text('New'),
-            ),
-          if (viewingWants && _count(wanted) > 0)
-            TextButton(
-              key: const Key('clearBinder'),
-              onPressed: () => _clearBinder(context),
-              child: const Text('Clear Want List'),
-            ),
-          if (inOwnedBinder)
-            PopupMenuButton<String>(
-              key: const Key('binderOverflow'),
-              tooltip: 'Binder actions',
-              icon: const Icon(Icons.more_vert),
-              onSelected: (action) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!context.mounted) return;
-                  if (action == 'clear') _clearBinder(context);
-                  if (action == 'share') _shareBinder(context);
-                });
-              },
-              itemBuilder: (_) => [
-                if (openRows.isNotEmpty)
-                  const PopupMenuItem(
-                    key: Key('clearBinder'),
-                    value: 'clear',
-                    child: Text('Clear Binder'),
-                  ),
-                const PopupMenuItem(
-                  key: Key('shareBinder'),
-                  value: 'share',
-                  child: Text('Share Binder'),
+    final selection = ref.watch(binderSelectionProvider);
+    final selecting = inOwnedBinder && selection.isNotEmpty;
+    final selectionBar = selecting
+        ? _SelectionActionBar(
+            canMove: Binder.gridOrder(binders)
+                .any((b) => b.isLive && !b.isWant && b.clientId != openId),
+            onMove: () => _moveSelected(context),
+            onTrade: () => _tradeSelected(context),
+            onRemove: () => _removeSelected(context),
+          )
+        : null;
+
+    return PopScope(
+      // Back leaves selection mode before it leaves the screen.
+      canPop: !selecting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) ref.read(binderSelectionProvider.notifier).clear();
+      },
+      child: Scaffold(
+        appBar: selecting
+            ? _selectionAppBar(selection)
+            : AppBar(
+                leading: inBinder
+                    ? IconButton(
+                        key: const Key('binderBackToGrid'),
+                        icon: const Icon(Icons.arrow_back),
+                        tooltip: 'Back to Binders',
+                        onPressed: () {
+                          ref.read(binderFiltersProvider.notifier).clear();
+                          ref.read(openBinderIdProvider.notifier).close();
+                        },
+                      )
+                    : null,
+                title: ShowcaseTheme.mark(
+                  key: OnboardingKeys.binderTabs,
+                  title: TourCopy.binderTabsTitle,
+                  description: TourCopy.binderTabsBody,
+                  child: Text(title, key: const Key('binderHomeTitle')),
                 ),
-              ],
-            ),
-        ],
-      ),
-      body: openId == null
-          ? BinderGrid(
-              onOpen: (id) {
-                ref.read(binderFiltersProvider.notifier).clear();
-                ref.read(openBinderIdProvider.notifier).open(id);
-              },
-              onRename: (id) => _renameBinder(context, id),
-              onDelete: (id) => _deleteBinder(context, id),
-              onClear: (id) => _clearBinder(context, clientId: id),
-            )
-          : viewingWants
-              ? WantListPane(
-                  onAdd: () => _addBySearch(isWanted: true),
-                )
-              : BinderList(binderId: openId, pricing: pricing),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: SizedBox(
-        key: const Key('binderActionRow'),
-        width: MediaQuery.sizeOf(context).width - 32,
-        height: 56,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (inOwnedBinder && openRows.isNotEmpty) ...[
-              Flexible(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  heightFactor: 1,
-                  widthFactor: 1,
-                  child: ShowcaseTheme.mark(
-                    key: OnboardingKeys.binderTotal,
-                    title: TourCopy.binderTotalTitle,
-                    description: TourCopy.binderTotalBody,
-                    child: _CollectionStatsButton(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          settings:
-                              const RouteSettings(name: 'Collection Stats'),
-                          builder: (_) => const CollectionStatsScreen(),
+                actions: [
+                  if (openId == null)
+                    TextButton.icon(
+                      key: const Key('createBinder'),
+                      onPressed: () => _createBinder(context),
+                      icon: const Icon(Icons.add_box_outlined),
+                      label: const Text('New'),
+                    ),
+                  if (viewingWants && _count(wanted) > 0)
+                    TextButton(
+                      key: const Key('clearBinder'),
+                      onPressed: () => _clearBinder(context),
+                      child: const Text('Clear Want List'),
+                    ),
+                  if (inOwnedBinder)
+                    PopupMenuButton<String>(
+                      key: const Key('binderOverflow'),
+                      tooltip: 'Binder actions',
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (action) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!context.mounted) return;
+                          if (action == 'clear') _clearBinder(context);
+                          if (action == 'share') _shareBinder(context);
+                        });
+                      },
+                      itemBuilder: (_) => [
+                        if (openRows.isNotEmpty)
+                          const PopupMenuItem(
+                            key: Key('clearBinder'),
+                            value: 'clear',
+                            child: Text('Clear Binder'),
+                          ),
+                        const PopupMenuItem(
+                          key: Key('shareBinder'),
+                          value: 'share',
+                          child: Text('Share Binder'),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+        body: openId == null
+            ? BinderGrid(
+                onOpen: (id) {
+                  ref.read(binderFiltersProvider.notifier).clear();
+                  ref.read(openBinderIdProvider.notifier).open(id);
+                },
+                onRename: (id) => _renameBinder(context, id),
+                onDelete: (id) => _deleteBinder(context, id),
+                onClear: (id) => _clearBinder(context, clientId: id),
+              )
+            : viewingWants
+                ? WantListPane(
+                    onAdd: () => _addBySearch(isWanted: true),
+                  )
+                : BinderList(binderId: openId, pricing: pricing),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: selectionBar ?? SizedBox(
+          key: const Key('binderActionRow'),
+          width: MediaQuery.sizeOf(context).width - 32,
+          height: 56,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (inOwnedBinder && openRows.isNotEmpty) ...[
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    heightFactor: 1,
+                    widthFactor: 1,
+                    child: ShowcaseTheme.mark(
+                      key: OnboardingKeys.binderTotal,
+                      title: TourCopy.binderTotalTitle,
+                      description: TourCopy.binderTotalBody,
+                      child: _CollectionStatsButton(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            settings:
+                                const RouteSettings(name: 'Collection Stats'),
+                            builder: (_) => const CollectionStatsScreen(),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 12),
+              ] else
+                const SizedBox.shrink(),
+              ShowcaseTheme.mark(
+                key: OnboardingKeys.binderFab,
+                title: TourCopy.binderFabTitle,
+                description: TourCopy.binderFabBody,
+                child: FloatingActionButton.extended(
+                  heroTag: 'binderFab',
+                  onPressed: () => viewingWants
+                      ? _addBySearch(isWanted: true)
+                      : _showBinderAddOptions(context),
+                  icon: const Icon(Icons.add),
+                  label: Text(viewingWants ? 'Add want' : 'Add card'),
+                ),
               ),
-              const SizedBox(width: 12),
-            ] else
-              const SizedBox.shrink(),
-            ShowcaseTheme.mark(
-              key: OnboardingKeys.binderFab,
-              title: TourCopy.binderFabTitle,
-              description: TourCopy.binderFabBody,
-              child: FloatingActionButton.extended(
-                heroTag: 'binderFab',
-                onPressed: () => viewingWants
-                    ? _addBySearch(isWanted: true)
-                    : _showBinderAddOptions(context),
-                icon: const Icon(Icons.add),
-                label: Text(viewingWants ? 'Add want' : 'Add card'),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  PreferredSizeWidget _selectionAppBar(Set<String> selection) {
+    final visibleKeys =
+        ref.read(filteredBinderProvider).map(binderRowKey).toList();
+    final allSelected = visibleKeys.every(selection.contains);
+    final notifier = ref.read(binderSelectionProvider.notifier);
+    return AppBar(
+      leading: IconButton(
+        key: const Key('binderSelectionClose'),
+        icon: const Icon(Icons.close),
+        tooltip: 'Cancel selection',
+        onPressed: notifier.clear,
+      ),
+      title: Text(
+        '${selection.length} selected',
+        key: const Key('binderSelectionCount'),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('binderSelectAll'),
+          onPressed: allSelected ? null : () => notifier.selectAll(visibleKeys),
+          child: const Text('Select all'),
+        ),
+      ],
+    );
+  }
+
+  /// Selected rows as they are now, so actions see current quantities.
+  List<BinderEntry> _selectedRows() {
+    final openId = ref.read(openBinderIdProvider);
+    if (openId == null) return const [];
+    final keys = ref.read(binderSelectionProvider);
+    return ownedInBinder(ref.read(binderProvider), openId)
+        .where((e) => keys.contains(binderRowKey(e)))
+        .toList();
+  }
+
+  static String _cards(int n) => '$n ${n == 1 ? 'card' : 'cards'}';
+
+  Future<void> _moveSelected(BuildContext context) async {
+    final openId = ref.read(openBinderIdProvider);
+    final rows = _selectedRows();
+    if (openId == null || rows.isEmpty) return;
+    final dests = Binder.gridOrder(ref.read(bindersProvider))
+        .where((b) => b.isLive && !b.isWant && b.clientId != openId)
+        .toList();
+    final dest = await showModalBottomSheet<Binder>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(title: Text('Move ${_cards(rows.length)} to…')),
+              for (final binder in dests)
+                ListTile(
+                  key: Key('bulkMoveDest-${binder.clientId}'),
+                  leading: const Icon(Icons.collections_bookmark_outlined),
+                  title: Text(binder.name),
+                  onTap: () => Navigator.pop(ctx, binder),
+                ),
+            ],
+          ),
+        ),
+      ),
+      routeSettings: const RouteSettings(name: 'Bulk Move'),
+    );
+    if (dest == null || !context.mounted) return;
+    final moved =
+        ref.read(binderProvider.notifier).moveEntries(rows, dest.clientId);
+    ref.read(binderSelectionProvider.notifier).clear();
+    _toast(
+      context,
+      moved == rows.length
+          ? 'Moved ${_cards(moved)} to ${dest.name}'
+          : 'Moved $moved of ${_cards(rows.length)} to ${dest.name}',
+    );
+  }
+
+  /// Puts one copy of each selected card on my side of the trade. The cards
+  /// stay in the Binder until the trade is confirmed.
+  void _tradeSelected(BuildContext context) {
+    final rows = _selectedRows();
+    if (rows.isEmpty) return;
+    final trade = ref.read(tradeDraftProvider.notifier);
+    for (final row in rows) {
+      trade.addCard(TradeSide.have, row.card, source: 'binder_bulk');
+    }
+    ref.read(binderSelectionProvider.notifier).clear();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        key: const Key('binderBulkTradeSnack'),
+        content: Text('Added ${_cards(rows.length)} to your side of the trade'),
+        action: SnackBarAction(
+          label: 'View',
+          onPressed: () =>
+              ref.read(shellTabProvider.notifier).go(tradeTabIndex),
+        ),
+      ));
+  }
+
+  void _removeSelected(BuildContext context) {
+    final rows = _selectedRows();
+    if (rows.isEmpty) return;
+    final notifier = ref.read(binderProvider.notifier);
+    final removed = notifier.removeEntries(rows);
+    ref.read(binderSelectionProvider.notifier).clear();
+    if (removed.isEmpty) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        key: const Key('binderBulkRemovedSnack'),
+        content: Text('Removed ${_cards(removed.length)}'),
+        action: SnackBarAction(
+          key: const Key('binderBulkRemovedUndo'),
+          label: 'Undo',
+          onPressed: () => notifier.restore(removed),
+        ),
+      ));
   }
 
   int _count(List<BinderEntry> e) => e.fold<int>(0, (s, x) => s + x.quantity);
@@ -612,6 +757,107 @@ class _CollectionStatsButton extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Stands in for the Add card row while rows are selected.
+class _SelectionActionBar extends StatelessWidget {
+  const _SelectionActionBar({
+    required this.canMove,
+    required this.onMove,
+    required this.onTrade,
+    required this.onRemove,
+  });
+
+  final bool canMove;
+  final VoidCallback onMove;
+  final VoidCallback onTrade;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+      key: const Key('binderSelectionBar'),
+      width: MediaQuery.sizeOf(context).width - 32,
+      padding: const EdgeInsets.all(AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: AppRadii.xlAll,
+        border: Border.all(color: t.border),
+        boxShadow: t.shadowLg,
+      ),
+      child: Row(
+        children: [
+          _SelectionAction(
+            key: const Key('binderBulkMove'),
+            icon: Icons.drive_file_move_outline,
+            label: 'Move',
+            color: t.text,
+            onTap: canMove ? onMove : null,
+          ),
+          _SelectionAction(
+            key: const Key('binderBulkTrade'),
+            icon: Icons.swap_horiz_rounded,
+            label: 'Add to trade',
+            color: t.text,
+            onTap: onTrade,
+          ),
+          _SelectionAction(
+            key: const Key('binderBulkRemove'),
+            icon: Icons.delete_outline_rounded,
+            label: 'Remove',
+            color: t.loss,
+            onTap: onRemove,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectionAction extends StatelessWidget {
+  const _SelectionAction({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = onTap == null ? context.tokens.textFaint : color;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadii.mdAll,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 22, color: c),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: c,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
           ),
         ),
       ),

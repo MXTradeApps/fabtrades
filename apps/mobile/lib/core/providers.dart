@@ -799,6 +799,9 @@ final binderShareRepositoryProvider = Provider<BinderShareRepository>(
 final shellTabProvider =
     NotifierProvider<ShellTabNotifier, int?>(ShellTabNotifier.new);
 
+/// HomeShell's Trade tab, for [shellTabProvider].
+const tradeTabIndex = 1;
+
 class ShellTabNotifier extends Notifier<int?> {
   @override
   int? build() => null;
@@ -818,6 +821,30 @@ class OpenBinderIdNotifier extends Notifier<String?> {
   void open(String binderId) => state = binderId;
 
   void close() => state = null;
+}
+
+/// Identity of an owned row inside the open Binder (printing + condition).
+String binderRowKey(BinderEntry e) => '${e.card.id}|${e.condition}';
+
+/// Rows picked in the open Binder's selection mode, by [binderRowKey]. Empty
+/// means selection mode is off. Opening, switching or leaving a Binder ends it.
+final binderSelectionProvider =
+    NotifierProvider<BinderSelectionNotifier, Set<String>>(
+        BinderSelectionNotifier.new);
+
+class BinderSelectionNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() {
+    ref.watch(openBinderIdProvider);
+    return const {};
+  }
+
+  void toggle(String key) => state =
+      state.contains(key) ? ({...state}..remove(key)) : {...state, key};
+
+  void selectAll(Iterable<String> keys) => state = {...state, ...keys};
+
+  void clear() => state = const {};
 }
 
 class BindersNotifier extends Notifier<List<Binder>> {
@@ -1088,6 +1115,57 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
     if (missing.isEmpty) return;
     state = [...missing, ...state];
     _persist();
+  }
+
+  /// Removes these exact owned rows (printing + Binder + condition) in one
+  /// save and returns what was removed, for an Undo via [restore].
+  List<BinderEntry> removeEntries(Iterable<BinderEntry> rows) {
+    bool picked(BinderEntry e) => rows.any((r) =>
+        !e.isWanted &&
+        !r.isWanted &&
+        e.card.id == r.card.id &&
+        e.resolvedBinderId == r.resolvedBinderId &&
+        e.condition == r.condition);
+    final removed = state.where(picked).toList();
+    if (removed.isEmpty) return removed;
+    state = state.where((e) => !picked(e)).toList();
+    _persist();
+    ref.read(analyticsProvider).capture('binder_bulk_action', {
+      'action': 'remove',
+      'count': removed.length,
+    });
+    return removed;
+  }
+
+  /// Moves every copy of each owned row into [toBinderId] in one save.
+  /// Returns how many rows moved; rows that can't move stay where they are.
+  int moveEntries(Iterable<BinderEntry> rows, String toBinderId) {
+    final binders = ref.read(bindersProvider);
+    var next = state;
+    var moved = 0;
+    for (final row in rows) {
+      if (row.isWanted || row.resolvedBinderId == null) continue;
+      final result = moveBinderCopies(
+        binders: binders,
+        entries: next,
+        fromBinderId: row.resolvedBinderId!,
+        toBinderId: toBinderId,
+        printingId: row.card.id,
+        condition: row.condition,
+        quantity: row.quantity,
+      );
+      if (!result.ok) continue;
+      next = result.entries;
+      moved++;
+    }
+    if (moved == 0) return 0;
+    state = next;
+    _persist();
+    ref.read(analyticsProvider).capture('binder_bulk_action', {
+      'action': 'move',
+      'count': moved,
+    });
+    return moved;
   }
 
   /// Drops every owned row in [binderId]. Want List rows stay.
