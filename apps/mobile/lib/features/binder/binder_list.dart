@@ -9,6 +9,7 @@ import '../../app/printing_picker.dart';
 import '../../app/theme.dart';
 import '../../app/widgets.dart';
 import '../../core/data/card_repository.dart';
+import '../../core/logic/binder_value_snapshot.dart';
 import '../../core/logic/pricing.dart';
 import '../../core/models/binder.dart';
 import '../../core/models/binder_entry.dart';
@@ -422,12 +423,40 @@ class _EntryRow extends ConsumerWidget {
     }
   }
 
+  /// Removes this row and offers Undo, since a swipe or a stray − is easy.
+  void _removeWithUndo(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(binderProvider.notifier);
+    final removed = ref
+        .read(binderProvider)
+        .where((e) =>
+            !e.isWanted &&
+            e.card.id == entry.card.id &&
+            e.resolvedBinderId == binderId)
+        .toList();
+    notifier.remove(entry.card.id, entry.isWanted, binderId: binderId);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        key: const Key('binderRemovedSnack'),
+        content: Text('Removed ${entry.card.name}'),
+        action: SnackBarAction(
+          key: const Key('binderRemovedUndo'),
+          label: 'Undo',
+          onPressed: () => notifier.restore(removed),
+        ),
+      ));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final notifier = ref.read(binderProvider.notifier);
     final card = entry.card;
-    final lineValue = (pricing.value(card) ?? 0) * entry.quantity;
+    final unit = pricing.value(card);
+    // Unpriced reads `—`, matching the Binder tile and the web list.
+    final lineLabel = isPricedField(unit)
+        ? pricing.formatValue(unit! * entry.quantity)
+        : '—';
     final catalog = ref.watch(catalogProvider).asData?.value ?? const [];
     final dests = Binder.gridOrder(liveBinders)
         .where((b) => b.isLive && !b.isWant && b.clientId != binderId)
@@ -443,11 +472,7 @@ class _EntryRow extends ConsumerWidget {
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      onDismissed: (_) => notifier.remove(
-        card.id,
-        entry.isWanted,
-        binderId: binderId,
-      ),
+      onDismissed: (_) => _removeWithUndo(context, ref),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
         child: Row(
@@ -503,7 +528,8 @@ class _EntryRow extends ConsumerWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(pricing.formatValue(lineValue),
+                Text(lineLabel,
+                    key: Key('binderRowValue-${card.id}'),
                     style: theme.textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.w800)),
                 if (pricing.lowPriceLabel(card) != null)
@@ -519,12 +545,14 @@ class _EntryRow extends ConsumerWidget {
                     entry.quantity + 1,
                     binderId: binderId,
                   ),
-                  onDec: () => notifier.setQuantity(
-                    card.id,
-                    entry.isWanted,
-                    entry.quantity - 1,
-                    binderId: binderId,
-                  ),
+                  onDec: () => entry.quantity <= 1
+                      ? _removeWithUndo(context, ref)
+                      : notifier.setQuantity(
+                          card.id,
+                          entry.isWanted,
+                          entry.quantity - 1,
+                          binderId: binderId,
+                        ),
                 ),
               ],
             ),

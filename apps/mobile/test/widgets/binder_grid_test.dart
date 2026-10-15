@@ -40,8 +40,8 @@ void main() {
     expect(find.byKey(const Key('binderTile-system:want')), findsOneWidget);
     expect(find.byKey(const Key('binderTile-system:collection')), findsOneWidget);
     expect(find.byKey(const Key('binderTileName-system:want')), findsOneWidget);
-    expect(find.widgetWithText(Tab, 'Want List (0)'), findsOneWidget);
-    expect(find.widgetWithText(Tab, 'Binder (0)'), findsOneWidget);
+    // Want List lives only in the grid now, not as a second tab.
+    expect(find.byType(TabBar), findsNothing);
   });
 
   testWidgets('empty tiles show 0, true-zero value, and no cover', (tester) async {
@@ -147,8 +147,6 @@ void main() {
     expect(find.byKey(const Key('collectionStatsButton')), findsOneWidget);
     expect(find.text('Trade Binder'), findsOneWidget);
     expect(find.text('My Binders'), findsNothing);
-    expect(find.widgetWithText(Tab, 'Want List (0)'), findsNothing);
-    expect(find.widgetWithText(Tab, 'Binder (1)'), findsNothing);
     expect(find.byKey(const Key('binderOverflow')), findsOneWidget);
     expect(find.byKey(const Key('clearBinder')), findsNothing);
 
@@ -158,7 +156,6 @@ void main() {
     expect(find.byKey(const Key('binderGrid')), findsOneWidget);
     expect(find.text('Alpha'), findsNothing);
     expect(find.text('My Binders'), findsOneWidget);
-    expect(find.widgetWithText(Tab, 'Want List (0)'), findsOneWidget);
   });
 
   testWidgets('Clear Binder confirms then empties the open Binder',
@@ -322,15 +319,6 @@ void main() {
     expect(find.text('Add want'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('binderBackToGrid')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('binderGrid')), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(Tab, 'Want List (1)'));
-    await tester.pumpAndSettle();
-    expect(find.text('Wanted Card'), findsOneWidget);
-    expect(find.byKey(const Key('binderGrid')), findsNothing);
-
-    await tester.tap(find.widgetWithText(Tab, 'Binder (0)'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('binderGrid')), findsOneWidget);
   });
@@ -593,5 +581,96 @@ void main() {
     expect(find.byKey(const Key('copyBinderText')), findsOneWidget);
     expect(find.text('Copy Link to Binder'), findsOneWidget);
     expect(find.text('Copy Binder as Text'), findsOneWidget);
+  });
+
+  testWidgets('Share in a non-trade Binder only copies as text',
+      (tester) async {
+    final container = await pumpGrid(tester);
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'a-Normal', name: 'Alpha'),
+          binderId: BinderIds.collection,
+        );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('binderTile-system:collection')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('binderOverflow')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('shareBinder')));
+    await tester.pumpAndSettle();
+
+    // Share links only show the Trade Binder, so Collection cannot offer one.
+    expect(find.byKey(const Key('copyBinderLink')), findsNothing);
+    expect(find.byKey(const Key('copyBinderText')), findsOneWidget);
+  });
+
+  testWidgets('Add card on the grid asks which Binder first', (tester) async {
+    await pumpGrid(tester);
+
+    await tester.tap(find.widgetWithText(FloatingActionButton, 'Add card'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('addTargetBinderSheet')), findsOneWidget);
+    expect(find.byKey(const Key('addTarget-system:want')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('addTarget-system:collection')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<Text>(find.byKey(const Key('binderHomeTitle'))).data,
+      'Collection',
+    );
+    expect(find.text('Scan cards'), findsWidgets);
+    expect(find.text('Add by search'), findsWidgets);
+  });
+
+  testWidgets('removing a row offers Undo that restores it', (tester) async {
+    final container = await pumpGrid(tester);
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'a-Normal', name: 'Alpha', tcgMarket: 3),
+          quantity: 2,
+          binderId: BinderIds.trade,
+        );
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'b-Normal', name: 'Beta', tcgMarket: 1),
+          binderId: BinderIds.trade,
+        );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('binderRow-a-Normal')),
+      const Offset(-500, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Alpha'), findsNothing);
+    expect(find.byKey(const Key('binderRemovedSnack')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('binderRemovedUndo')));
+    await tester.pumpAndSettle();
+    final alpha = container
+        .read(binderProvider)
+        .where((e) => e.card.id == 'a-Normal')
+        .toList();
+    expect(alpha, hasLength(1));
+    expect(alpha.single.quantity, 2);
+    expect(alpha.single.resolvedBinderId, BinderIds.trade);
+    expect(find.text('Alpha'), findsOneWidget);
+  });
+
+  testWidgets('unpriced rows show a dash, not \$0.00', (tester) async {
+    final container = await pumpGrid(tester);
+    container.read(binderProvider.notifier).add(
+          buildCard(id: 'u-Normal', name: 'Unpriced'),
+          binderId: BinderIds.trade,
+        );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('binderTile-system:trade')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<Text>(find.byKey(const Key('binderRowValue-u-Normal'))).data,
+      '—',
+    );
   });
 }

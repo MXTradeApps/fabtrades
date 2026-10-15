@@ -92,7 +92,7 @@ void main() {
     expect(find.byKey(const Key('importFabrary')), findsOneWidget);
   });
 
-  testWidgets('Want List tab and app Settings have no Fabrary import',
+  testWidgets('Want List and app Settings have no Fabrary import',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -105,7 +105,7 @@ void main() {
       seed: _onboarded(),
     );
     await tester.pump();
-    await tester.tap(find.widgetWithText(Tab, 'Want List (0)'));
+    await tester.tap(find.byKey(const Key('binderTile-system:want')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('binderSettings')), findsNothing);
     expect(find.byKey(const Key('importFabrary')), findsNothing);

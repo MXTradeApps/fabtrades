@@ -794,6 +794,20 @@ final binderShareRepositoryProvider = Provider<BinderShareRepository>(
 );
 
 /// Currently drilled-in Binder, or null when the grid is showing.
+/// A request from inside a tab to switch the shell's bottom tab. HomeShell
+/// listens, switches, then clears it.
+final shellTabProvider =
+    NotifierProvider<ShellTabNotifier, int?>(ShellTabNotifier.new);
+
+class ShellTabNotifier extends Notifier<int?> {
+  @override
+  int? build() => null;
+
+  void go(int index) => state = index;
+
+  void clear() => state = null;
+}
+
 final openBinderIdProvider = NotifierProvider<OpenBinderIdNotifier, String?>(
     OpenBinderIdNotifier.new);
 
@@ -1060,6 +1074,20 @@ class BinderNotifier extends Notifier<List<BinderEntry>> {
       isWanted ? 'want_list_card_removed' : 'binder_card_removed',
       {'card_id': cardId},
     );
+  }
+
+  /// Puts back rows removed a moment ago (the Undo on a removal). A row
+  /// whose identity has been re-added since is left as it is now.
+  void restore(List<BinderEntry> rows) {
+    final missing = rows.where((row) => !state.any((e) =>
+        e.card.id == row.card.id &&
+        e.isWanted == row.isWanted &&
+        (row.isWanted ||
+            (e.resolvedBinderId == row.resolvedBinderId &&
+                e.condition == row.condition))));
+    if (missing.isEmpty) return;
+    state = [...missing, ...state];
+    _persist();
   }
 
   /// Drops every owned row in [binderId]. Want List rows stay.
