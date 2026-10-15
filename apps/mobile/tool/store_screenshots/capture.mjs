@@ -50,8 +50,29 @@ page.on('pageerror', (e) => console.error('page error:', e.message.slice(0, 300)
 
 const settle = (ms = 1500) => page.waitForTimeout(ms);
 
+// Card art loads lazily from the CDN; track it so captures wait for it.
+const pendingImages = new Set();
+const isImage = (r) => r.resourceType() === 'image' || /\.(jpe?g|png|webp)(\?|$)/.test(r.url());
+page.on('request', (r) => isImage(r) && pendingImages.add(r));
+page.on('requestfinished', (r) => pendingImages.delete(r));
+page.on('requestfailed', (r) => pendingImages.delete(r));
+
+async function imagesLoaded(timeout = 30000) {
+  const end = Date.now() + timeout;
+  let quietSince = Date.now();
+  while (Date.now() < end) {
+    if (pendingImages.size) quietSince = Date.now();
+    else if (Date.now() - quietSince > 2000) return;
+    await page.waitForTimeout(250);
+  }
+  console.warn(`images still loading after ${timeout}ms`);
+}
+
 async function shot(name) {
-  await settle(2500);
+  await settle(1000);
+  await imagesLoaded();
+  // One more beat for decoded images to paint.
+  await settle(1500);
   const file = path.join(outDir, `${name}.png`);
   await page.screenshot({ path: file });
   console.log('captured', file);
@@ -196,7 +217,7 @@ await settle();
 try {
   await tab('Lend').tap();
   await settle();
-  await button(new RegExp(`^${seed.lend[0].person}`)).tap();
+  await page.getByRole('button').filter({ hasText: seed.lend[0].person }).first().tap();
   await settle(3000);
   await shot('05-lend');
   // The value card has no semantics node of its own, so grow its label's box
