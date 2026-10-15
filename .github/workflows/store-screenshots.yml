@@ -75,11 +75,11 @@ jobs:
           if ls apps/mobile/tool/store_screenshots/out/raw/debug-*.png >/dev/null 2>&1; then
             mkdir -p screenshots/debug
             cp apps/mobile/tool/store_screenshots/out/raw/debug-*.png screenshots/debug/
-            git add screenshots/debug
+            git add -f screenshots/debug
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add screenshots/final
+          git add -f screenshots/final
           if git diff --cached --quiet; then
             echo "No screenshot changes."
           else
