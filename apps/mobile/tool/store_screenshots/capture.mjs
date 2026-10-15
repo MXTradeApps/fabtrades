@@ -69,9 +69,12 @@ page.on('request', (r) => isImage(r) && pendingImages.add(r));
 page.on('requestfinished', (r) => pendingImages.delete(r));
 page.on('requestfailed', (r) => {
   pendingImages.delete(r);
-  if (isImage(r)) console.warn('image failed:', r.url(), r.failure()?.errorText);
+  // Set logos come from a CDN that refuses this origin; only card art matters here.
+  if (isImage(r) && isCardArt(r.url())) console.warn('card art failed:', r.url(), r.failure()?.errorText);
 });
 page.on('response', (r) => isImage(r.request()) && r.status() >= 400 && console.warn('image', r.status(), r.url()));
+const isCardArt = (url) => /tcgplayer-cdn|legendstory/.test(url);
+page.on('requestfinished', (r) => process.env.DEBUG_ART && isCardArt(r.url()) && console.log('art loaded', r.url()));
 
 async function imagesLoaded(timeout = 30000) {
   const end = Date.now() + timeout;
@@ -87,8 +90,9 @@ async function imagesLoaded(timeout = 30000) {
 async function shot(name) {
   await settle(1000);
   await imagesLoaded();
-  // One more beat for decoded images to paint.
-  await settle(1500);
+  // Flutter decodes and paints art a while after it downloads.
+  await settle(Number(process.env.PAINT_WAIT ?? 8000));
+  await imagesLoaded();
   const file = path.join(outDir, `${name}.png`);
   await page.screenshot({ path: file });
   console.log('captured', file);

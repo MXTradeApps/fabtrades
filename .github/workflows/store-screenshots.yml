@@ -52,7 +52,7 @@ jobs:
         working-directory: apps/mobile/tool/store_screenshots
         run: |
           (cd ../../build/web && python3 -m http.server 8787 >/dev/null 2>&1 &)
-          node capture.mjs http://localhost:8787/ out/raw
+          DEBUG_ART=1 node capture.mjs http://localhost:8787/ out/raw
 
       - name: Frame
         if: always()
