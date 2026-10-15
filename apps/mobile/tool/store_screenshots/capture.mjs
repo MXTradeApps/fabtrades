@@ -25,10 +25,10 @@ const H = 932 - 54;
 await mkdir(outDir, { recursive: true });
 
 const browser = await chromium.launch({
-  // Full Chromium rather than the headless shell: the shell's image decoder
-  // leaves some card art black.
-  channel: process.env.CHROMIUM_CHANNEL ?? 'chromium',
-  args: ['--proxy-bypass-list=localhost;127.0.0.1', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+  channel: process.env.CHROMIUM_CHANNEL,
+  // Without a GPU, CanvasKit's WebGL path paints most card art black; with
+  // WebGL off it falls back to software rendering, which draws it all.
+  args: ['--proxy-bypass-list=localhost;127.0.0.1', '--disable-webgl', '--disable-webgl2'],
   proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY } : undefined,
 });
 const context = await browser.newContext({
@@ -41,13 +41,7 @@ const context = await browser.newContext({
   timezoneId: 'America/New_York',
 });
 
-// Dev hook: route Supabase to fixtures when the network can't reach it.
-if (process.env.MOCK_ROUTES) {
-  const { install } = await import(path.resolve(process.env.MOCK_ROUTES));
-  await install(context);
-}
-
-// Flutter web decodes card art in WebGL, which needs CORS, and the card CDN
+// Flutter web uploads card art to the GPU, which needs CORS, and the card CDN
 // doesn't always send the header. Fetch the art here and add it.
 await context.route(/tcgplayer-cdn\.tcgplayer\.com|legendstory-production/, async (route) => {
   try {
@@ -58,6 +52,12 @@ await context.route(/tcgplayer-cdn\.tcgplayer\.com|legendstory-production/, asyn
     await route.abort();
   }
 });
+
+// Dev hook (registered last so it wins): route Supabase to fixtures when the network can't reach it.
+if (process.env.MOCK_ROUTES) {
+  const { install } = await import(path.resolve(process.env.MOCK_ROUTES));
+  await install(context);
+}
 
 const page = await context.newPage();
 page.on('console', (m) => process.env.DEBUG && console.log('console:', m.text().slice(0, 200)));
