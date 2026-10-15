@@ -189,19 +189,28 @@ await settle();
 await page.getByRole('group', { name: /^Trade Binder/ }).first().tap();
 await settle(3000);
 await shot('04-binder');
+await button('Back').tap().catch(() => {});
+await settle();
 
 // 05 Track every loan
-await tab('Lend').tap();
-await settle();
-await button(new RegExp(`^${seed.lend[0].person}`)).tap();
-await settle(3000);
-await shot('05-lend');
-// The value card has no semantics node of its own, so grow its label's box
-// out to the card (full width, two lines tall).
-{
-  const label = await page.locator('flt-semantics').filter({ hasText: /^Lent out value/ }).last().boundingBox();
-  if (label) boxes['05-lend'] = { x: 8, y: label.y - 14, w: W - 16, h: 68 };
-  else console.warn('no breakout panel found for 05-lend');
+try {
+  await tab('Lend').tap();
+  await settle();
+  await button(new RegExp(`^${seed.lend[0].person}`)).tap();
+  await settle(3000);
+  await shot('05-lend');
+  // The value card has no semantics node of its own, so grow its label's box
+  // out to the card (full width, two lines tall).
+  {
+    const label = await page.locator('flt-semantics').filter({ hasText: /^Lent out value/ }).last().boundingBox();
+    if (label) boxes['05-lend'] = { x: 8, y: label.y - 14, w: W - 16, h: 68 };
+    else console.warn('no breakout panel found for 05-lend');
+  }
+} catch (e) {
+  // Keep the other screens; leave a picture of what the screen looked like.
+  console.error('05-lend failed:', e.message);
+  await shot('debug-05-lend');
+  process.exitCode = 1;
 }
 
 await writeFile(path.join(outDir, 'boxes.json'), JSON.stringify(boxes, null, 2));

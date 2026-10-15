@@ -55,10 +55,12 @@ jobs:
           node capture.mjs http://localhost:8787/ out/raw
 
       - name: Frame
+        if: always()
         working-directory: apps/mobile/tool/store_screenshots
         run: node compose.mjs out/raw out
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: store-screenshots
           path: apps/mobile/tool/store_screenshots/out
