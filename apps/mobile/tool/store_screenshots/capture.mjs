@@ -50,7 +50,8 @@ await context.route(/tcgplayer-cdn\.tcgplayer\.com|legendstory-production/, asyn
   try {
     const response = await route.fetch();
     await route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } });
-  } catch {
+  } catch (e) {
+    console.warn('card art fetch failed:', route.request().url(), e.message);
     await route.abort();
   }
 });
@@ -66,7 +67,11 @@ const pendingImages = new Set();
 const isImage = (r) => r.resourceType() === 'image' || /\.(jpe?g|png|webp)(\?|$)/.test(r.url());
 page.on('request', (r) => isImage(r) && pendingImages.add(r));
 page.on('requestfinished', (r) => pendingImages.delete(r));
-page.on('requestfailed', (r) => pendingImages.delete(r));
+page.on('requestfailed', (r) => {
+  pendingImages.delete(r);
+  if (isImage(r)) console.warn('image failed:', r.url(), r.failure()?.errorText);
+});
+page.on('response', (r) => isImage(r.request()) && r.status() >= 400 && console.warn('image', r.status(), r.url()));
 
 async function imagesLoaded(timeout = 30000) {
   const end = Date.now() + timeout;
