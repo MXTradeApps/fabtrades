@@ -275,7 +275,7 @@ class _PlayerLifePanelState extends State<_PlayerLifePanel> {
     final pending = player.pendingDelta;
     final lifeSize = widget.landscape ? 96.0 : 120.0;
 
-    final deltaColor = pending >= 0 ? AppTheme.positive : AppTheme.negative;
+    final deltaColor = pending >= 0 ? context.tokens.gain : context.tokens.loss;
     final deltaText = pending > 0 ? '+$pending' : '$pending';
 
     return ColoredBox(

@@ -99,7 +99,7 @@ class _HistoryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final deltaColor =
-        entry.delta >= 0 ? AppTheme.positive : AppTheme.negative;
+        entry.delta >= 0 ? context.tokens.gain : context.tokens.loss;
     final deltaText =
         entry.delta > 0 ? '+${entry.delta}' : '${entry.delta}';
     final align =

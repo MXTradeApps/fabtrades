@@ -97,7 +97,7 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
                         child: _TradeSideList(
                           side: TradeSide.want,
                           title: 'Their cards',
-                          accent: AppTheme.wantAccent,
+                          accent: context.tokens.accent,
                           items: trade.wantItems,
                           symbol: trade.currencySymbol,
                           addLabel: 'Add their cards',
@@ -129,7 +129,7 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
                         child: _TradeSideList(
                           side: TradeSide.have,
                           title: 'My cards',
-                          accent: AppTheme.haveAccent,
+                          accent: context.tokens.gain,
                           items: trade.haveItems,
                           symbol: trade.currencySymbol,
                           addLabel: 'Add my cards',
@@ -451,7 +451,7 @@ class _DragBar extends StatelessWidget {
     final shownBalanced = shownDiff.abs() < 0.01;
     final Color deltaColor = shownBalanced
         ? theme.colorScheme.onSurfaceVariant
-        : (shownDiff >= 0 ? AppTheme.positive : AppTheme.negative);
+        : (shownDiff >= 0 ? context.tokens.gain : context.tokens.loss);
     final String deltaText = shownBalanced
         ? (showLow ? 'Low Even' : 'Even')
         : showLow
@@ -491,7 +491,7 @@ class _DragBar extends StatelessWidget {
             _summaryRow(
               theme,
               icon: Icons.south,
-              accent: AppTheme.wantAccent,
+              accent: context.tokens.accent,
               label: 'Receiving',
               value: theirValue,
             ),
@@ -517,7 +517,7 @@ class _DragBar extends StatelessWidget {
             _summaryRow(
               theme,
               icon: Icons.north,
-              accent: AppTheme.haveAccent,
+              accent: context.tokens.gain,
               label: 'Giving',
               value: myValue,
             ),

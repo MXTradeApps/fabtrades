@@ -102,13 +102,13 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
                                   onTap: () => _editBinderQty(context, owned),
                                   child: PillBadge(
                                       label: 'Own $owned',
-                                      color: AppTheme.positive,
+                                      color: context.tokens.gain,
                                       icon: Icons.check),
                                 ),
                               if (wanted)
                                 PillBadge(
                                     label: 'Wanted',
-                                    color: AppTheme.wantAccent,
+                                    color: context.tokens.accent,
                                     icon: Icons.favorite),
                             ],
                           ),
@@ -644,8 +644,8 @@ class _ActionBar extends ConsumerWidget {
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
-                    backgroundColor: AppTheme.wantAccent.withValues(alpha: 0.15),
-                    foregroundColor: AppTheme.wantAccent),
+                    backgroundColor: context.tokens.accent.withValues(alpha: 0.15),
+                    foregroundColor: context.tokens.accent),
                 icon: const Icon(Icons.favorite_border),
                 label: const Text('Want List'),
                 onPressed: () => addToBinderOrUpsell(

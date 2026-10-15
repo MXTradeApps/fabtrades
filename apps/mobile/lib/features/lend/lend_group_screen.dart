@@ -29,7 +29,7 @@ class LendGroupScreen extends ConsumerWidget {
       );
     }
 
-    final color = group.isBorrowing ? AppTheme.wantAccent : AppTheme.positive;
+    final color = group.isBorrowing ? context.tokens.accent : context.tokens.gain;
     final title = group.personName?.isNotEmpty == true
         ? group.personName!
         : (group.isBorrowing ? 'Borrowing' : 'Lent out');
@@ -178,7 +178,7 @@ class _ItemRow extends ConsumerWidget {
       key: ValueKey('${groupId}_${card.id}'),
       direction: DismissDirection.endToStart,
       background: Container(
-        color: AppTheme.negative,
+        color: context.tokens.loss,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.white),

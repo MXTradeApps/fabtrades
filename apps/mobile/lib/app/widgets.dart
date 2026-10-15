@@ -502,10 +502,10 @@ class CardRow extends ConsumerWidget {
 
     final ownership = <Widget>[
       if (owned > 0)
-        PillBadge(label: 'Own $owned', color: AppTheme.positive, icon: Icons.check),
+        PillBadge(label: 'Own $owned', color: context.tokens.gain, icon: Icons.check),
       if (wanted)
         PillBadge(
-            label: 'Wanted', color: AppTheme.wantAccent, icon: Icons.favorite),
+            label: 'Wanted', color: context.tokens.accent, icon: Icons.favorite),
     ];
 
     return LayoutBuilder(

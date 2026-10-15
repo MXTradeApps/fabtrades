@@ -160,7 +160,7 @@ class _TradeFillerSheetState extends ConsumerState<_TradeFillerSheet> {
         child: Column(
           children: [
             Icon(Icons.check_circle_outline,
-                size: 40, color: AppTheme.positive),
+                size: 40, color: context.tokens.gain),
             const SizedBox(height: 8),
             Text('Nothing to fill — the trade is balanced.',
                 style: theme.textTheme.bodyMedium),
