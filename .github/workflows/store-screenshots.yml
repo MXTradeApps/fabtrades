@@ -1,0 +1,88 @@
+name: Store screenshots
+
+# Regenerates the App Store and Play screenshots from the current UI and commits
+# them to the branch it ran on. See apps/mobile/tool/store_screenshots/README.md.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['claude/store-screenshots*']
+    paths:
+      - 'apps/mobile/tool/store_screenshots/**'
+      - '.github/workflows/store-screenshots.yml'
+
+concurrency:
+  group: store-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # PostHog's web SDK isn't loaded by web/index.html, so analytics setup would
+      # hang the web build at startup. Screenshots don't need it.
+      - name: Build the web app
+        working-directory: apps/mobile
+        run: |
+          jq '.POSTHOG_API_KEY = ""' env/production.json > "$RUNNER_TEMP/screenshots-env.json"
+          flutter pub get
+          flutter build web --release --no-web-resources-cdn --dart-define-from-file="$RUNNER_TEMP/screenshots-env.json"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        working-directory: apps/mobile/tool/store_screenshots
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Capture
+        working-directory: apps/mobile/tool/store_screenshots
+        run: |
+          (cd ../../build/web && python3 -m http.server 8787 >/dev/null 2>&1 &)
+          DEBUG_ART=1 node capture.mjs http://localhost:8787/ out/raw
+
+      - name: Frame
+        if: always()
+        working-directory: apps/mobile/tool/store_screenshots
+        run: node compose.mjs out/raw out
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: store-screenshots
+          path: apps/mobile/tool/store_screenshots/out
+
+      # Commits whatever was produced, so one broken screen doesn't lose the rest.
+      - name: Commit to the branch
+        if: always()
+        run: |
+          mkdir -p screenshots/final/play
+          cp apps/mobile/tool/store_screenshots/out/ios/*.jpg screenshots/final/ || true
+          cp apps/mobile/tool/store_screenshots/out/android/*.jpg screenshots/final/play/ || true
+          if ls apps/mobile/tool/store_screenshots/out/raw/debug-*.png >/dev/null 2>&1; then
+            mkdir -p screenshots/debug
+            cp apps/mobile/tool/store_screenshots/out/raw/debug-*.png screenshots/debug/
+            git add -f screenshots/debug
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -f screenshots/final
+          if git diff --cached --quiet; then
+            echo "No screenshot changes."
+          else
+            git commit -m "Regenerate store screenshots from the current UI"
+            git push
+          fi
