@@ -16,11 +16,12 @@ void main() {
     expect(find.text('Add my cards'), findsOneWidget);
     expect(find.text('Add their cards'), findsOneWidget);
     expect(find.text('Even'), findsOneWidget);
-    expect(find.text('Receiving'), findsOneWidget);
-    expect(find.text('Giving'), findsOneWidget);
+    expect(find.text('Even trade'), findsOneWidget);
+    expect(find.text('You get · 0'), findsOneWidget);
+    expect(find.text('You give · 0'), findsOneWidget);
     expect(find.text('TCGplayer'), findsNothing);
     expect(tester.getSize(find.byKey(const Key('tradeDragBar'))).height,
-        lessThan(88));
+        lessThan(108));
   });
 
   testWidgets('adding cards updates totals and the delta', (tester) async {
@@ -39,10 +40,11 @@ void main() {
 
     expect(find.text('Their Card'), findsOneWidget);
     expect(find.text('My Card'), findsOneWidget);
-    expect(find.text('Receiving'), findsOneWidget);
-    expect(find.text('Giving'), findsOneWidget);
+    expect(find.text('You get · 1'), findsOneWidget);
+    expect(find.text('You give · 1'), findsOneWidget);
     // theirs 10 - mine 4 => +$6.00 in your favor
     expect(find.text('+\$6.00'), findsOneWidget);
+    expect(find.text('You get \$6.00 more'), findsOneWidget);
   });
 
   testWidgets('clear action appears once the trade is non-empty',

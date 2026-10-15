@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/theme.dart';
 import '../../core/analytics/analytics.dart';
 import '../../core/config/legal_urls.dart';
 import '../../core/config/supabase_config.dart';
@@ -186,7 +187,7 @@ class SettingsSectionLabel extends StatelessWidget {
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
             letterSpacing: 0.8,
             fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.primary,
+            color: context.tokens.textMuted,
           ),
     );
   }

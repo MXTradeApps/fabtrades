@@ -80,7 +80,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('tab and app bar say Home, not Browse, and there is no fifth tab',
+  testWidgets('tab and app bar say Home, not Browse, and the fifth slot is More',
       (tester) async {
     SharedPreferences.setMockInitialValues({
       OnboardingRepository.storageKey:
@@ -117,7 +117,9 @@ void main() {
 
     expect(find.text('Home'), findsWidgets);
     expect(find.text('Browse'), findsNothing);
-    expect(find.byType(NavigationDestination), findsNWidgets(4));
+    // Four tabs plus More, which opens a sheet rather than a fifth screen.
+    expect(find.byType(NavigationDestination), findsNWidgets(5));
+    expect(find.text('More'), findsOneWidget);
     expect(find.byIcon(Icons.home), findsOneWidget);
     expect(find.byIcon(Icons.grid_view), findsNothing);
   });

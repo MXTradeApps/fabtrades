@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:showcaseview/showcaseview.dart';
 
-import '../../app/app.dart';
 import '../../app/theme.dart';
 import '../../core/logic/binder_names.dart';
 import '../../core/logic/binder_text.dart';
@@ -169,9 +168,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen>
                   child: Text('Share Binder'),
                 ),
               ],
-            )
-          else
-            const AppMenuAction(),
+            ),
         ],
         bottom: inBinder
             ? null

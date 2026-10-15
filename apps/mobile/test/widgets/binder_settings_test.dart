@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:fabtrades/app/more_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,7 +59,7 @@ Future<ProviderContainer> _pumpImport(
 }
 
 void main() {
-  testWidgets('hamburger offers Import from Fabrary; binder tiles do not',
+  testWidgets('More sheet offers Import from Fabrary; binder tiles do not',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -80,7 +81,7 @@ void main() {
     await tester.tapAt(const Offset(8, 400));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Menu'));
+    showMoreSheet(tester.element(find.byType(BinderScreen)));
     await tester.pumpAndSettle();
     expect(find.text('Import from Fabrary'), findsOneWidget);
     await tester.tap(find.text('Import from Fabrary'));

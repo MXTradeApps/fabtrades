@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../app/app.dart';
 import '../../app/theme.dart';
 import '../../app/widgets.dart';
 import '../../core/logic/pricing.dart';
@@ -41,7 +40,7 @@ class _LendScreenState extends ConsumerState<LendScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lend'),
-        actions: const [AppMenuAction()],
+        
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(46),
           child: ShowcaseTheme.mark(

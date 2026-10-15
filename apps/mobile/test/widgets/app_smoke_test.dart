@@ -62,12 +62,13 @@ void main() {
     return container;
   }
 
-  testWidgets('boots with the four main tabs', (tester) async {
+  testWidgets('boots with the four main tabs and More', (tester) async {
     await launch(tester);
     expect(find.text('Home'), findsWidgets);
     expect(find.text('Trade'), findsWidgets);
     expect(find.text('Binder'), findsWidgets);
     expect(find.text('Lend'), findsWidgets);
+    expect(find.text('More'), findsWidgets);
     expect(find.byIcon(Icons.home), findsOneWidget);
   });
 
@@ -96,7 +97,7 @@ void main() {
   testWidgets('Life Tracker covers the tab bar', (tester) async {
     await launch(tester);
 
-    await tester.tap(find.byTooltip('Menu').hitTestable().first);
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Life Tracker'));
     await tester.pumpAndSettle();
