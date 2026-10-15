@@ -25,6 +25,9 @@ const H = 932 - 54;
 await mkdir(outDir, { recursive: true });
 
 const browser = await chromium.launch({
+  // Full Chromium rather than the headless shell: the shell's image decoder
+  // leaves some card art black.
+  channel: process.env.CHROMIUM_CHANNEL ?? 'chromium',
   args: ['--proxy-bypass-list=localhost;127.0.0.1', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
   proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY } : undefined,
 });
