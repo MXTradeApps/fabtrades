@@ -18,8 +18,16 @@ const BRAND = '#8B4513';
 const STATUS_BAR = 54; // points; matches the height capture.mjs leaves free
 
 // Same captions and order as the previous listing.
+// Scan needs a real camera, so it comes from a phone screenshot kept next to
+// this script (see README), with the match results lifted out.
 const screens = [
-  { raw: '01-scan', out: '01-scan-cards-instantly', title: ['SCAN', 'CARDS INSTANTLY'] },
+  {
+    raw: '01-scan',
+    out: '01-scan-cards-instantly',
+    title: ['SCAN', 'CARDS INSTANTLY'],
+    fallback: 'scan.png',
+    box: { x: 8, y: 428, w: 414, h: 176 },
+  },
   { raw: '02-trade', out: '02-balance-fair-trades', title: ['BALANCE', 'FAIR TRADES'] },
   { raw: '03-browse', out: '03-browse-live-prices', title: ['BROWSE', 'LIVE PRICES'] },
   { raw: '04-binder', out: '04-build-your-binder', title: ['BUILD', 'YOUR BINDER'] },
@@ -82,9 +90,10 @@ function html({ width, height, device }, screen, dataUrl, box) {
   * { box-sizing: border-box; margin: 0; }
   html, body { width: ${width}px; height: ${height}px; overflow: hidden; }
   body { background: radial-gradient(120% 70% at 50% 0%, #a0561f 0%, ${BRAND} 45%, #6e370f 100%); font-family: 'Archivo', sans-serif; position: relative; }
-  .title { position: absolute; top: ${device === 'iphone' ? 58 : 34}px; width: 100%; text-align: center; color: #fff; text-shadow: 0 3px 12px rgba(0,0,0,.25); }
+  .title { position: absolute; top: ${device === 'iphone' ? 58 : 34}px; width: 100%; text-align: center; color: #fff; text-shadow: 0 3px 12px rgba(0,0,0,.25);
+    display: flex; flex-direction: column; align-items: center; }
   .title .a { display: inline-block; white-space: nowrap; font-weight: 900; font-size: ${big}px; line-height: 1; letter-spacing: 1px; }
-  .title .b { font-weight: 800; font-size: ${small}px; line-height: 1.15; margin-top: 8px; letter-spacing: .5px; }
+  .title .b { white-space: nowrap; font-weight: 800; font-size: ${small}px; line-height: 1.15; margin-top: 8px; letter-spacing: .5px; }
   .phone { position: absolute; left: ${phoneLeft}px; top: ${phoneTop}px; width: ${phoneW}px; height: ${phoneH}px;
     border-radius: ${radius + bezel}px; background: #1b1b1d; padding: ${bezel}px;
     box-shadow: 0 0 0 2px #4a4a4e, 0 0 0 3.5px #2a2a2c, 0 30px 60px rgba(0,0,0,.45); }
@@ -124,18 +133,20 @@ for (const target of targets) {
     deviceScaleFactor: 3,
   });
   for (const screen of screens) {
-    const rawFile = path.join(rawDir, `${screen.raw}.png`);
+    let rawFile = path.join(rawDir, `${screen.raw}.png`);
+    if (!(await exists(rawFile)) && screen.fallback) rawFile = path.join(here, screen.fallback);
     if (!(await exists(rawFile))) {
       console.warn('skipping', screen.raw, '(no capture)');
       continue;
     }
     const dataUrl = `data:image/png;base64,${(await readFile(rawFile)).toString('base64')}`;
-    await page.setContent(html(target, screen, dataUrl, boxes[screen.raw]), { waitUntil: 'networkidle' });
+    await page.setContent(html(target, screen, dataUrl, boxes[screen.raw] ?? screen.box), { waitUntil: 'networkidle' });
     // Match the status bar to the app's top edge, and shrink long headlines to fit.
     await page.evaluate(async () => {
-      const a = document.querySelector('.title .a');
-      let size = parseFloat(getComputedStyle(a).fontSize);
-      while (a.getBoundingClientRect().width > innerWidth - 36 && size > 20) a.style.fontSize = `${--size}px`;
+      for (const line of document.querySelectorAll('.title > div')) {
+        let size = parseFloat(getComputedStyle(line).fontSize);
+        while (line.getBoundingClientRect().width > innerWidth - 36 && size > 12) line.style.fontSize = `${--size}px`;
+      }
       const img = document.querySelector('.app');
       await img.decode();
       const c = document.createElement('canvas');

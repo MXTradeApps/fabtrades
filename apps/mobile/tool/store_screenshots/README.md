@@ -29,9 +29,10 @@ It does not upload anything to either store.
 ## Limits
 
 - **Scan** can't be captured: the scanner needs a real camera and ML Kit, neither of
-  which runs on the web. Take that one on a phone (a scan with the match sheet up),
-  save it as `out/raw/01-scan.png` at 1290px wide with the status bar cropped off
-  (the top 162px of a 1290×2796 iPhone screenshot), and re-run `compose.mjs`.
+  which runs on the web. `compose.mjs` frames `scan.png` instead, a phone screenshot
+  of a scan with the match sheet up. To replace it, crop the status bar off a new
+  iPhone screenshot, scale it to 1290px wide, save it over `scan.png`, and adjust the
+  lifted-out box on the `01-scan` entry in `compose.mjs` if the results moved.
 - The web build uses Chromium's text rendering, so it is close to, but not
   pixel-identical with, the iOS build.
 
