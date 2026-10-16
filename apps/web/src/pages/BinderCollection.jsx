@@ -25,6 +25,7 @@ import {
 import {
     BookmarkBorderRounded,
     CollectionsBookmarkOutlined,
+    FileDownloadOutlined,
     FileUploadOutlined,
     InsightsOutlined,
     SortRounded,
@@ -67,6 +68,12 @@ import {
 } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
 import { formatBinderAsText } from '../utils/binderText.js';
+import {
+    buildFabraryExportRows,
+    downloadCsv,
+    fabraryExportFilename,
+    toFabraryCsv,
+} from '../utils/fabraryExport.js';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
 import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
@@ -504,6 +511,20 @@ const BinderCollection = ({ isWanted = false }) => {
         return next;
     };
 
+    const handleExportFabrary = () => {
+        const rows = buildFabraryExportRows({
+            owned: allOwned,
+            wants,
+            resolveCard: (entry) => catalogById.get(entry.cardId),
+        });
+        if (rows.length === 0) {
+            setToast('Nothing to export');
+            return;
+        }
+        downloadCsv(toFabraryCsv(rows), fabraryExportFilename());
+        setToast(`Exported ${rows.length} printings for Fabrary`);
+    };
+
     const handleCreateBinder = async () => {
         const name = promptName('New Binder');
         if (name == null) return;
@@ -902,6 +923,16 @@ const BinderCollection = ({ isWanted = false }) => {
                                     onClick={() => setImportOpen(true)}
                                 >
                                     Import from Fabrary
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    color="inherit"
+                                    data-testid="export-fabrary"
+                                    startIcon={<FileDownloadOutlined />}
+                                    onClick={handleExportFabrary}
+                                    disabled={allOwned.length === 0 && wants.length === 0}
+                                >
+                                    Export for Fabrary
                                 </Button>
                                 <Button
                                     variant="contained"
