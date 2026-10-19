@@ -78,8 +78,8 @@ class TradeOffer {
     final price = item.priceEach.round();
     return [
       if (item.quantity > 1) '${item.quantity}x',
-      if (foil != null) foil,
-      if (parsed.artAbbrev != null) parsed.artAbbrev!,
+      ?foil,
+      ?parsed.artAbbrev,
       parsed.baseName,
       if (price > 0) '$price',
     ].join(' ');
