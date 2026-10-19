@@ -42,8 +42,16 @@ class AuthRepository {
   /// listener running for the rest of the session.
   static const _browserRoundTrip = Duration(minutes: 10);
 
+  /// How long a failed launch waits to see whether the deep link beat it back.
+  /// The redirect lands within a second of the failure, so this only needs to
+  /// cover a slow token exchange.
+  static const _quickReturnGrace = Duration(seconds: 3);
+
   StreamSubscription<AuthState>? _returnFromBrowser;
   Timer? _returnFromBrowserTimeout;
+
+  /// Completes when the current browser handoff brings a session back.
+  Completer<void>? _sessionReturned;
 
   /// Session restored from disk at startup, or null when signed out. Reading
   /// this synchronously means the first frame already knows.
@@ -177,10 +185,24 @@ class AuthRepository {
     // not report back until the provider's page has finished loading, and on a
     // slow connection that can be later than we want to start listening.
     _closeBrowserOnReturn();
+    final returned = _sessionReturned!.future;
     final outcome = await _openProviderPage(provider);
+    if (outcome is SignInFailed && await _arrivesSoon(returned)) {
+      // On iOS the Safari view reports a failed launch when its very first
+      // page never finishes loading. That is exactly what happens when the
+      // provider remembers the customer and redirects straight back to the
+      // app: the page "fails" because it became a deep link, and the session
+      // shows up a moment later. Reporting that as a failure would leave the
+      // sheet showing an error over a sign-in that worked.
+      return const SignInSucceeded();
+    }
     if (outcome is! SignInPending) _stopWaitingForReturn();
     return outcome;
   }
+
+  Future<bool> _arrivesSoon(Future<void> returned) => returned
+      .then((_) => true)
+      .timeout(_quickReturnGrace, onTimeout: () => false);
 
   Future<SignInOutcome> _openProviderPage(OAuthProvider provider) async {
     try {
@@ -217,9 +239,11 @@ class AuthRepository {
   /// a reason to get out of the browser and let the app show what happened.
   void _closeBrowserOnReturn() {
     _stopWaitingForReturn();
+    final returned = _sessionReturned = Completer<void>();
     _returnFromBrowser = authStateChanges.listen(
       (state) {
         if (state.event == AuthChangeEvent.signedIn) {
+          if (!returned.isCompleted) returned.complete();
           unawaited(_dismissBrowser());
         }
       },

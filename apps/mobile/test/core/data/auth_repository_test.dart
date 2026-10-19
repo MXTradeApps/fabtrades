@@ -19,12 +19,16 @@ class _FakeBrowser extends UrlLauncherPlatform {
   int openCount = 0;
   int closeCount = 0;
 
+  /// Runs before the launch reports back, for redirects that finish first.
+  void Function()? onLaunch;
+
   @override
   LinkDelegate? get linkDelegate => null;
 
   @override
   Future<bool> launchUrl(String url, LaunchOptions options) async {
     openCount++;
+    onLaunch?.call();
     return opens;
   }
 
@@ -126,6 +130,22 @@ void main() {
 
     expect(outcome, isA<SignInFailed>());
     expect(browser.closeCount, 0);
+  });
+
+  test('counts a failed launch as success when the session comes straight back',
+      () async {
+    // iOS reports the launch as failed when the provider remembers the
+    // customer and redirects to the app before the first page finishes.
+    browser.opens = false;
+    browser.onLaunch = () => authStates.add(
+          AuthState(AuthChangeEvent.signedIn, null),
+        );
+
+    final outcome = await repository.signIn(AuthProviderKind.google);
+    await pumpEventQueue();
+
+    expect(outcome, isA<SignInSucceeded>());
+    expect(browser.closeCount, 1);
   });
 
   test('closes the browser only once per handoff', () async {
