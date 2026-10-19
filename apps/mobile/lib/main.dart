@@ -10,6 +10,7 @@ import 'app/app.dart';
 import 'core/config/posthog_config.dart';
 import 'core/config/supabase_config.dart';
 import 'core/data/purchases_repository.dart';
+import 'core/notifications/push_service.dart';
 import 'core/providers.dart';
 
 Future<void> main() async {
@@ -29,6 +30,9 @@ Future<void> main() async {
     await purchases.configure();
 
     await _setupPostHog();
+
+    // Push for price alerts. Never throws; without Firebase keys push is off.
+    await PushService.initialize();
 
     runApp(
       ProviderScope(

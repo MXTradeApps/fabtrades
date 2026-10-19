@@ -15,6 +15,9 @@ import '../features/onboarding/onboarding_repository.dart';
 import '../features/onboarding/showcase_theme.dart';
 import '../features/onboarding/tour_controller.dart';
 import '../features/onboarding/welcome_carousel.dart';
+import '../features/card_detail/card_detail_screen.dart';
+import '../features/price_alerts/price_alerts_screen.dart';
+import '../features/price_alerts/push_host.dart';
 import '../features/search/search_screen.dart';
 import '../features/sync/sync_host.dart';
 import '../features/trade/trade_screen.dart';
@@ -37,7 +40,9 @@ class FabTradesApp extends ConsumerWidget {
           ? ThemeMode.dark
           : ThemeMode.light,
       navigatorObservers: [PosthogObserver()],
-      home: const SyncHost(child: UpdatePromptHost(child: _OnboardingGate())),
+      home: const SyncHost(
+        child: PushHost(child: UpdatePromptHost(child: _OnboardingGate())),
+      ),
     );
   }
 }
@@ -201,6 +206,24 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     });
   }
 
+  /// Opens a tapped price alert notification on the current tab: the card
+  /// when it is in the catalog, otherwise the alerts list.
+  void _openFromPush(String cardId) {
+    final nav = _activeNav;
+    if (nav == null) return;
+    final card = cardId.isEmpty ? null : ref.read(catalogByIdProvider)[cardId];
+    nav.push(
+      MaterialPageRoute<void>(
+        builder: (_) => card == null
+            ? const PriceAlertsScreen(source: 'push')
+            : CardDetailScreen(card: card, source: 'price_alert_push'),
+        settings: RouteSettings(
+          name: card == null ? 'Price Alerts' : 'Card Detail',
+        ),
+      ),
+    );
+  }
+
   Widget _tabNavigator(int i) {
     return Navigator(
       key: _navKeys[i],
@@ -222,6 +245,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       if (next == null) return;
       ref.read(shellTabProvider.notifier).clear();
       if (next != _index) _selectTab(next);
+    });
+    ref.listen<String?>(pushOpenProvider, (_, next) {
+      if (next == null) return;
+      ref.read(pushOpenProvider.notifier).clear();
+      _openFromPush(next);
     });
     final draft = ref.watch(tradeDraftProvider);
     final tradeCount = draft.haveCount + draft.wantCount;
