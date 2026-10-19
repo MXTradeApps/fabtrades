@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box,
     Button,
+    Checkbox,
     CircularProgress,
     FormControl,
     IconButton,
@@ -45,6 +46,9 @@ export default function BinderEntryList({
     onRemove,
     onMove,
     onAddToTrade,
+    rowKey = (entry) => entry.cardId,
+    selectedKeys,
+    onToggleSelect,
 }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(BINDER_PAGE_SIZE);
@@ -121,11 +125,12 @@ export default function BinderEntryList({
                     const canOpen = Boolean(catalogById?.get(entry.cardId));
                     const market = card.market;
                     const priced = market != null && Number.isFinite(market) && market > 0;
+                    const key = rowKey(entry);
 
                     return (
                         <Box
                             component="li"
-                            key={entry.cardId}
+                            key={key}
                             data-testid={`binder-entry-row-${entry.cardId}`}
                             sx={{
                                 display: 'flex',
@@ -140,8 +145,21 @@ export default function BinderEntryList({
                                 borderColor: 'divider',
                                 transition: 'background-color 120ms ease',
                                 '&:hover': { bgcolor: 'action.hover' },
+                                ...(selectedKeys?.has(key) && { bgcolor: 'action.selected' }),
                             }}
                         >
+                            {onToggleSelect && (
+                                <Checkbox
+                                    size="small"
+                                    checked={Boolean(selectedKeys?.has(key))}
+                                    onChange={() => onToggleSelect(entry)}
+                                    inputProps={{
+                                        'aria-label': `Select ${card.name}`,
+                                        'data-testid': `binder-select-${key}`,
+                                    }}
+                                    sx={{ p: 0.5, ml: -0.5, flexShrink: 0 }}
+                                />
+                            )}
                             <CardThumbnail
                                 imageUrl={card.imageUrl}
                                 fallbackUrl={card.imageUrlFallback}
