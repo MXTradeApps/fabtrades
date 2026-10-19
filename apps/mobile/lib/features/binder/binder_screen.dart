@@ -28,6 +28,7 @@ import '../want_list/want_list_screen.dart';
 import 'binder_grid.dart';
 import 'binder_list.dart';
 import 'collection_stats_screen.dart';
+import 'sale_post_sheet.dart';
 
 class BinderScreen extends ConsumerStatefulWidget {
   const BinderScreen({super.key});
@@ -100,6 +101,7 @@ class _BinderScreenState extends ConsumerState<BinderScreen> {
                 .any((b) => b.isLive && !b.isWant && b.clientId != openId),
             onMove: () => _moveSelected(context),
             onTrade: () => _tradeSelected(context),
+            onSell: () => _sellSelected(context),
             onRemove: () => _removeSelected(context),
           )
         : null;
@@ -155,9 +157,16 @@ class _BinderScreenState extends ConsumerState<BinderScreen> {
                           if (!context.mounted) return;
                           if (action == 'clear') _clearBinder(context);
                           if (action == 'share') _shareBinder(context);
+                          if (action == 'sell') _sellBinder(context);
                         });
                       },
                       itemBuilder: (_) => [
+                        if (openRows.isNotEmpty)
+                          const PopupMenuItem(
+                            key: Key('sellBinder'),
+                            value: 'sell',
+                            child: Text('Post for sale'),
+                          ),
                         if (openRows.isNotEmpty)
                           const PopupMenuItem(
                             key: Key('clearBinder'),
@@ -345,6 +354,42 @@ class _BinderScreenState extends ConsumerState<BinderScreen> {
       ));
   }
 
+  bool _openIsTradeBinder() {
+    final openId = ref.read(openBinderIdProvider);
+    return openId != null &&
+        ref.read(bindersProvider.notifier).byId(openId)?.isTrade == true;
+  }
+
+  Future<void> _sellBinder(BuildContext context) async {
+    final openId = ref.read(openBinderIdProvider);
+    if (openId == null) return;
+    final rows = ownedInBinder(ref.read(binderProvider), openId)
+        .where((e) => e.quantity > 0)
+        .toList();
+    if (rows.isEmpty) return;
+    await showSalePostSheet(
+      context,
+      ref,
+      entries: rows,
+      canLink: _openIsTradeBinder(),
+      source: 'binder_menu',
+    );
+  }
+
+  /// Lists only the selected cards. Selection stays so the seller can go
+  /// straight on to Remove once they have sold.
+  Future<void> _sellSelected(BuildContext context) async {
+    final rows = _selectedRows();
+    if (rows.isEmpty) return;
+    await showSalePostSheet(
+      context,
+      ref,
+      entries: rows,
+      canLink: _openIsTradeBinder(),
+      source: 'binder_selection',
+    );
+  }
+
   void _removeSelected(BuildContext context) {
     final rows = _selectedRows();
     if (rows.isEmpty) return;
@@ -503,11 +548,9 @@ class _BinderScreenState extends ConsumerState<BinderScreen> {
   }
 
   Future<void> _shareBinder(BuildContext context) async {
-    final openId = ref.read(openBinderIdProvider);
     // Share links only ever show the Trade Binder (see
     // get_public_binder_by_token), so other Binders share as text only.
-    final canLink =
-        openId != null && ref.read(bindersProvider.notifier).byId(openId)?.isTrade == true;
+    final canLink = _openIsTradeBinder();
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -770,12 +813,14 @@ class _SelectionActionBar extends StatelessWidget {
     required this.canMove,
     required this.onMove,
     required this.onTrade,
+    required this.onSell,
     required this.onRemove,
   });
 
   final bool canMove;
   final VoidCallback onMove;
   final VoidCallback onTrade;
+  final VoidCallback onSell;
   final VoidCallback onRemove;
 
   @override
@@ -806,6 +851,13 @@ class _SelectionActionBar extends StatelessWidget {
             label: 'Add to trade',
             color: t.text,
             onTap: onTrade,
+          ),
+          _SelectionAction(
+            key: const Key('binderBulkSell'),
+            icon: Icons.sell_outlined,
+            label: 'Sell',
+            color: t.text,
+            onTap: onSell,
           ),
           _SelectionAction(
             key: const Key('binderBulkRemove'),

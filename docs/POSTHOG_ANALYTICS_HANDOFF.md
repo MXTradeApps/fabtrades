@@ -264,6 +264,8 @@ Files: `apps/mobile/lib/features/binder/binder_screen.dart`, `apps/mobile/lib/fe
 | `binder_card_removed` | removal | `card_id` |
 | `want_list_card_added` | add to want list (from card detail or actions sheet) | `card_id`, `source`, `want_list_size_after` |
 | `want_list_card_removed` | removal | `card_id` |
+| `sale_post_opened` | "Post for sale" sheet opened (`sale_post_sheet.dart`) | `source` (`binder_menu`/`binder_selection`), `cards` |
+| `sale_post_copied` | a sale post (or one part of a split Discord post) copied | `platform` (`discord`/`facebook`), `percent`, `cards`, `part`, `parts`, `with_link`, `source` |
 | `free_limit_hit` | any free-tier cap blocks an action — `pro_limits.dart` is the choke point | `limit_type` (`binder`/`want_list`/`lend`/`trade_history`), `current_count`, `limit` |
 
 `free_limit_hit` is the top of the monetization funnel — it must fire every time a cap blocks the user, immediately before the paywall is offered.
