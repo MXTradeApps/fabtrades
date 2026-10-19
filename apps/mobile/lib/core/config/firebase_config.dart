@@ -10,7 +10,10 @@ import 'package:flutter/foundation.dart';
 /// When they are missing, push silently stays off and price alerts still show
 /// in the app.
 abstract final class FirebaseEnv {
-  static const apiKey = String.fromEnvironment('FIREBASE_API_KEY');
+  // Firebase issues one API key per platform, each restricted to its app.
+  static const iosApiKey = String.fromEnvironment('FIREBASE_IOS_API_KEY');
+  static const androidApiKey =
+      String.fromEnvironment('FIREBASE_ANDROID_API_KEY');
   static const projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
   static const messagingSenderId =
       String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
@@ -18,20 +21,23 @@ abstract final class FirebaseEnv {
   static const iosAppId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
   static const iosBundleId = String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID');
 
-  static String get _appId =>
-      defaultTargetPlatform == TargetPlatform.iOS ? iosAppId : androidAppId;
+  static bool get _ios => defaultTargetPlatform == TargetPlatform.iOS;
+
+  static String get _appId => _ios ? iosAppId : androidAppId;
+
+  static String get _apiKey => _ios ? iosApiKey : androidApiKey;
 
   static bool get isConfigured =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android) &&
-      apiKey.isNotEmpty &&
+      _apiKey.isNotEmpty &&
       projectId.isNotEmpty &&
       messagingSenderId.isNotEmpty &&
       _appId.isNotEmpty;
 
   static FirebaseOptions get options => FirebaseOptions(
-        apiKey: apiKey,
+        apiKey: _apiKey,
         appId: _appId,
         messagingSenderId: messagingSenderId,
         projectId: projectId,

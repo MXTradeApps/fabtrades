@@ -46,6 +46,9 @@ Without any of this, the feature still works in the app: alerts are created and
 listed, and they show as *Hit* once the function runs. Push is the part that needs
 Firebase.
 
+Done for the `fab-trades` Firebase project on 2026-10-19: steps 2 and the
+`FCM_SERVICE_ACCOUNT` secret.
+
 1. **Database.** Apply `supabase/migrations/20261019220000_fab_price_alerts.sql`.
 2. **Firebase project.** Create one (or reuse one), add an iOS app
    (bundle id `com.fabtrades.app`) and an Android app (package `fabtrades.myapp`).
@@ -55,10 +58,11 @@ Firebase.
    - Copy the app ids, API key, sender id and project id into
      `apps/mobile/env/production.json`:
      ```json
-     "FIREBASE_API_KEY": "...",
      "FIREBASE_PROJECT_ID": "...",
      "FIREBASE_MESSAGING_SENDER_ID": "...",
+     "FIREBASE_ANDROID_API_KEY": "...",
      "FIREBASE_ANDROID_APP_ID": "1:...:android:...",
+     "FIREBASE_IOS_API_KEY": "...",
      "FIREBASE_IOS_APP_ID": "1:...:ios:...",
      "FIREBASE_IOS_BUNDLE_ID": "..."
      ```
