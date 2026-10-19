@@ -14,6 +14,7 @@ import 'package:fabtrades/features/onboarding/onboarding_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 
+import 'price_alert_fake.dart';
 import 'sync_stub.dart';
 
 class MockCardRepository extends Mock implements CardRepository {}
@@ -34,6 +35,8 @@ class _ProSubscription extends SubscriptionNotifier {
 /// either way [accountProvider] is overridden so nothing reaches Supabase Auth,
 /// whose client does not exist under `flutter test`.
 ///
+/// Price alerts come from [priceAlerts], an in-memory fake (empty by default).
+///
 /// Also registers the home [ShowcaseView] scope so screens that wrap widgets in
 /// coach marks can build outside [HomeShell].
 Future<ProviderContainer> pumpApp(
@@ -53,6 +56,7 @@ Future<ProviderContainer> pumpApp(
   Map<String, List<RecentLowChange>> printingRecentChangesByKey = const {},
   Object? printingRecentChangesError,
   bool isPro = false,
+  FakePriceAlertRepository? priceAlerts,
   List<Override> extraOverrides = const [],
 }) async {
   SharedPreferences.setMockInitialValues(seed);
@@ -105,6 +109,8 @@ Future<ProviderContainer> pumpApp(
       cardRepositoryProvider.overrideWithValue(mockRepo),
       accountProvider.overrideWith((ref) => Stream.value(account)),
       syncProvider.overrideWith(StubSyncNotifier.new),
+      priceAlertRepositoryProvider
+          .overrideWithValue(priceAlerts ?? FakePriceAlertRepository()),
       if (isPro) subscriptionProvider.overrideWith(_ProSubscription.new),
       ...extraOverrides,
     ],

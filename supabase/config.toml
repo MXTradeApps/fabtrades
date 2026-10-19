@@ -72,6 +72,9 @@ verify_jwt = false
 [functions.reconcile-entitlements]
 verify_jwt = false
 
+[functions.price-alerts]
+verify_jwt = false
+
 # Staging points at the free fabloodle project so sandbox purchases never touch
 # production entitlements and we do not pay for a persistent branch. Schema is
 # applied with `supabase link --project-ref cnmxaccamqshgvesieez && supabase db push`

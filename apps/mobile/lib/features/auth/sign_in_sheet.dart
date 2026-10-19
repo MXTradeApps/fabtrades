@@ -72,6 +72,13 @@ class SignInCopy {
         'A shareable binder link is tied to your account so you can turn it '
         'off later. Copying the binder as text still works without signing in.',
   );
+
+  static const priceAlerts = SignInCopy(
+    title: 'Sign in for price alerts',
+    body:
+        'Price alerts are checked on our servers every day, so they need an '
+        'account to notify. Everything already on this device is kept.',
+  );
 }
 
 /// Why an account is worth having, then one button per provider.
