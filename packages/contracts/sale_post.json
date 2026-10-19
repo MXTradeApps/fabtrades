@@ -1,0 +1,247 @@
+{
+  "salePriceCents": [
+    {
+      "price": 39.99,
+      "percent": 90,
+      "expected": 3600
+    },
+    {
+      "price": 0.45,
+      "percent": 90,
+      "expected": 41
+    },
+    {
+      "price": 5,
+      "percent": 100,
+      "expected": 500
+    },
+    {
+      "price": 9.99,
+      "percent": 100,
+      "expected": 999
+    },
+    {
+      "price": 11.11,
+      "percent": 100,
+      "expected": 1100
+    },
+    {
+      "price": null,
+      "percent": 90,
+      "expected": null
+    },
+    {
+      "price": 0,
+      "percent": 100,
+      "expected": null
+    },
+    {
+      "price": 0.004,
+      "percent": 100,
+      "expected": null
+    }
+  ],
+  "buildSalePost": [
+    {
+      "name": "empty list has no post",
+      "input": {
+        "platform": "discord",
+        "items": []
+      },
+      "expected": []
+    },
+    {
+      "name": "discord at 90% of market",
+      "input": {
+        "platform": "discord",
+        "items": [
+          {
+            "name": "Fleeing Starbreeze (Extended Art) (MST040)",
+            "finish": "Cold Foil",
+            "condition": "NM",
+            "quantity": 2,
+            "price": 39.99
+          },
+          {
+            "name": "Lightning Press (Red)",
+            "finish": "Rainbow Foil",
+            "condition": "LP",
+            "quantity": 1,
+            "price": 5
+          },
+          {
+            "name": "Bravo",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 3,
+            "price": 0.45
+          },
+          {
+            "name": "Mystery",
+            "finish": "",
+            "condition": "MP",
+            "quantity": 1,
+            "price": null
+          },
+          {
+            "name": "Gone",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 0,
+            "price": 3
+          }
+        ],
+        "percent": 90,
+        "symbol": "$",
+        "sourceLabel": "TCGplayer",
+        "pricedOn": "Oct 19, 2026",
+        "link": ""
+      },
+      "expected": [
+        "**WTS** · prices are 90% of TCGplayer market (Oct 19, 2026)\nAll NM unless noted. DM me!\n\n2x CF EA Fleeing Starbreeze $36 ea\nRF Lightning Press (Red) (LP) $4.50\n3x NF Bravo $0.41 ea\nNF Mystery (MP)\n\n7 cards · $78 total\nPriced on fabtrades.net"
+      ]
+    },
+    {
+      "name": "discord at market with a Binder link",
+      "input": {
+        "platform": "discord",
+        "items": [
+          {
+            "name": "Fleeing Starbreeze (Extended Art) (MST040)",
+            "finish": "Cold Foil",
+            "condition": "NM",
+            "quantity": 2,
+            "price": 39.99
+          },
+          {
+            "name": "Lightning Press (Red)",
+            "finish": "Rainbow Foil",
+            "condition": "LP",
+            "quantity": 1,
+            "price": 5
+          }
+        ],
+        "percent": 100,
+        "symbol": "$",
+        "sourceLabel": "TCGplayer",
+        "pricedOn": "Oct 19, 2026",
+        "link": "https://fabtrades.net/binder/abc"
+      },
+      "expected": [
+        "**WTS** · prices are TCGplayer market (Oct 19, 2026)\nAll NM unless noted. DM me!\n\n2x CF EA Fleeing Starbreeze $40 ea\nRF Lightning Press (Red) (LP) $5.00\n\n3 cards · $85 total\nFull list: https://fabtrades.net/binder/abc"
+      ]
+    },
+    {
+      "name": "facebook at 85% of CardMarket",
+      "input": {
+        "platform": "facebook",
+        "items": [
+          {
+            "name": "Fleeing Starbreeze (Extended Art) (MST040)",
+            "finish": "Cold Foil",
+            "condition": "NM",
+            "quantity": 2,
+            "price": 39.99
+          },
+          {
+            "name": "Lightning Press (Red)",
+            "finish": "Rainbow Foil",
+            "condition": "LP",
+            "quantity": 1,
+            "price": 5
+          },
+          {
+            "name": "Bravo",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 3,
+            "price": 0.45
+          },
+          {
+            "name": "Mystery",
+            "finish": "",
+            "condition": "MP",
+            "quantity": 1,
+            "price": null
+          },
+          {
+            "name": "Gone",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 0,
+            "price": 3
+          }
+        ],
+        "percent": 85,
+        "symbol": "€",
+        "sourceLabel": "CardMarket",
+        "pricedOn": "Oct 19, 2026",
+        "link": "https://fabtrades.net/binder/abc"
+      },
+      "expected": [
+        "WTS - Flesh and Blood singles\nPrices are 85% of CardMarket market (Oct 19, 2026). All NM unless noted. Comment or message me!\n\n2x Fleeing Starbreeze (EA, Cold Foil) - €34 each\nLightning Press (Red) (Rainbow Foil, LP) - €4.25\n3x Bravo - €0.38 each\nMystery (MP)\n\n7 cards · €73 total\nFull list: https://fabtrades.net/binder/abc"
+      ]
+    },
+    {
+      "name": "discord splits long posts under the limit",
+      "input": {
+        "platform": "discord",
+        "items": [
+          {
+            "name": "Aether Flare",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 1,
+            "price": 10
+          },
+          {
+            "name": "Belittle",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 1,
+            "price": 11
+          },
+          {
+            "name": "Command and Conquer",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 1,
+            "price": 12
+          },
+          {
+            "name": "Dawnblade",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 1,
+            "price": 13
+          },
+          {
+            "name": "Enlightened Strike",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 1,
+            "price": 14
+          },
+          {
+            "name": "Fyendal's Spring Tunic",
+            "finish": "Normal",
+            "condition": "NM",
+            "quantity": 1,
+            "price": 15
+          }
+        ],
+        "percent": 100,
+        "symbol": "$",
+        "sourceLabel": "TCGplayer",
+        "pricedOn": "",
+        "link": "",
+        "limit": 120
+      },
+      "expected": [
+        "**WTS** · prices are TCGplayer market\nAll NM unless noted. DM me!\n\nNF Fyendal's Spring Tunic $15",
+        "NF Enlightened Strike $14\nNF Dawnblade $13\nNF Command and Conquer $12\nNF Belittle $11\nNF Aether Flare $10",
+        "6 cards · $75 total\nPriced on fabtrades.net"
+      ]
+    }
+  ]
+}

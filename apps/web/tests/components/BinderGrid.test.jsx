@@ -697,4 +697,53 @@ describe('BinderGrid', () => {
         expect(writeText.mock.calls[0][0]).toContain('3x Lightning Press');
         expect(await screen.findByText('Binder copied as text')).toBeInTheDocument();
     });
+    test('Post for sale formats the open Binder for Discord and Facebook', async () => {
+        const writeText = jest.fn().mockResolvedValue(undefined);
+        Object.assign(navigator, { clipboard: { writeText } });
+        mockEnsureBinderShare.mockResolvedValue({
+            data: { url: 'https://fabtrades.net/b/tok', isEnabled: true },
+            error: null,
+        });
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    {
+                        cardId: pricedPrinting._uniqueId,
+                        quantity: 3,
+                        isWanted: false,
+                        binderId: 'system:trade',
+                        condition: 'LP',
+                        card: pricedPrinting,
+                    },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        renderCollection(false);
+        fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
+        fireEvent.click(await screen.findByTestId('binder-sell'));
+
+        const preview = await screen.findByTestId('sale-post-preview-0');
+        expect(preview.textContent).toContain('**WTS** · prices are TCGplayer market');
+        expect(preview.textContent).toContain('3x NF Lightning Press (LP) $13 ea');
+
+        fireEvent.click(screen.getByTestId('sale-post-percent-80'));
+        fireEvent.click(screen.getByTestId('sale-post-facebook'));
+        expect(screen.getByTestId('sale-post-preview-0').textContent).toContain(
+            '3x Lightning Press (LP) - $10 each',
+        );
+
+        fireEvent.click(screen.getByLabelText('Add a link to my Binder'));
+        await waitFor(() =>
+            expect(screen.getByTestId('sale-post-preview-0').textContent).toContain(
+                'Full list: https://fabtrades.net/b/tok',
+            ),
+        );
+
+        fireEvent.click(screen.getByTestId('sale-post-copy-0'));
+        await waitFor(() => expect(writeText).toHaveBeenCalled());
+        expect(writeText.mock.calls[0][0]).toBe(screen.getByTestId('sale-post-preview-0').textContent);
+        expect(await screen.findByText('Copied')).toBeInTheDocument();
+    });
 });

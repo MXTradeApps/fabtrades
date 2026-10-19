@@ -35,6 +35,7 @@ import {
     Clear as ClearIcon,
     ContentCopy as ContentCopyIcon,
     Search as SearchIcon,
+    SellOutlined,
     Share as ShareIcon,
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -76,6 +77,7 @@ import {
 } from '../utils/fabraryExport.js';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
 import BinderEntryList from '../components/binder/BinderEntryList.jsx';
+import SalePostDialog from '../components/binder/SalePostDialog.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
@@ -166,6 +168,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const [busyCardId, setBusyCardId] = useState(null);
     const [toast, setToast] = useState('');
     const [shareOpen, setShareOpen] = useState(false);
+    const [saleOpen, setSaleOpen] = useState(false);
     const [share, setShare] = useState(null);
     const [shareBusy, setShareBusy] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null);
@@ -703,6 +706,31 @@ const BinderCollection = ({ isWanted = false }) => {
         }
     };
 
+    const saleItems = useMemo(
+        () =>
+            entries.map((entry) => {
+                const card = resolveCard(entry);
+                return {
+                    name: card.name,
+                    finish: card.finish,
+                    condition: entry.condition || 'NM',
+                    quantity: entry.quantity,
+                    price: card.market || null,
+                };
+            }),
+        [entries, resolveCard],
+    );
+
+    // Share links only ever show the Trade Binder.
+    const getSaleLink = async () => {
+        const { data, error: shareError } = await ensureBinderShare();
+        if (shareError || !data) return null;
+        if (data.isEnabled) return data.url;
+        const { data: enabled } = await setBinderShareEnabled(true);
+        if (enabled) setShare(enabled);
+        return enabled?.isEnabled ? enabled.url : null;
+    };
+
     const copyBinderAsText = async () => {
         const text = formatBinderAsText({
             name: viewingWants ? 'Want List' : (openBinder?.name || 'Binder'),
@@ -887,6 +915,17 @@ const BinderCollection = ({ isWanted = false }) => {
                                 }}
                             >
                                 Collection Stats
+                            </Button>
+                        )}
+                        {!viewingWants && !showingGrid && entries.length > 0 && (
+                            <Button
+                                data-testid="binder-sell"
+                                variant="outlined"
+                                color="inherit"
+                                startIcon={<SellOutlined />}
+                                onClick={() => setSaleOpen(true)}
+                            >
+                                Post for sale
                             </Button>
                         )}
                         {!isWanted && openBinderId === TRADE_BINDER_ID && (
@@ -1117,6 +1156,15 @@ const BinderCollection = ({ isWanted = false }) => {
                 keepOpenOnSelect
                 keepInputOnSelect
             />
+
+            {saleOpen && (
+                <SalePostDialog
+                    open
+                    onClose={() => setSaleOpen(false)}
+                    items={saleItems}
+                    getLink={openBinderId === TRADE_BINDER_ID ? getSaleLink : null}
+                />
+            )}
 
             <Dialog
                 open={shareOpen}
