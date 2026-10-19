@@ -129,10 +129,9 @@ GRANT EXECUTE ON FUNCTION public.fab_register_push_token(text, text) TO authenti
 
 -- The sweep. Uses the same price the app shows: TCGplayer market (falling
 -- back to low/mid/high), or CardMarket trend (the foil trend for a foil
--- printing). Returns the alerts it fired on this call (for analytics). Sending
--- is separate: the Edge
--- Function reads every fired alert with no `notified_at`, so a push that failed
--- on one run is retried on the next.
+-- printing). Returns the alerts it fired on this call (for analytics).
+-- Sending is separate: the Edge Function reads every fired alert with no
+-- `notified_at`, so a push that failed on one run is retried on the next.
 CREATE OR REPLACE FUNCTION public.fab_fire_price_alerts()
 RETURNS TABLE (
   id UUID,
