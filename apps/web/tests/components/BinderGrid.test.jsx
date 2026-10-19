@@ -15,6 +15,7 @@ const mockDeleteBinder = jest.fn();
 const mockClearBinder = jest.fn();
 const mockApplyBinderMove = jest.fn();
 const mockEnsureBinderShare = jest.fn();
+const mockRemoveEntry = jest.fn();
 
 let mockUser = { id: 'user-1' };
 
@@ -73,7 +74,7 @@ jest.mock('../../src/services/binder.js', () => ({
     getBinderEntries: (...args) => mockGetBinderEntries(...args),
     getBinders: (...args) => mockGetBinders(...args),
     upsertEntry: (...args) => mockUpsertEntry(...args),
-    removeEntry: jest.fn(),
+    removeEntry: (...args) => mockRemoveEntry(...args),
     ensureBinderShare: (...args) => mockEnsureBinderShare(...args),
     regenerateBinderShare: jest.fn(),
     setBinderShareEnabled: jest.fn(),
@@ -745,5 +746,56 @@ describe('BinderGrid', () => {
         await waitFor(() => expect(writeText).toHaveBeenCalled());
         expect(writeText.mock.calls[0][0]).toBe(screen.getByTestId('sale-post-preview-0').textContent);
         expect(await screen.findByText('Copied')).toBeInTheDocument();
+    });
+    test('multi-select posts only the selected cards and removes them in a batch', async () => {
+        mockRemoveEntry.mockResolvedValue({ data: { success: true }, error: null });
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    {
+                        cardId: pricedPrinting._uniqueId,
+                        quantity: 2,
+                        isWanted: false,
+                        binderId: 'system:trade',
+                        condition: 'NM',
+                        card: pricedPrinting,
+                    },
+                    {
+                        cardId: unpricedPrinting._uniqueId,
+                        quantity: 1,
+                        isWanted: false,
+                        binderId: 'system:trade',
+                        condition: 'NM',
+                        card: unpricedPrinting,
+                    },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        renderCollection(false);
+        fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
+        await screen.findByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`);
+        expect(screen.queryByTestId('binder-selection-bar')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByLabelText(`Select ${pricedPrinting.name}`));
+        expect(screen.getByTestId('binder-selection-bar')).toHaveTextContent('1 selected');
+
+        fireEvent.click(screen.getByTestId('binder-bulk-sell'));
+        const preview = await screen.findByTestId('sale-post-preview-0');
+        expect(preview.textContent).toContain('Lightning Press');
+        expect(preview.textContent).not.toContain(unpricedPrinting.name);
+        expect(preview.textContent).toContain('2 cards');
+        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+        fireEvent.click(screen.getByTestId('binder-select-all'));
+        expect(screen.getByTestId('binder-selection-bar')).toHaveTextContent('2 selected');
+        fireEvent.click(screen.getByTestId('binder-bulk-remove'));
+        fireEvent.click(await screen.findByTestId('binder-bulk-remove-confirm'));
+
+        await waitFor(() => expect(mockRemoveEntry).toHaveBeenCalledTimes(2));
+        expect(await screen.findByText('Removed 2 cards')).toBeInTheDocument();
+        expect(screen.queryByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).not.toBeInTheDocument();
+        expect(screen.queryByTestId('binder-selection-bar')).not.toBeInTheDocument();
     });
 });

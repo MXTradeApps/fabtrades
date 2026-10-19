@@ -168,7 +168,11 @@ const BinderCollection = ({ isWanted = false }) => {
     const [busyCardId, setBusyCardId] = useState(null);
     const [toast, setToast] = useState('');
     const [shareOpen, setShareOpen] = useState(false);
-    const [saleOpen, setSaleOpen] = useState(false);
+    // Entries the sale post lists; null while the dialog is closed.
+    const [saleEntries, setSaleEntries] = useState(null);
+    const [selectedKeys, setSelectedKeys] = useState(() => new Set());
+    const [pendingBulkRemove, setPendingBulkRemove] = useState(false);
+    const [bulkBusy, setBulkBusy] = useState(false);
     const [share, setShare] = useState(null);
     const [shareBusy, setShareBusy] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null);
@@ -225,6 +229,30 @@ const BinderCollection = ({ isWanted = false }) => {
     useEffect(() => {
         setOpenBinderId(isWanted ? null : openBinderId);
     }, [isWanted, openBinderId]);
+
+    useEffect(() => {
+        setSelectedKeys(new Set());
+    }, [isWanted, openBinderId]);
+
+    const rowKey = useCallback(
+        (entry) => (viewingWants ? entry.cardId : ownedIdentity(entry)),
+        [viewingWants],
+    );
+
+    const selectedEntries = useMemo(
+        () => entries.filter((entry) => selectedKeys.has(rowKey(entry))),
+        [entries, selectedKeys, rowKey],
+    );
+
+    const toggleSelected = (entry) => {
+        const key = rowKey(entry);
+        setSelectedKeys((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+    };
 
     const catalogById = useMemo(() => {
         const map = new Map();
@@ -708,7 +736,7 @@ const BinderCollection = ({ isWanted = false }) => {
 
     const saleItems = useMemo(
         () =>
-            entries.map((entry) => {
+            (saleEntries || []).map((entry) => {
                 const card = resolveCard(entry);
                 return {
                     name: card.name,
@@ -718,8 +746,36 @@ const BinderCollection = ({ isWanted = false }) => {
                     price: card.market || null,
                 };
             }),
-        [entries, resolveCard],
+        [saleEntries, resolveCard],
     );
+
+    const confirmBulkRemove = async () => {
+        const rows = selectedEntries;
+        setBulkBusy(true);
+        const removed = new Set();
+        for (const entry of rows) {
+            const { error: delError } = await removeEntry(entry.cardId, viewingWants, {
+                binderId: entry.binderId,
+                condition: entry.condition,
+            });
+            if (!delError) removed.add(rowKey(entry));
+        }
+        setBulkBusy(false);
+        setPendingBulkRemove(false);
+        setSelectedKeys(new Set());
+        if (viewingWants) {
+            setWants((prev) => prev.filter((e) => !removed.has(rowKey(e))));
+        } else {
+            setAllOwned((prev) => prev.filter((e) => !removed.has(rowKey(e))));
+        }
+        const failed = rows.length - removed.size;
+        const label = (n) => `${n} ${n === 1 ? 'card' : 'cards'}`;
+        setToast(
+            failed > 0
+                ? `Removed ${label(removed.size)}; ${label(failed)} could not be removed`
+                : `Removed ${label(removed.size)}`,
+        );
+    };
 
     // Share links only ever show the Trade Binder.
     const getSaleLink = async () => {
@@ -923,7 +979,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                 variant="outlined"
                                 color="inherit"
                                 startIcon={<SellOutlined />}
-                                onClick={() => setSaleOpen(true)}
+                                onClick={() => setSaleEntries(entries)}
                             >
                                 Post for sale
                             </Button>
@@ -1117,6 +1173,66 @@ const BinderCollection = ({ isWanted = false }) => {
                         </Panel>
                     )}
 
+                    {!loading && selectedEntries.length > 0 && (
+                        <Box
+                            data-testid="binder-selection-bar"
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: 1,
+                                mb: 1.5,
+                                px: 1.5,
+                                py: 1,
+                                borderRadius: '14px',
+                                border: 1,
+                                borderColor: 'primary.main',
+                                bgcolor: 'action.selected',
+                            }}
+                        >
+                            <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', mr: 'auto' }}>
+                                {selectedEntries.length} selected
+                            </Typography>
+                            <Button
+                                size="small"
+                                color="inherit"
+                                data-testid="binder-select-all"
+                                disabled={filtered.every((e) => selectedKeys.has(rowKey(e)))}
+                                onClick={() => setSelectedKeys(new Set(filtered.map(rowKey)))}
+                            >
+                                Select all
+                            </Button>
+                            {!viewingWants && (
+                                <Button
+                                    size="small"
+                                    variant="contained"
+                                    data-testid="binder-bulk-sell"
+                                    startIcon={<SellOutlined />}
+                                    onClick={() => setSaleEntries(selectedEntries)}
+                                >
+                                    Post for sale
+                                </Button>
+                            )}
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                data-testid="binder-bulk-remove"
+                                onClick={() => setPendingBulkRemove(true)}
+                            >
+                                Remove
+                            </Button>
+                            <Button
+                                size="small"
+                                color="inherit"
+                                data-testid="binder-select-clear"
+                                onClick={() => setSelectedKeys(new Set())}
+                            >
+                                Cancel
+                            </Button>
+                        </Box>
+                    )}
+
                     {!loading && filtered.length > 0 && (
                         <BinderEntryList
                             entries={filtered}
@@ -1132,6 +1248,9 @@ const BinderCollection = ({ isWanted = false }) => {
                             onUpdateQuantity={updateQuantity}
                             onRemove={handleRemove}
                             onMove={viewingWants ? undefined : handleMove}
+                            rowKey={rowKey}
+                            selectedKeys={selectedKeys}
+                            onToggleSelect={toggleSelected}
                         />
                     )}
                     </>
@@ -1157,10 +1276,10 @@ const BinderCollection = ({ isWanted = false }) => {
                 keepInputOnSelect
             />
 
-            {saleOpen && (
+            {saleEntries && (
                 <SalePostDialog
                     open
-                    onClose={() => setSaleOpen(false)}
+                    onClose={() => setSaleEntries(null)}
                     items={saleItems}
                     getLink={openBinderId === TRADE_BINDER_ID ? getSaleLink : null}
                 />
@@ -1241,6 +1360,36 @@ const BinderCollection = ({ isWanted = false }) => {
                     </Button>
                     <Button onClick={() => setShareOpen(false)} disabled={shareBusy}>
                         Done
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={pendingBulkRemove}
+                onClose={() => !bulkBusy && setPendingBulkRemove(false)}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>
+                    Remove {selectedEntries.length} {selectedEntries.length === 1 ? 'card' : 'cards'}?
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        {`This removes every copy of the selected cards from this ${listLabel.toLowerCase()}. This cannot be undone.`}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button color="inherit" onClick={() => setPendingBulkRemove(false)} disabled={bulkBusy}>
+                        Cancel
+                    </Button>
+                    <Button
+                        data-testid="binder-bulk-remove-confirm"
+                        onClick={confirmBulkRemove}
+                        color="error"
+                        variant="contained"
+                        disabled={bulkBusy}
+                    >
+                        {bulkBusy ? 'Removing…' : 'Remove'}
                     </Button>
                 </DialogActions>
             </Dialog>
