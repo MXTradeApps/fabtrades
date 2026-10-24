@@ -24,6 +24,7 @@ import { formatTimestamp } from "../../utils/helpers.js";
 import { useThemeMode } from "../../contexts/ThemeContext.jsx";
 import { shell } from "../../theme/tokens.js";
 import LoginButton from '../auth/LoginButton.jsx';
+import { APP_STORE_URL, PLAY_STORE_URL } from '../../utils/appLinks.js';
 
 // Grouped the way people think about the app: the trade at the table, the
 // cards they own or want, and the market.
@@ -66,12 +67,12 @@ const LEGAL_ITEMS = [
 const APP_LINKS = [
     {
         label: 'iOS App',
-        href: 'https://apps.apple.com/us/app/fabtrades/id6794308687',
+        href: APP_STORE_URL,
         icon: Apple,
     },
     {
         label: 'Android App',
-        href: 'https://play.google.com/store/apps/details?id=fabtrades.myapp',
+        href: PLAY_STORE_URL,
         icon: Android,
     },
 ];
