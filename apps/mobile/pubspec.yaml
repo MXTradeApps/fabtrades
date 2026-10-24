@@ -123,6 +123,12 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # Firebase arrives through Swift Package Manager while the ML Kit scanner
+  # pods bring the same GoogleDataTransport through CocoaPods, so the app links
+  # it twice and the iOS build fails. Keep every plugin on CocoaPods until ML
+  # Kit can move to SPM (Firebase stops CocoaPods releases after Oct 2026).
+  config:
+    enable-swift-package-manager: false
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
