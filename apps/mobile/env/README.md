@@ -26,3 +26,7 @@ These are safe to commit. Publishable keys are public by design: every catalog
 table is read-only under RLS and per-user data is scoped to `auth.uid()`. Real
 secrets — RevenueCat API keys, signing keys, service-role keys — are passed
 separately by CI and never live in this directory.
+
+Push notifications for price alerts read optional `FIREBASE_*` values from the same
+files; without them push is simply off. See
+[docs/PRICE_ALERTS.md](../../../docs/PRICE_ALERTS.md).

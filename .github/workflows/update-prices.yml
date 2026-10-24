@@ -40,3 +40,37 @@ jobs:
           fi
           curl --fail --silent --show-error -X POST -d '{}' "$NETLIFY_BUILD_HOOK"
           echo "Requested a Netlify rebuild so the new prices ship to the site."
+
+      # Fire the price alerts the new prices satisfy and push them to their owners.
+      # Holds only the function's shared secret, as reconcile-entitlements.yml does;
+      # the service-role and Firebase keys stay in Supabase. Skipped until the
+      # secrets are set, so the ingest is never held hostage by alerts.
+      - name: Send price alerts
+        env:
+          FUNCTIONS_URL: ${{ secrets.SUPABASE_FUNCTIONS_URL }}
+          PRICE_ALERTS_SECRET: ${{ secrets.PRICE_ALERTS_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FUNCTIONS_URL:-}" ] || [ -z "${PRICE_ALERTS_SECRET:-}" ]; then
+            echo "SUPABASE_FUNCTIONS_URL or PRICE_ALERTS_SECRET is not set; skipping price alerts."
+            exit 0
+          fi
+          status=$(curl --silent --show-error \
+            --max-time 300 \
+            --output response.json \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header "Authorization: Bearer ${PRICE_ALERTS_SECRET}" \
+            --header 'Content-Type: application/json' \
+            "${FUNCTIONS_URL}/price-alerts")
+          cat response.json
+          echo
+          if [ "$status" != "200" ]; then
+            echo "::error::price-alerts returned HTTP ${status}"
+            exit 1
+          fi
+          fired=$(jq -r '.fired // 0' response.json)
+          sent=$(jq -r '.sent // 0' response.json)
+          echo "### Price alerts" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Fired **${fired}** alert(s), sent **${sent}** push notification(s)." >> "$GITHUB_STEP_SUMMARY"

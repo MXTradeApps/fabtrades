@@ -3,5 +3,12 @@
   "SUPABASE_URL": "https://tenrvaghaspwdvnwvgrh.supabase.co",
   "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_ohMvMDesyA2rr4Y4nfALpg_i0N-swkr",
   "POSTHOG_API_KEY": "phc_vwZeKtRGcGbQjotwKxYDrX2CurGwoCJkA5nfJdzs95EF",
-  "POSTHOG_HOST": "https://us.i.posthog.com"
+  "POSTHOG_HOST": "https://us.i.posthog.com",
+  "FIREBASE_PROJECT_ID": "fab-trades",
+  "FIREBASE_MESSAGING_SENDER_ID": "591110699312",
+  "FIREBASE_IOS_API_KEY": "AIzaSyCqTVOybxT2M686FVpOqeLMvetEkNOEMJc",
+  "FIREBASE_IOS_APP_ID": "1:591110699312:ios:5555c19c1d480580e970f5",
+  "FIREBASE_IOS_BUNDLE_ID": "com.fabtrades.app",
+  "FIREBASE_ANDROID_API_KEY": "AIzaSyDr4YtgPg1CYRFReubEpxxBKZ3Nex75VmQ",
+  "FIREBASE_ANDROID_APP_ID": "1:591110699312:android:bd87f1ab5dbe7a33e970f5"
 }

@@ -17,6 +17,7 @@ import 'data/binder_share_repository.dart';
 import 'data/binders_repository.dart';
 import 'data/entitlement_repository.dart';
 import 'data/lend_repository.dart';
+import 'data/price_alert_repository.dart';
 import 'data/purchases_repository.dart';
 import 'data/review_prompt_repository.dart';
 import 'data/set_logo_cache.dart';
@@ -38,6 +39,7 @@ import 'models/binder_entry.dart';
 import 'models/card_model.dart';
 import 'models/entitlement.dart';
 import 'models/lend_group.dart';
+import 'models/price_alert.dart';
 import 'models/purchase_outcome.dart';
 import 'models/subscription_status.dart';
 import 'models/trade.dart';
@@ -807,6 +809,117 @@ class ShellTabNotifier extends Notifier<int?> {
   int? build() => null;
 
   void go(int index) => state = index;
+
+  void clear() => state = null;
+}
+
+// ---------------------------------------------------------------------------
+// Price alerts
+// ---------------------------------------------------------------------------
+
+final priceAlertRepositoryProvider = Provider<PriceAlertRepository>(
+  (ref) => PriceAlertRepository(ref.watch(supabaseClientProvider)),
+);
+
+/// The signed-in user's price alerts, newest first. Empty when signed out:
+/// alerts live in Supabase only, because the server is what fires them.
+class PriceAlertsNotifier extends AsyncNotifier<List<PriceAlert>> {
+  @override
+  Future<List<PriceAlert>> build() async {
+    final userId = ref.watch(accountProvider.select((a) => a.value?.id));
+    if (userId == null) return const [];
+    return ref.read(priceAlertRepositoryProvider).list();
+  }
+
+  List<PriceAlert> get _current => state.value ?? const [];
+
+  Future<void> refresh() async {
+    if (ref.read(accountProvider).value == null) return;
+    try {
+      final alerts = await ref.read(priceAlertRepositoryProvider).list();
+      state = AsyncData(alerts);
+    } catch (_) {
+      // Keep showing what we have; the next open retries.
+    }
+  }
+
+  Future<PriceAlert> create({
+    required CardModel card,
+    required PriceAlertDirection direction,
+    required PriceSource source,
+    required double targetPrice,
+    double? currentPrice,
+  }) async {
+    final alert = await ref.read(priceAlertRepositoryProvider).create(
+          cardId: card.id,
+          direction: direction,
+          source: source,
+          targetPrice: targetPrice,
+          currentPrice: currentPrice,
+        );
+    state = AsyncData([alert, ..._current]);
+    ref.read(analyticsProvider).capture('price_alert_created', {
+      'card_id': card.id,
+      'card_name': card.name,
+      'direction': direction.id,
+      'price_source': source.name,
+      'target_price': targetPrice,
+      'current_price': ?currentPrice,
+      'alert_count': _current.length,
+    });
+    return alert;
+  }
+
+  Future<void> delete(PriceAlert alert, {String source = 'list'}) async {
+    final before = _current;
+    state = AsyncData([
+      for (final a in before)
+        if (a.id != alert.id) a,
+    ]);
+    try {
+      await ref.read(priceAlertRepositoryProvider).delete(alert.id);
+      ref.read(analyticsProvider).capture('price_alert_deleted', {
+        'card_id': alert.cardId,
+        'was_triggered': alert.isTriggered,
+        'source': source,
+      });
+    } catch (_) {
+      state = AsyncData(before);
+      rethrow;
+    }
+  }
+
+  Future<void> rearm(PriceAlert alert) async {
+    await ref.read(priceAlertRepositoryProvider).rearm(alert.id);
+    state = AsyncData([
+      for (final a in _current) a.id == alert.id ? a.rearmed() : a,
+    ]);
+    ref.read(analyticsProvider).capture('price_alert_rearmed', {
+      'card_id': alert.cardId,
+    });
+  }
+}
+
+final priceAlertsProvider =
+    AsyncNotifierProvider<PriceAlertsNotifier, List<PriceAlert>>(
+        PriceAlertsNotifier.new);
+
+/// How many alerts have fired, for the badge on More.
+final triggeredPriceAlertCountProvider = Provider<int>((ref) {
+  final alerts = ref.watch(priceAlertsProvider).value ?? const <PriceAlert>[];
+  return alerts.where((a) => a.isTriggered).length;
+});
+
+/// A push notification the user tapped, waiting for HomeShell to open it:
+/// a card id for one alert, or '' for the alerts list.
+final pushOpenProvider =
+    NotifierProvider<PushOpenNotifier, String?>(PushOpenNotifier.new);
+
+class PushOpenNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void open(String cardIdOrList) => state = cardIdOrList;
 
   void clear() => state = null;
 }

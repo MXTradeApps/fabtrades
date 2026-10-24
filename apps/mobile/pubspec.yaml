@@ -70,6 +70,11 @@ dependencies:
   # System rating sheet (SKStoreReviewController / Play In-App Review), asked
   # only after positive moments — see lib/core/logic/review_prompt.dart.
   in_app_review: ^2.0.12
+  # Push notifications for price alerts (FCM, which also delivers to iOS via
+  # APNs). Configured from dart-defines; without them push stays off. See
+  # docs/PRICE_ALERTS.md.
+  firebase_core: ^5.0.0
+  firebase_messaging: ^17.0.0
 
 dev_dependencies:
   flutter_test:

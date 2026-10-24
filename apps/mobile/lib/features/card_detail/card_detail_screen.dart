@@ -15,6 +15,8 @@ import '../../core/models/card_model.dart';
 import '../../core/models/trade.dart';
 import '../../core/providers.dart';
 import '../paywall/pro_limits.dart';
+import '../price_alerts/price_alert_sheet.dart';
+import '../price_alerts/price_alert_widgets.dart';
 import 'price_history_section.dart';
 
 class CardDetailScreen extends ConsumerStatefulWidget {
@@ -78,7 +80,20 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
     final printings = printingsForCard(catalog, widget.card);
 
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            tooltip: 'Price alert',
+            icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: () => showPriceAlertSheet(
+              context,
+              ref,
+              card: _selected,
+              source: 'card_detail_app_bar',
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -153,6 +168,8 @@ class _CardDetailScreenState extends ConsumerState<CardDetailScreen> {
                     settings: settings,
                     pricing: pricing,
                   ),
+                  const SizedBox(height: 18),
+                  CardPriceAlerts(card: _selected),
                   const SizedBox(height: 14),
                   PriceHistorySection(cardId: _selected.id),
                 ],
