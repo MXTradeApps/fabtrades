@@ -40,6 +40,11 @@ class CardSearchBar extends StatelessWidget {
             autofocus: autofocus,
             onChanged: onChanged,
             textInputAction: TextInputAction.search,
+            // Mobile TextFields keep focus on outside taps by default, which
+            // leaves the keyboard stuck open. Close it on an outside tap or
+            // the keyboard's search key.
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+            onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             style: dense ? theme.textTheme.bodyMedium : null,
             decoration: InputDecoration(
               isDense: dense,

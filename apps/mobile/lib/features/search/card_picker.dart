@@ -163,6 +163,8 @@ class _CardPickerScreenState extends ConsumerState<CardPickerScreen> {
                   return const Center(child: Text('No cards found.'));
                 }
                 return ListView.separated(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: cards.length,
                   separatorBuilder: (_, _) =>
                       const Divider(height: 1, indent: 72),
