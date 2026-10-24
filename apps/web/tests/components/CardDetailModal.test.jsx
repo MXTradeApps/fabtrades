@@ -40,6 +40,10 @@ jest.mock('../../src/services/binder.js', () => ({
     upsertEntry: (...args) => mockUpsertEntry(...args),
 }));
 
+jest.mock('../../src/services/priceAlerts.js', () => ({
+    listPriceAlertsForCard: () => Promise.resolve({ data: [], error: null }),
+}));
+
 jest.mock('../../src/components/auth/SignInDialog.jsx', () => ({
     __esModule: true,
     default: ({ open }) => (open ? <div data-testid="sign-in-dialog" /> : null),
@@ -195,5 +199,15 @@ describe('CardDetailModal', () => {
         expect(await screen.findByTestId('price-history-chart')).toBeInTheDocument();
         expect(screen.getByText('Prices')).toBeInTheDocument();
         expect(screen.queryByText('See full history with Pro')).not.toBeInTheDocument();
+    });
+    test('Price alert points to the mobile app instead of creating one', async () => {
+        await renderModal();
+        fireEvent.click(screen.getByRole('button', { name: 'Price alert' }));
+        expect(await screen.findByText('Set price alerts in the app')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /App Store/ }))
+            .toHaveAttribute('href', 'https://apps.apple.com/us/app/fabtrades/id6794308687');
+        expect(screen.getByRole('link', { name: /Google Play/ }))
+            .toHaveAttribute('href', 'https://play.google.com/store/apps/details?id=fabtrades.myapp');
+        expect(screen.queryByTestId('sign-in-dialog')).not.toBeInTheDocument();
     });
 });
