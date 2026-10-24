@@ -116,6 +116,8 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                   ? _GlobalSearchResults(query: _query, sort: _sort)
                   : CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
                       slivers: [
                         const SliverToBoxAdapter(child: HomeDashboard()),
                         const SliverToBoxAdapter(
@@ -505,6 +507,7 @@ class _GlobalSearchResultsState extends ConsumerState<_GlobalSearchResults> {
         return ListView.builder(
           key: const Key('search-trend-boxes'),
           physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.only(bottom: 16),
           itemCount: filtered.length + (_overlayError != null ? 1 : 0),
           itemBuilder: (context, i) {
@@ -737,6 +740,7 @@ class _PrintingList extends StatelessWidget {
         Expanded(
           child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.only(bottom: 16),
             itemCount: cards.length,
             separatorBuilder: (_, _) => const Divider(height: 1, indent: 16),

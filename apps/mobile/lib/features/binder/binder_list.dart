@@ -152,6 +152,8 @@ class _BinderListState extends ConsumerState<BinderList> {
                   )
                 : ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: const EdgeInsets.only(bottom: 96),
                     itemCount: pageRows.length,
                     separatorBuilder: (_, _) =>
