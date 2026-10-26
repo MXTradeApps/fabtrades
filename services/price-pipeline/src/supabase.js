@@ -1,4 +1,5 @@
 import { UPSERT_CHUNK_SIZE } from './config.js';
+import { findStaleTwins } from './stale.js';
 
 const PAGE = 1000;
 
@@ -57,26 +58,41 @@ export async function retireBaseDuplicates(supabase) {
     return 0;
   }
 
-  const bases = pairs.map((pair) => pair.base);
-  const normalByBase = new Map(pairs.map((pair) => [pair.base, pair.normal]));
+  await retireOntoTwins(
+    supabase,
+    pairs.map((pair) => ({ stale: pair.base, twin: pair.normal })),
+    (stub) => ({ ...stub, sub_type_name: 'Normal' })
+  );
+  console.log(`   ✓ Linked ${pairs.length} blank-finish card${pairs.length === 1 ? '' : 's'} onto Normal`);
+  return pairs.length;
+}
 
-  await deleteWhereIn(supabase, 'fab_price_history', 'card_id', bases);
-  await deleteWhereIn(supabase, 'fab_card_prices', 'card_id', bases);
+/**
+ * Drop each `stale` card id in favour of its `twin`: binder entries and price
+ * alerts move to the twin, then the stale row and its prices go. A binder that
+ * already holds the twin keeps that entry and the stale one is tombstoned.
+ */
+async function retireOntoTwins(supabase, pairs, patchStub = (stub) => stub) {
+  const stales = pairs.map((pair) => pair.stale);
+  const twinByStale = new Map(pairs.map((pair) => [pair.stale, pair.twin]));
 
-  for (let i = 0; i < bases.length; i += 200) {
-    const chunk = bases.slice(i, i + 200);
+  await deleteWhereIn(supabase, 'fab_price_history', 'card_id', stales);
+  await deleteWhereIn(supabase, 'fab_card_prices', 'card_id', stales);
+
+  for (let i = 0; i < stales.length; i += 200) {
+    const chunk = stales.slice(i, i + 200);
     const { data, error } = await supabase
       .from('binder_entries')
       .select('id, card_id, card')
       .in('card_id', chunk);
     if (error) throw new Error(`Reading binder entries failed: ${error.message}`);
     for (const entry of data || []) {
-      const normal = normalByBase.get(entry.card_id);
-      if (!normal) continue;
-      const stub = { ...(entry.card || {}), id: normal, sub_type_name: 'Normal' };
+      const twin = twinByStale.get(entry.card_id);
+      if (!twin) continue;
+      const stub = patchStub({ ...(entry.card || {}), id: twin });
       const { error: updateError } = await supabase
         .from('binder_entries')
-        .update({ card_id: normal, card: stub })
+        .update({ card_id: twin, card: stub })
         .eq('id', entry.id);
       if (!updateError) continue;
       if (updateError.code !== '23505') {
@@ -92,8 +108,41 @@ export async function retireBaseDuplicates(supabase) {
     }
   }
 
-  await deleteWhereIn(supabase, 'fab_cards', 'id', bases);
-  console.log(`   ✓ Linked ${pairs.length} blank-finish card${pairs.length === 1 ? '' : 's'} onto Normal`);
+  // Alerts cascade on card delete, so move them first.
+  for (const [stale, twin] of twinByStale) {
+    const { error } = await supabase.from('fab_price_alerts').update({ card_id: twin }).eq('card_id', stale);
+    if (error) throw new Error(`Relinking price alerts failed: ${error.message}`);
+  }
+
+  await deleteWhereIn(supabase, 'fab_cards', 'id', stales);
+}
+
+/**
+ * Rows this run no longer produces that duplicate a printing it did produce
+ * (see findStaleTwins). Retire them onto the fresh row.
+ */
+export async function retireStaleTwins(supabase, freshCards) {
+  const existing = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from('fab_cards')
+      .select('id, set_id, name, sub_type_name, collector_number, is_sealed')
+      .order('id')
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`Reading fab_cards failed: ${error.message}`);
+    existing.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+
+  const pairs = findStaleTwins(existing, freshCards);
+  if (pairs.length === 0) {
+    console.log('   ✓ No stale duplicates');
+    return 0;
+  }
+  await retireOntoTwins(supabase, pairs);
+  console.log(`   ✓ Retired ${pairs.length} stale duplicate${pairs.length === 1 ? '' : 's'} onto the current printing`);
   return pairs.length;
 }
 
