@@ -3,7 +3,7 @@ import { fetchGroups, fetchGroupProducts } from './tcgcsv.js';
 import { fetchCardMarketByName } from './cardmarket.js';
 import { buildRows } from './transform.js';
 import { applyOfficialCards, buildUnmatchedOfficialCards, fetchOfficialPrintings } from './official.js';
-import { retireBaseDuplicates, upsertInChunks } from './supabase.js';
+import { retireBaseDuplicates, retireStaleTwins, upsertInChunks } from './supabase.js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 
@@ -131,6 +131,8 @@ async function main() {
     await upsertInChunks(supabase, 'fab_price_history', allHistory, 'card_id,captured_on');
     console.log('🔗 Linking blank-finish rows onto Normal...');
     await retireBaseDuplicates(supabase);
+    console.log('🔗 Retiring stale duplicates onto current printings...');
+    await retireStaleTwins(supabase, allCards);
 
     await supabase
       .from('fab_pipeline_runs')
