@@ -13,9 +13,6 @@ import '../../core/providers.dart';
 import '../card_detail/card_detail_screen.dart';
 import 'mover_box.dart';
 
-/// Shell tab index of the Binder tab (see `HomeShell._tabRoots`).
-const binderTabIndex = 2;
-
 /// Movers below this start Low are penny noise, so Home leaves them out.
 const _moverFloor = 1.0;
 

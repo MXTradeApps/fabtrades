@@ -92,12 +92,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   // opened via Browse / Binder add paths — it is not a top-level tab.
   static const _tabRoots = [
     BrowseScreen(),
-    TradeScreen(),
     BinderScreen(),
+    TradeScreen(),
     LendScreen(),
   ];
 
-  static const _tabScreenNames = ['Home', 'Trade', 'Binder', 'Lend'];
+  static const _tabScreenNames = ['Home', 'Binder', 'Trade', 'Lend'];
 
   /// The fifth destination is not a tab: it opens the More sheet.
   static const _moreIndex = 4;
@@ -130,12 +130,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void _onTourFinished() {
     final tab = _activeTourTab;
     _activeTourTab = null;
-    if (tab == 1) _tours.cleanupTradeSeed();
+    if (tab == tradeTabIndex) _tours.cleanupTradeSeed();
     if (tab == null) return;
     final id = switch (tab) {
-      1 => OnboardingTourId.trade,
-      2 => OnboardingTourId.binder,
-      3 => OnboardingTourId.lend,
+      tradeTabIndex => OnboardingTourId.trade,
+      binderTabIndex => OnboardingTourId.binder,
+      lendTabIndex => OnboardingTourId.lend,
       _ => null,
     };
     if (id != null) _tours.markSeen(id);
@@ -153,7 +153,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (i == _index) {
       // Re-tapping the current tab pops back to its root.
       _activeNav?.popUntil((r) => r.isFirst);
-      if (i == 2) {
+      if (i == binderTabIndex) {
         ref.read(openBinderIdProvider.notifier).close();
       }
       return;
@@ -179,17 +179,17 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // Home has no dedicated tour; Scan teaches itself when opened.
     if (i == 0) return;
     final id = switch (i) {
-      1 => OnboardingTourId.trade,
-      2 => OnboardingTourId.binder,
-      3 => OnboardingTourId.lend,
+      tradeTabIndex => OnboardingTourId.trade,
+      binderTabIndex => OnboardingTourId.binder,
+      lendTabIndex => OnboardingTourId.lend,
       _ => null,
     };
     if (id == null || _tours.hasSeen(id)) return;
 
     final keys = switch (i) {
-      1 => _tours.prepareTradeTour(),
-      2 => _tours.binderKeys(),
-      3 => _tours.lendKeys(),
+      tradeTabIndex => _tours.prepareTradeTour(),
+      binderTabIndex => _tours.binderKeys(),
+      lendTabIndex => _tours.lendKeys(),
       _ => <GlobalKey>[],
     };
     if (keys.isEmpty) {
@@ -289,6 +289,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 selectedIcon: Icon(Icons.home),
                 label: 'Home',
               ),
+              const NavigationDestination(
+                icon: Icon(Icons.collections_bookmark_outlined),
+                selectedIcon: Icon(Icons.collections_bookmark),
+                label: 'Binder',
+              ),
               NavigationDestination(
                 icon: Badge(
                   isLabelVisible: tradeCount > 0,
@@ -301,11 +306,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   child: const Icon(Icons.swap_horiz_rounded),
                 ),
                 label: 'Trade',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.collections_bookmark_outlined),
-                selectedIcon: Icon(Icons.collections_bookmark),
-                label: 'Binder',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.sync_alt_rounded),
