@@ -9,7 +9,6 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    TextField,
     Snackbar,
     Alert,
     FormControlLabel,
@@ -18,34 +17,14 @@ import {
 import { 
     Warning as WarningIcon,
     Clear as ClearIcon,
-    ContentCopy as ContentCopyIcon,
-    Forum as ForumIcon,
     CheckCircle as CheckCircleIcon,
     Campaign as CampaignIcon,
 } from '@mui/icons-material';
 import SalePostDialog from "../binder/SalePostDialog.jsx";
-import { generateTradeOffer } from "../../utils/tradeOffer.js";
 import { confirmTrade } from "../../services/confirmTrade.js";
 import { FreeLimits } from "../../utils/freeLimits.js";
 import { useAuth } from "../../contexts/AuthContext.jsx";
-import { fonts, tk } from "../../theme/tokens.js";
-
-// Copy text to the clipboard with a fallback for non-secure contexts.
-const copyTextToClipboard = async (text) => {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
-    }
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'absolute';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-};
+import { tk } from "../../theme/tokens.js";
 
 // Whole amounts stay short ($12); anything with cents always shows both digits.
 const money = (value) => {
@@ -130,9 +109,7 @@ const TradeSummary = ({
 }) => {
     const { user } = useAuth();
     const [showClearConfirm, setShowClearConfirm] = useState(false);
-    const [showTradeOffer, setShowTradeOffer] = useState(false);
     const [showTradePost, setShowTradePost] = useState(false);
-    const [tradeOfferText, setTradeOfferText] = useState('');
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [removeGiven, setRemoveGiven] = useState(true);
     const [addReceived, setAddReceived] = useState(true);
@@ -146,7 +123,7 @@ const TradeSummary = ({
 
     const haveCardCount = getTotalCardCount(haveList);
     const wantCardCount = getTotalCardCount(wantList);
-    const canGenerateTradeOffer = haveList.length > 0 || wantList.length > 0;
+    const hasCards = haveList.length > 0 || wantList.length > 0;
 
     // The trade post reads "Cards I Want" as Looking for and "Cards I Have" as Have.
     const toPostItems = (list) =>
@@ -162,29 +139,6 @@ const TradeSummary = ({
     const handleClearTradeData = () => {
         clearURLTradeData();
         setShowClearConfirm(false);
-    };
-
-    const handleGenerateTradeOffer = () => {
-        const text = generateTradeOffer({
-            haveList,
-            wantList,
-            haveTotal,
-            wantTotal,
-            diff,
-            pricedAsOf: new Date(),
-        });
-        setTradeOfferText(text);
-        setShowTradeOffer(true);
-    };
-
-    const handleCopyTradeOffer = async () => {
-        try {
-            await copyTextToClipboard(tradeOfferText);
-            setSnackbar({ open: true, message: 'Copied — send it to the trade poster', severity: 'success' });
-        } catch (err) {
-            console.error('Failed to copy trade offer:', err);
-            setSnackbar({ open: true, message: 'Could not copy — select the text and copy it manually', severity: 'error' });
-        }
     };
 
     const handleOpenConfirmDialog = () => {
@@ -295,7 +249,7 @@ const TradeSummary = ({
                     fullWidth={isLandscape}
                     startIcon={<CheckCircleIcon />}
                     onClick={handleOpenConfirmDialog}
-                    disabled={!canGenerateTradeOffer}
+                    disabled={!hasCards}
                 >
                     Confirm Trade
                 </Button>
@@ -310,7 +264,7 @@ const TradeSummary = ({
             size={isLandscape ? 'medium' : 'small'}
             startIcon={<CampaignIcon sx={{ fontSize: '1rem !important' }} />}
             onClick={() => setShowTradePost(true)}
-            disabled={!canGenerateTradeOffer}
+            disabled={!hasCards}
             fullWidth={isLandscape}
             sx={{ color: 'text.primary' }}
             data-testid="trade-post-button"
@@ -389,20 +343,6 @@ const TradeSummary = ({
 
                 <Box sx={{ pt: 2, borderTop: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Replying to a Purple Discord trade?
-                    </Typography>
-                    <Button
-                        variant="outlined"
-                        color="inherit"
-                        startIcon={<ForumIcon sx={{ fontSize: '1rem !important' }} />}
-                        onClick={handleGenerateTradeOffer}
-                        disabled={!canGenerateTradeOffer}
-                        fullWidth
-                        sx={{ color: 'text.primary' }}
-                    >
-                        Generate Trade Offer
-                    </Button>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
                         Posting your own WTT/WTS?
                     </Typography>
                     {tradePostButton}
@@ -475,47 +415,6 @@ const TradeSummary = ({
                 <Button color="inherit" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
                 <Button onClick={handleClearTradeData} color="warning" variant="contained">
                     Clear
-                </Button>
-            </DialogActions>
-        </Dialog>
-
-        {/* Generated Trade Offer Dialog */}
-        <Dialog
-            open={showTradeOffer}
-            onClose={() => setShowTradeOffer(false)}
-            fullWidth
-            maxWidth="sm"
-        >
-            <DialogTitle sx={{ pb: 1 }}>Trade Offer</DialogTitle>
-            <DialogContent>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    Copy this and send it to the trade poster on Purple Discord.
-                </Typography>
-                <TextField
-                    value={tradeOfferText}
-                    multiline
-                    fullWidth
-                    minRows={8}
-                    maxRows={18}
-                    InputProps={{
-                        readOnly: true,
-                        sx: {
-                            fontFamily: fonts.mono,
-                            fontSize: '0.85rem',
-                            lineHeight: 1.45
-                        }
-                    }}
-                    onFocus={(e) => e.target.select()}
-                />
-            </DialogContent>
-            <DialogActions>
-                <Button color="inherit" onClick={() => setShowTradeOffer(false)}>Close</Button>
-                <Button
-                    variant="contained"
-                    startIcon={<ContentCopyIcon />}
-                    onClick={handleCopyTradeOffer}
-                >
-                    Copy to Clipboard
                 </Button>
             </DialogActions>
         </Dialog>
