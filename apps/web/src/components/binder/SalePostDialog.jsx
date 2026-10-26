@@ -14,7 +14,9 @@ import {
     Typography,
 } from '@mui/material';
 import { Check as CheckIcon, ContentCopy as ContentCopyIcon } from '@mui/icons-material';
-import { SALE_POST_PERCENTS, buildSalePost } from '../../utils/salePost.js';
+import { SALE_POST_PERCENTS, buildTradePost } from '../../utils/salePost.js';
+
+const MODE_LABELS = { 'wtt-wts': 'WTT/WTS', wtt: 'WTT', wts: 'WTS' };
 
 const pricedOnLabel = () =>
     new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -28,8 +30,12 @@ const pricedOnLabel = () =>
  * @param {Array<{ name: string, finish?: string, condition?: string, quantity: number, price?: number|null }>} props.items
  * @param {(() => Promise<string|null>)|null} [props.getLink] - Resolves the shared
  *   Binder URL; omit when the open Binder cannot be linked.
+ * @param {Array|null} [props.wants] - Cards the poster is looking for. When given,
+ *   the dialog writes a WTT/WTS post with a "Looking for" section and `items` as "Have".
  */
-export default function SalePostDialog({ open, onClose, items, getLink = null }) {
+export default function SalePostDialog({ open, onClose, items, getLink = null, wants = null }) {
+    const isTrade = Array.isArray(wants);
+    const [mode, setMode] = useState(isTrade ? 'wtt-wts' : 'wts');
     const [platform, setPlatform] = useState('discord');
     const [percent, setPercent] = useState(100);
     const [link, setLink] = useState('');
@@ -37,11 +43,19 @@ export default function SalePostDialog({ open, onClose, items, getLink = null })
     const [linkError, setLinkError] = useState('');
     const [copied, setCopied] = useState(() => new Set());
 
-    const cards = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    const countCards = (list) => list.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+    const cards = countCards(items);
+    const wantCards = isTrade ? countCards(wants) : 0;
     const messages = useMemo(
-        () => buildSalePost({ platform, items, percent, pricedOn: pricedOnLabel(), link }),
-        [platform, items, percent, link],
+        () => buildTradePost({ mode, wants: wants || [], platform, items, percent, pricedOn: pricedOnLabel(), link }),
+        [mode, wants, platform, items, percent, link],
     );
+    const plural = (n) => (n === 1 ? '1 card' : `${n} cards`);
+    const intro = !isTrade
+        ? `${plural(cards)}, priced and formatted to paste into a selling channel or group.`
+        : mode === 'wts'
+            ? `${plural(cards)} you have, priced and formatted to paste into a selling channel or group.`
+            : `${plural(wantCards)} you're looking for and ${plural(cards)} you have, formatted to paste into a trading channel or group.`;
 
     const update = (fn) => {
         fn();
@@ -78,12 +92,27 @@ export default function SalePostDialog({ open, onClose, items, getLink = null })
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth data-testid="sale-post-dialog">
-            <DialogTitle>Post for sale</DialogTitle>
+            <DialogTitle>{isTrade ? 'Trade post' : 'Post for sale'}</DialogTitle>
             <DialogContent>
                 <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem', mb: 2 }}>
-                    {cards === 1 ? '1 card' : `${cards} cards`}, priced and formatted to paste into a
-                    selling channel or group.
+                    {intro}
                 </Typography>
+                {isTrade && (
+                    <ToggleButtonGroup
+                        exclusive
+                        fullWidth
+                        size="small"
+                        value={mode}
+                        onChange={(_, value) => value && update(() => setMode(value))}
+                        sx={{ mb: 1.5 }}
+                    >
+                        {Object.entries(MODE_LABELS).map(([value, label]) => (
+                            <ToggleButton key={value} value={value} data-testid={`sale-post-mode-${value}`}>
+                                {label}
+                            </ToggleButton>
+                        ))}
+                    </ToggleButtonGroup>
+                )}
                 <ToggleButtonGroup
                     exclusive
                     fullWidth
@@ -95,19 +124,28 @@ export default function SalePostDialog({ open, onClose, items, getLink = null })
                     <ToggleButton value="discord" data-testid="sale-post-discord">Discord</ToggleButton>
                     <ToggleButton value="facebook" data-testid="sale-post-facebook">Facebook</ToggleButton>
                 </ToggleButtonGroup>
-                <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.75 }}>Asking price</Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-                    {SALE_POST_PERCENTS.map((p) => (
-                        <Chip
-                            key={p}
-                            data-testid={`sale-post-percent-${p}`}
-                            label={p === 100 ? 'Market' : `${p}%`}
-                            color={percent === p ? 'primary' : 'default'}
-                            variant={percent === p ? 'filled' : 'outlined'}
-                            onClick={() => update(() => setPercent(p))}
-                        />
-                    ))}
-                </Box>
+                {mode !== 'wtt' && (
+                    <Box>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.75 }}>Asking price</Typography>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
+                            {SALE_POST_PERCENTS.map((p) => (
+                                <Chip
+                                    key={p}
+                                    data-testid={`sale-post-percent-${p}`}
+                                    label={p === 100 ? 'Market' : `${p}%`}
+                                    color={percent === p ? 'primary' : 'default'}
+                                    variant={percent === p ? 'filled' : 'outlined'}
+                                    onClick={() => update(() => setPercent(p))}
+                                />
+                            ))}
+                        </Box>
+                    </Box>
+                )}
+                {messages.length === 0 && (
+                    <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem', mb: 1.5 }}>
+                        Add cards you have to the trade to post them for sale.
+                    </Typography>
+                )}
                 {getLink && (
                     <Box sx={{ mb: 1.5 }}>
                         <FormControlLabel
