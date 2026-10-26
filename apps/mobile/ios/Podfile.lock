@@ -6,16 +6,16 @@ PODS:
   - file_picker_darwin (1.0.0):
     - Flutter
     - FlutterMacOS
-  - Firebase/CoreOnly (12.19.0):
-    - FirebaseCore (~> 12.19.0)
-  - Firebase/Messaging (12.19.0):
+  - Firebase/CoreOnly (12.19.3):
+    - FirebaseCore (~> 12.19.3)
+  - Firebase/Messaging (12.19.3):
     - Firebase/CoreOnly
     - FirebaseMessaging (~> 12.19.0)
-  - firebase_core (5.0.0):
-    - Firebase/CoreOnly (= 12.19.0)
+  - firebase_core (5.1.0):
+    - Firebase/CoreOnly (= 12.19.3)
     - Flutter
-  - firebase_messaging (17.0.0):
-    - Firebase/Messaging (= 12.19.0)
+  - firebase_messaging (17.0.1):
+    - Firebase/Messaging (= 12.19.3)
     - firebase_core
     - Flutter
   - FirebaseCore (12.19.3):
@@ -39,14 +39,14 @@ PODS:
     - GoogleUtilities/UserDefaults (~> 8.1)
     - nanopb (~> 3.30910.0)
   - Flutter (1.0.0)
-  - google_mlkit_commons (0.12.0):
+  - google_mlkit_commons (0.13.0):
     - Flutter
     - MLKitVision (~> 10.0.0)
-  - google_mlkit_text_recognition (0.16.0):
+  - google_mlkit_text_recognition (0.17.1):
     - Flutter
     - google_mlkit_commons
     - GoogleMLKit/TextRecognition (~> 9.0.0)
-  - GoogleDataTransport (10.1.0):
+  - GoogleDataTransport (10.1.1):
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
   - GoogleMLKit/MLKitCore (9.0.0):
@@ -59,28 +59,28 @@ PODS:
     - GoogleToolboxForMac/Defines (= 4.2.1)
   - "GoogleToolboxForMac/NSData+zlib (4.2.1)":
     - GoogleToolboxForMac/Defines (= 4.2.1)
-  - GoogleUtilities/AppDelegateSwizzler (8.1.2):
+  - GoogleUtilities/AppDelegateSwizzler (8.1.5):
     - GoogleUtilities/Environment
     - GoogleUtilities/Logger
     - GoogleUtilities/Network
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Environment (8.1.2):
+  - GoogleUtilities/Environment (8.1.5):
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Logger (8.1.2):
+  - GoogleUtilities/Logger (8.1.5):
     - GoogleUtilities/Environment
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Network (8.1.2):
+  - GoogleUtilities/Network (8.1.5):
     - GoogleUtilities/Logger
     - "GoogleUtilities/NSData+zlib"
     - GoogleUtilities/Privacy
     - GoogleUtilities/Reachability
-  - "GoogleUtilities/NSData+zlib (8.1.2)":
+  - "GoogleUtilities/NSData+zlib (8.1.5)":
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Privacy (8.1.2)
-  - GoogleUtilities/Reachability (8.1.2):
+  - GoogleUtilities/Privacy (8.1.5)
+  - GoogleUtilities/Reachability (8.1.5):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
-  - GoogleUtilities/UserDefaults (8.1.2):
+  - GoogleUtilities/UserDefaults (8.1.5):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
   - GTMSessionFetcher/Core (3.5.0)
@@ -120,27 +120,28 @@ PODS:
   - posthog_flutter (0.0.1):
     - Flutter
     - FlutterMacOS
-    - PostHog (< 4.0.0, >= 3.66.0)
+    - PostHog (< 4.0.0, >= 3.84.0)
   - PromisesObjC (2.4.1)
-  - purchases_flutter (10.4.3):
+  - purchases_flutter (10.18.1):
     - Flutter
-    - PurchasesHybridCommon (= 18.22.2)
-  - purchases_ui_flutter (10.4.3):
+    - PurchasesHybridCommon (= 19.15.0)
+  - purchases_ui_flutter (10.18.1):
     - Flutter
-    - PurchasesHybridCommonUI (= 18.22.2)
-  - PurchasesHybridCommon (18.22.2):
-    - RevenueCat (= 5.81.1)
-  - PurchasesHybridCommonUI (18.22.2):
-    - PurchasesHybridCommon (= 18.22.2)
-    - RevenueCatUI (= 5.81.1)
-  - RevenueCat (5.81.1)
-  - RevenueCatUI (5.81.1):
-    - RevenueCat (= 5.81.1)
+    - PurchasesHybridCommonUI (= 19.15.0)
+  - PurchasesHybridCommon (19.15.0):
+    - RevenueCat (= 5.98.0)
+  - PurchasesHybridCommonUI (19.15.0):
+    - PurchasesHybridCommon (= 19.15.0)
+    - RevenueCatUI (= 5.98.0)
+  - RevenueCat (5.98.0)
+  - RevenueCatUI (5.98.0):
+    - RevenueCat (= 5.98.0)
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
   - sign_in_with_apple (0.0.1):
     - Flutter
+    - FlutterMacOS
   - sqflite_darwin (0.0.4):
     - Flutter
     - FlutterMacOS
@@ -151,7 +152,7 @@ PODS:
 
 DEPENDENCIES:
   - app_links (from `.symlinks/plugins/app_links/ios`)
-  - camera_avfoundation (from `.symlinks/plugins/camera_avfoundation/ios`)
+  - camera_avfoundation (from `.symlinks/plugins/camera_avfoundation/darwin`)
   - file_picker_darwin (from `.symlinks/plugins/file_picker_darwin/darwin`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_messaging (from `.symlinks/plugins/firebase_messaging/ios`)
@@ -165,7 +166,7 @@ DEPENDENCIES:
   - purchases_flutter (from `.symlinks/plugins/purchases_flutter/ios`)
   - purchases_ui_flutter (from `.symlinks/plugins/purchases_ui_flutter/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
-  - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/ios`)
+  - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/darwin`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
   - wakelock_plus (from `.symlinks/plugins/wakelock_plus/ios`)
@@ -199,7 +200,7 @@ EXTERNAL SOURCES:
   app_links:
     :path: ".symlinks/plugins/app_links/ios"
   camera_avfoundation:
-    :path: ".symlinks/plugins/camera_avfoundation/ios"
+    :path: ".symlinks/plugins/camera_avfoundation/darwin"
   file_picker_darwin:
     :path: ".symlinks/plugins/file_picker_darwin/darwin"
   firebase_core:
@@ -227,7 +228,7 @@ EXTERNAL SOURCES:
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   sign_in_with_apple:
-    :path: ".symlinks/plugins/sign_in_with_apple/ios"
+    :path: ".symlinks/plugins/sign_in_with_apple/darwin"
   sqflite_darwin:
     :path: ".symlinks/plugins/sqflite_darwin/darwin"
   url_launcher_ios:
@@ -239,20 +240,20 @@ SPEC CHECKSUMS:
   app_links: a754cbec3c255bd4bbb4d236ecc06f28cd9a7ce8
   camera_avfoundation: 968a9a5323c79a99c166ad9d7866bfd2047b5a9b
   file_picker_darwin: 4c2b9a50ea44cb3b071381ea0cf48591bdd80251
-  Firebase: 7ca191e43724142f79fae653547b3382c45413cc
-  firebase_core: aa2923f301f5b09667356bb91e59308e6e2e38d3
-  firebase_messaging: 01fe7740dac1005d38a2788b3f177a0497ce8564
+  Firebase: e3c5ab38229ae085490d02398d97b9f5374bbe6e
+  firebase_core: 80d50cac10fc9dff2597c55ed43e296d9a0bc90a
+  firebase_messaging: 378a914df459aea513c6642ebb531fe7d7200c94
   FirebaseCore: ab948de5d99e69aeed3cd6f5ace263ce795b2559
   FirebaseCoreInternal: 656b1c2fd5a1c5976183dc54b73deda78fb26ee3
   FirebaseInstallations: f70a49eed611f5602f373e40974b3b01556ac217
   FirebaseMessaging: c15f48126adbe8b4d3238a5e1fa24bab3ad3e472
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  google_mlkit_commons: b4dfe2f6ae4cbf24010dc6640a28984d01343c86
-  google_mlkit_text_recognition: 9b164471713e3afdb4c129cabe6d1d64fef7e817
-  GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
+  google_mlkit_commons: b2c0a76e7ef4ff555e70e5d71f21d66ce3d08a97
+  google_mlkit_text_recognition: 5a8cb8b73c765938fb7111de6f5f883b90f15d52
+  GoogleDataTransport: a24e58982ab3ba2f64d79613e027fe7f57e88539
   GoogleMLKit: b1eee21a41c57704fe72483b15c85cb2c0cd7444
   GoogleToolboxForMac: d1a2cbf009c453f4d6ded37c105e2f67a32206d8
-  GoogleUtilities: 766ace00c6b10d8148408f329d10c4f051931850
+  GoogleUtilities: 7dc09b3fa9ecb5c2298b952313d14628b61b9da3
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   in_app_review: 7dd1ea365263f834b8464673f9df72c80c17c937
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
@@ -264,19 +265,19 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   PostHog: e23d1748dabcbd718125fc8d5c9b7b72beef35d2
-  posthog_flutter: 528072e27902d8a2f413fa06111c7e3293d8f305
+  posthog_flutter: c5462b0e35302b20ff880fc8036b842221408729
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
-  purchases_flutter: 70ea95feca029142ca37761d1a0b57b8324e9a29
-  purchases_ui_flutter: ec34abc3188f7cf471ba108b741293640581da7d
-  PurchasesHybridCommon: e47bc4f611e86fcf8295bf1c984f187982270f02
-  PurchasesHybridCommonUI: e6756576ad454c6c15a4679f57446115382ff791
-  RevenueCat: 693b033863262f9776130cc6c1f9255a74ab23ff
-  RevenueCatUI: 2c7092fa0a485454d2a474e80f241e6db591dd36
+  purchases_flutter: bce632274172e59844aa3ba697b90a139fe81978
+  purchases_ui_flutter: f43993b7b2a7566a52f2ac6442c483eff9453d1a
+  PurchasesHybridCommon: 896c922f222ffde889a96568e02268b5ca9db85a
+  PurchasesHybridCommonUI: 843d45949325d6cf4c4abe285fa15876ca16f910
+  RevenueCat: d2d6a98d8e1d53cc1c6362cc1fdfb64ca99b8735
+  RevenueCatUI: 8f089ba531a2393465cb5062e2009eb3a6e42927
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
-  sign_in_with_apple: c5dcc141574c8c54d5ac99dd2163c0c72ad22418
+  sign_in_with_apple: 5e34677a4e74c5f42760f41b3bbe05343e84d171
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
-  wakelock_plus: e29112ab3ef0b318e58cfa5c32326458be66b556
+  wakelock_plus: d4ca1e4e4bc9de42cb55d57b5bdc158af318e3c6
 
 PODFILE CHECKSUM: 741922557a464117bdfef96ef9850f0a37a4f044
 
