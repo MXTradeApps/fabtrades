@@ -801,8 +801,11 @@ final binderShareRepositoryProvider = Provider<BinderShareRepository>(
 final shellTabProvider =
     NotifierProvider<ShellTabNotifier, int?>(ShellTabNotifier.new);
 
-/// HomeShell's Trade tab, for [shellTabProvider].
-const tradeTabIndex = 1;
+// HomeShell tab positions, for [shellTabProvider]. Trade sits in the middle
+// of the bottom bar (Home, Binder, Trade, Lend, More).
+const binderTabIndex = 1;
+const tradeTabIndex = 2;
+const lendTabIndex = 3;
 
 class ShellTabNotifier extends Notifier<int?> {
   @override
