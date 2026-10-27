@@ -315,6 +315,31 @@ String baseCardName(String name) {
   return s;
 }
 
+const Map<String, String> _pitchColorByValue = {
+  '1': 'Red',
+  '2': 'Yellow',
+  '3': 'Blue',
+};
+
+/// The card a printing belongs to, as one display name: [baseCardName] plus
+/// the pitch color from the `pitch` column when the name leaves it out.
+///
+/// Catalog names come from two sources that disagree on qualifiers, e.g.
+/// "Usurp the Shadow Throne" / "Usurp the Shadow Throne (Blue)" /
+/// "Usurp the Shadow Throne (Blue) (Marvel)" are printings of one blue card.
+/// [baseCardName] alone splits the color-less name into its own group, so
+/// grouping, the printing selector and scan expansion key on this instead.
+String cardGroupName(CardModel card) {
+  final base = baseCardName(card.name);
+  final last = RegExp(r'\(([^)]*)\)\s*$').firstMatch(base);
+  if (last != null &&
+      _pitchQualifiers.contains(last.group(1)!.trim().toLowerCase())) {
+    return base;
+  }
+  final color = _pitchColorByValue[card.pitch?.trim()];
+  return color == null ? base : '$base ($color)';
+}
+
 /// Ordering of Flesh and Blood rarities from most "base"/standard (0) to most
 /// premium, used to choose which printing represents a group. Unknown rarities
 /// sort last.
@@ -370,7 +395,7 @@ int _baseFirst(CardModel a, CardModel b) {
   return a.id.compareTo(b.id);
 }
 
-/// Groups [cards] by their [baseCardName] into [CardGroup]s, so every art/finish
+/// Groups [cards] by their [cardGroupName] into [CardGroup]s, so every art/finish
 /// variant of a card (e.g. Normal, Foil, Alternate Art, Overnumbered, Signature)
 /// collapses into one entry. Groups are ordered by the requested [sort] (applied
 /// to each group's representative printing). Assumes [cards] has already been
@@ -379,7 +404,7 @@ List<CardGroup> groupCardsByName(List<CardModel> cards, CardSort sort) {
   final byName = <String, List<CardModel>>{};
   final order = <String>[];
   for (final c in cards) {
-    final key = baseCardName(c.name);
+    final key = cardGroupName(c);
     final list = byName[key];
     if (list == null) {
       byName[key] = [c];
@@ -412,13 +437,13 @@ List<CardGroup> groupCardsByName(List<CardModel> cards, CardSort sort) {
 }
 
 /// All printings/variants of [card] found in the in-memory [catalog], i.e.
-/// every row whose [baseCardName] matches (Normal, Foil, Alternate Art,
+/// every row whose [cardGroupName] matches (Normal, Foil, Alternate Art,
 /// Overnumbered, Signature, … across every set), ordered base-first. Used by
 /// the card detail screen's printing/version selector.
 List<CardModel> printingsForCard(List<CardModel> catalog, CardModel card) {
-  final base = baseCardName(card.name);
+  final base = cardGroupName(card);
   final list = catalog
-      .where((c) => !isNonCardProduct(c) && baseCardName(c.name) == base)
+      .where((c) => !isNonCardProduct(c) && cardGroupName(c) == base)
       .toList()
     ..sort(_baseFirst);
   return list.isEmpty ? [card] : list;
@@ -948,7 +973,7 @@ ScanMatches expandScanMatchesToPrintings(
   final baseNames = <String>[];
   final baseNameSet = <String>{};
   for (final c in matches) {
-    final base = baseCardName(c.name);
+    final base = cardGroupName(c);
     if (baseNameSet.add(base)) baseNames.add(base);
   }
 
@@ -958,7 +983,7 @@ ScanMatches expandScanMatchesToPrintings(
   for (final c in catalog) {
     if (isNonCardProduct(c)) continue;
     if (matchIds.contains(c.id)) continue;
-    final base = baseCardName(c.name);
+    final base = cardGroupName(c);
     final bucket = extrasByBase[base];
     if (bucket == null) continue;
     bucket.add(c);
@@ -1073,14 +1098,26 @@ List<CardModel> finishesForCard(List<CardModel> catalog, CardModel card) {
   return matches;
 }
 
-/// `{productId}-base` is a blank finish that later became Normal
-/// (`{productId}-normal`). Keep the Normal row so search does not list both.
+/// `{productId}-base` is a blank finish left over from an older ingest. Drop
+/// it when the same product has a Normal row (`{productId}-normal`), or when
+/// it is unpriced and the product has any other finish: Usurp the Shadow
+/// Throne only exists as Rainbow Foil + Marvel Cold Foil, and its blank rows
+/// otherwise show up as phantom, unpriced "Normal" printings.
 List<CardModel> linkBaseToNormal(List<CardModel> cards) {
-  final normalIds = cards.map((card) => card.id).where((id) => id.endsWith('-normal')).toSet();
+  String productOf(CardModel card) =>
+      card.productId?.toString() ?? card.id.split('-').first;
+  final normalIds =
+      cards.map((card) => card.id).where((id) => id.endsWith('-normal')).toSet();
+  final productsWithFinish = cards
+      .where((card) => !card.id.endsWith('-base'))
+      .map(productOf)
+      .toSet();
   return cards.where((card) {
     if (!card.id.endsWith('-base')) return true;
     final normalId = '${card.id.substring(0, card.id.length - 4)}normal';
-    return !normalIds.contains(normalId);
+    if (normalIds.contains(normalId)) return false;
+    final unpriced = (card.tcgMarket ?? 0) <= 0 && (card.tcgLow ?? 0) <= 0;
+    return !(unpriced && productsWithFinish.contains(productOf(card)));
   }).toList();
 }
 
