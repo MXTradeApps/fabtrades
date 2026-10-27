@@ -463,15 +463,17 @@ describe('BinderGrid', () => {
         prompt.mockRestore();
     });
 
-    test('Import from Fabrary lives in each Binder tile menu, not the grid header', async () => {
+    test('Import cards lives in the open Binder ⋯ menu, not the grid or tile menu', async () => {
         renderCollection(false);
         expect(await screen.findByTestId('binder-create')).toBeInTheDocument();
         expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
         fireEvent.click(screen.getByTestId('binder-tile-menu-system:collection'));
-        expect(screen.queryByTestId('binder-tile-settings-system:collection')).not.toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('binder-import-system:collection'));
+        expect(screen.queryByText('Import cards')).not.toBeInTheDocument();
+        fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+        fireEvent.click(screen.getByTestId('binder-tile-system:collection'));
+        fireEvent.click(await screen.findByTestId('binder-open-menu'));
+        fireEvent.click(await screen.findByTestId('binder-import'));
         expect(await screen.findByRole('dialog')).toBeInTheDocument();
-        expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
     });
 
     test('/wants has no Binder Settings control', async () => {

@@ -137,8 +137,12 @@ const renderImport = (path = '/binder') =>
     );
 
 async function openImportDialog(binderId = 'system:collection') {
-    fireEvent.click(await screen.findByTestId(`binder-tile-menu-${binderId}`));
-    fireEvent.click(await screen.findByTestId(`binder-import-${binderId}`));
+    // Already inside the Binder after an earlier import → skip the grid.
+    if (!screen.queryByTestId('binder-open-menu')) {
+        fireEvent.click(await screen.findByTestId(`binder-tile-${binderId}`));
+    }
+    fireEvent.click(await screen.findByTestId('binder-open-menu'));
+    fireEvent.click(await screen.findByTestId('binder-import'));
     return screen.findByRole('dialog');
 }
 
@@ -158,18 +162,23 @@ describe('Binder CSV import', () => {
         mockUpsertEntries.mockResolvedValue({ data: { rows: [] }, error: null });
     });
 
-    test('grid has no top-level import; each Binder tile menu has one', async () => {
+    test('import lives in the open Binder ⋯ menu, not on the My Binders page', async () => {
         renderImport('/binder');
         expect(await screen.findByTestId('binder-create')).toBeInTheDocument();
-        expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('binder-open-menu')).not.toBeInTheDocument();
         fireEvent.click(await screen.findByTestId('binder-tile-menu-system:collection'));
-        expect(await screen.findByTestId('binder-import-system:collection')).toHaveTextContent('Import cards');
+        expect(screen.queryByText('Import cards')).not.toBeInTheDocument();
+        fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+        fireEvent.click(await screen.findByTestId('binder-tile-system:collection'));
+        fireEvent.click(await screen.findByTestId('binder-open-menu'));
+        expect(await screen.findByTestId('binder-import')).toHaveTextContent('Import cards');
     });
 
-    test('Want List tile menu has no import', async () => {
+    test('Want List has no ⋯ import menu', async () => {
         renderImport('/binder');
-        fireEvent.click(await screen.findByTestId('binder-tile-menu-system:want'));
-        expect(screen.queryByTestId('binder-import-system:want')).not.toBeInTheDocument();
+        fireEvent.click(await screen.findByTestId('binder-tile-system:want'));
+        await waitFor(() => screen.getByRole('heading', { name: 'Want List' }));
+        expect(screen.queryByTestId('binder-open-menu')).not.toBeInTheDocument();
     });
 
     test('/wants and the Header have no import', async () => {
