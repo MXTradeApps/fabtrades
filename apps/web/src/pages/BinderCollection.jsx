@@ -369,6 +369,8 @@ const BinderCollection = ({ isWanted = false }) => {
         [entries, resolveCard],
     );
 
+    const gridEntries = useMemo(() => [...allOwned, ...wants], [allOwned, wants]);
+
     const showingGrid = !isWanted && !openBinderId;
     const openBinder = binders.find((b) => b.clientId === openBinderId)
         || (openBinderId === WANT_BINDER_ID
@@ -1094,10 +1096,16 @@ const BinderCollection = ({ isWanted = false }) => {
                     </Box>
                 </Box>
 
-                    {showingGrid && (
+                    {showingGrid && loading && (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                            <CircularProgress />
+                        </Box>
+                    )}
+
+                    {showingGrid && !loading && (
                         <BinderGrid
                             binders={binders}
-                            entries={[...allOwned, ...wants]}
+                            entries={gridEntries}
                             resolveCard={resolveCard}
                             onOpen={(binder) => setOpenBinder(binder.clientId)}
                             onRename={handleRenameBinder}

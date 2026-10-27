@@ -66,7 +66,13 @@ async function requireAuthenticatedUser(unauthedMessage) {
         return { user: null, error: { message: 'Authentication not configured' } };
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    // getSession() reads the locally stored (auto-refreshed) session. getUser()
+    // would re-validate the JWT against the Auth server first: one extra round
+    // trip ahead of every binder read and write, and the Binder page makes
+    // several on load. RLS still checks the token on each request, so the id
+    // here only scopes the query.
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user ?? null;
 
     if (!user) {
         return { user: null, error: { message: unauthedMessage } };
@@ -499,21 +505,44 @@ const BINDER_ENTRIES_PAGE = 1000;
  * truncated at 1000, which drops the rest of a Fabrary-sized collection.
  */
 async function fetchAllBinderEntryRows(userId) {
-    const pages = [];
-    for (let from = 0; ; from += BINDER_ENTRIES_PAGE) {
-        const { data, error } = await supabase
-            .from('binder_entries')
-            .select('*')
-            .eq('user_id', userId)
-            .is('deleted_at', null)
-            .order('added_at', { ascending: false })
-            .order('client_id', { ascending: true })
-            .range(from, from + BINDER_ENTRIES_PAGE - 1);
-        if (error) throw error;
-        pages.push(...(data || []));
-        if (!data || data.length < BINDER_ENTRIES_PAGE) break;
+    const pageQuery = (from, options) => supabase
+        .from('binder_entries')
+        .select('*', options)
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .order('added_at', { ascending: false })
+        .order('client_id', { ascending: true })
+        .range(from, from + BINDER_ENTRIES_PAGE - 1);
+
+    // Large collections run to several pages. Asking for the total on the first
+    // request lets the rest load as one parallel batch instead of one round
+    // trip per page.
+    const first = await pageQuery(0, { count: 'exact' });
+    if (first.error) throw first.error;
+    const pages = [first.data || []];
+    let nextFrom = BINDER_ENTRIES_PAGE;
+
+    if (pages[0].length === BINDER_ENTRIES_PAGE && Number(first.count) > BINDER_ENTRIES_PAGE) {
+        const offsets = [];
+        for (let from = BINDER_ENTRIES_PAGE; from < first.count; from += BINDER_ENTRIES_PAGE) {
+            offsets.push(from);
+        }
+        const rest = await Promise.all(offsets.map((from) => pageQuery(from)));
+        for (const { data, error } of rest) {
+            if (error) throw error;
+            pages.push(data || []);
+        }
+        nextFrom = BINDER_ENTRIES_PAGE * (offsets.length + 1);
     }
-    return pages;
+
+    // No count, or rows added after it was taken: walk what is left page by page.
+    while (pages[pages.length - 1].length === BINDER_ENTRIES_PAGE) {
+        const { data, error } = await pageQuery(nextFrom);
+        if (error) throw error;
+        pages.push(data || []);
+        nextFrom += BINDER_ENTRIES_PAGE;
+    }
+    return pages.flat();
 }
 
 /**

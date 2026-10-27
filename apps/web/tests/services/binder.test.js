@@ -1,5 +1,5 @@
 jest.mock('../../src/lib/supabase.js', () => {
-    const auth = { getUser: jest.fn() };
+    const auth = { getUser: jest.fn(), getSession: jest.fn() };
     const supabase = { auth, from: jest.fn(), rpc: jest.fn() };
     return { supabase };
 });
@@ -57,9 +57,9 @@ const makeChain = (result) => {
 };
 
 const asUser = (id = 'user-1') =>
-    supabase.auth.getUser.mockResolvedValue({ data: { user: { id } } });
+    supabase.auth.getSession.mockResolvedValue({ data: { session: { user: { id } } } });
 const asAnonymous = () =>
-    supabase.auth.getUser.mockResolvedValue({ data: { user: null } });
+    supabase.auth.getSession.mockResolvedValue({ data: { session: null } });
 
 const webCard = {
     _uniqueId: '12345-foil',
@@ -304,6 +304,57 @@ describe('getBinderEntries', () => {
         expect(chain.range).toHaveBeenCalledWith(1000, 1999);
         expect(data.binder).toHaveLength(1001);
         expect(data.binder[1000].cardId).toBe('ice-bolt');
+    });
+
+    test('fetches the remaining pages in parallel once the first reports a count', async () => {
+        invalidateBinderEntriesCache();
+        asUser('user-1');
+        const row = (id) => ({
+            card_id: id,
+            is_wanted: false,
+            quantity: 1,
+            condition: 'NM',
+            card: { id, name: id },
+            added_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+        });
+        const pageAt = (from) => {
+            const size = from < 2000 ? 1000 : 500;
+            return Array.from({ length: size }, (_, i) => row(`c-${from + i}`));
+        };
+        const issued = [];
+        const resolvers = [];
+        supabase.from.mockImplementation(() => {
+            const chain = makeChain({ data: [], error: null });
+            let selectOptions;
+            chain.select.mockImplementation((_cols, options) => {
+                selectOptions = options;
+                return chain;
+            });
+            chain.range.mockImplementation((from) => {
+                issued.push(from);
+                chain.then = (resolve) => {
+                    const result = {
+                        data: pageAt(from),
+                        error: null,
+                        count: selectOptions?.count ? 2500 : null,
+                    };
+                    // Pages after the first must all be requested before any answers.
+                    if (from === 0) resolve(result);
+                    else resolvers.push(() => resolve(result));
+                    if (resolvers.length === 2) resolvers.forEach((r) => r());
+                };
+                return chain;
+            });
+            return chain;
+        });
+
+        const { data, error } = await getBinderEntries();
+
+        expect(error).toBeNull();
+        expect(issued).toEqual([0, 1000, 2000]);
+        expect(data.binder).toHaveLength(2500);
+        expect(data.binder[2499].cardId).toBe('c-2499');
     });
 });
 
