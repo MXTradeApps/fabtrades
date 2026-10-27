@@ -48,7 +48,7 @@ A file with no recognizable Name column is refused: "This file needs a Name colu
    - Set: code or name match against the printing's set.
    - Foiling: exact finish (`Foil` = any foil).
    - Treatment: if the name names one, keep those printings.
-   - Then preferences for blank fields: no treatment in the name → prefer untreated printings; blank Foiling → prefer non-foil printings (each only when any exist).
+   - Then the preference for a blank field: blank Foiling → prefer non-foil printings (only when any exist). No treatment in the name does **not** narrow: Marvel / Extended Art / … versions stay candidates, so the price spread decides whether the player is asked.
 4. **Pick.**
    - 0 candidates → **Couldn't match** (listed, not written).
    - 1 candidate → matched.
@@ -91,9 +91,10 @@ Same rule set produces the same result for the same file and catalog every time.
 6. Unknown name → Couldn't match, not written; other rows still import.
 7. A Fabrary export still previews and imports, with only Haves, into the chosen Binder.
 8. Cancel at any step leaves all Binders unchanged.
+9. `Usurp the Shadow Throne` (only Rainbow Foil $59 and Marvel Cold Foil $248 exist) → Needs review.
 
 ## Decisions (Max, 2026-10-27)
 
 1. Fabrary exports: keep auto-detecting; only Have is imported, into this Binder.
-2. Blank Foiling / no treatment in the name: prefer the plain printing.
+2. Blank Foiling: prefer the non-foil printing. No treatment in the name keeps treated versions in play (revised 2026-10-27: "Usurp the Shadow Throne" must ask Rainbow Foil vs Marvel Cold Foil).
 3. No candidate has a price: send the row to review.

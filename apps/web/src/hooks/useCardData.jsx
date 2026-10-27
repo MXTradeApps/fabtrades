@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { fetchCatalog } from '../services/fabDb.js';
 import { linkBasePrintings } from '../utils/catalogPrintings.js';
+import { canonicalCardName, cardKey } from '../utils/cardIdentity.js';
 // Create context
 const CardDataContext = createContext();
 
@@ -180,8 +181,10 @@ const enhanceDisplayNames = (cards) => {
         const extNumber = card.extNumber || '';
         const subTypeName = card.subTypeName || '';
         
-        // Create base display name
-        let enhancedName = card.name;
+        // Catalog names disagree across printings ("(Blue)" missing, " - FAB061",
+        // treatment order), so show one canonical form per card version.
+        const cardName = canonicalCardName(card);
+        let enhancedName = cardName;
         if (extNumber) {
             enhancedName += ` (${extNumber})`;
         }
@@ -192,6 +195,8 @@ const enhanceDisplayNames = (cards) => {
 
         return {
             ...card,
+            cardName,
+            cardKey: cardKey(card),
             displayName: enhancedName,
             _uniqueDisplayId: uniqueId  // Internal ID that includes edition info
         };

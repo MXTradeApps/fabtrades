@@ -44,3 +44,21 @@ describe('resolvePrinting', () => {
         expect(resolvePrinting({ name: 'Decorative' }, lookup)).toBeNull();
     });
 });
+
+describe('printingsForCard across inconsistent catalog names', () => {
+    const p = (id, name) => ({ _uniqueId: id, name, extPitchValue: 3 });
+    const catalog = [
+        p('711437-rainbow-foil', 'Usurp the Shadow Throne (Blue)'),
+        p('711436-cold-foil', 'Usurp the Shadow Throne (Blue) (Marvel)'),
+        p('x-normal', 'Usurp the Shadow Throne'),
+        { _uniqueId: 'red-normal', name: 'Usurp the Shadow Throne (Red)' },
+    ];
+
+    test('groups color-less, colored and Marvel names as one card', () => {
+        expect(printingsForCard(catalog, catalog[2]).map((c) => c._uniqueId)).toEqual([
+            '711437-rainbow-foil',
+            '711436-cold-foil',
+            'x-normal',
+        ]);
+    });
+});
