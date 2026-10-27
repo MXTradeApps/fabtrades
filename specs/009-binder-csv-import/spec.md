@@ -30,6 +30,9 @@ Headers are matched case-insensitively, ignoring spaces, `_` and `-`. Column ord
 | Set | No | `Set`, `Set Code`, `Set Name`, `Edition` | Set code (`WTR`, `ROS`) or set name (`Welcome to Rathe`), fuzzy matched |
 | Foiling | No | `Foiling`, `Foil`, `Finish` | Blank / `Normal` / `Non-foil`, `Rainbow` / `RF`, `Cold` / `CF`, `Gold` / `GF`, `Foil` (= any foil) |
 | Quantity | No | `Quantity`, `Qty`, `Count`, `Have` | Positive whole number. Blank means 1. 0 or negative skips the row. Non-numeric → Couldn't match list. |
+| Code | No | `Code`, `Card Code`, `Collector Number`, `Card Number`, `Set Number` | Card code, used like a code in Name (added with [010](../010-binder-csv-export/spec.md)) |
+| Pitch | No | `Pitch`, `Color` | `Red` / `Yellow` / `Blue` (or `1`/`2`/`3`), used like `(Red)` in Name (010) |
+| Treatment | No | `Treatment`, `Art`, `Art Treatment` | `Marvel`, `Extended Art`, …, used like a treatment in Name. A blank cell prefers untreated printings (010) |
 
 A file with no recognizable Name column is refused: "This file needs a Name column."
 
