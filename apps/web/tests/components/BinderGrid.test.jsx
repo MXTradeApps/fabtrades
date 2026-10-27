@@ -463,13 +463,13 @@ describe('BinderGrid', () => {
         prompt.mockRestore();
     });
 
-    test('grid shows Import from Fabrary next to New Binder, not Binder Settings', async () => {
+    test('Import from Fabrary lives in each Binder tile menu, not the grid header', async () => {
         renderCollection(false);
-        expect(await screen.findByTestId('import-fabrary')).toBeInTheDocument();
-        expect(screen.getByTestId('binder-create')).toBeInTheDocument();
+        expect(await screen.findByTestId('binder-create')).toBeInTheDocument();
+        expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
         fireEvent.click(screen.getByTestId('binder-tile-menu-system:collection'));
         expect(screen.queryByTestId('binder-tile-settings-system:collection')).not.toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('import-fabrary'));
+        fireEvent.click(screen.getByTestId('binder-import-system:collection'));
         expect(await screen.findByRole('dialog')).toBeInTheDocument();
         expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
     });

@@ -26,7 +26,6 @@ import {
     BookmarkBorderRounded,
     CollectionsBookmarkOutlined,
     FileDownloadOutlined,
-    FileUploadOutlined,
     InsightsOutlined,
     SortRounded,
     StyleOutlined,
@@ -48,7 +47,7 @@ import { Page, Panel, EmptyState } from '../components/layout/Page.jsx';
 import { tk } from '../theme/tokens.js';
 import { SearchDialog } from '../components/search/index.js';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
-import FabraryImportDialog from './BinderSettings.jsx';
+import CardImportDialog from '../components/binder/CardImportDialog.jsx';
 import {
     ensureBinderShare,
     getBinderEntries,
@@ -178,7 +177,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const [pendingDelete, setPendingDelete] = useState(null);
     const [pendingClear, setPendingClear] = useState(null);
     const [clearBusy, setClearBusy] = useState(false);
-    const [importOpen, setImportOpen] = useState(false);
+    const [importBinder, setImportBinder] = useState(null);
 
     const viewingWants = isWanted || openBinderId === WANT_BINDER_ID;
     const listLabel = viewingWants ? 'Want List' : 'Binder';
@@ -1013,15 +1012,6 @@ const BinderCollection = ({ isWanted = false }) => {
                                 <Button
                                     variant="outlined"
                                     color="inherit"
-                                    data-testid="import-fabrary"
-                                    startIcon={<FileUploadOutlined />}
-                                    onClick={() => setImportOpen(true)}
-                                >
-                                    Import from Fabrary
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    color="inherit"
                                     data-testid="export-fabrary"
                                     startIcon={<FileDownloadOutlined />}
                                     onClick={handleExportFabrary}
@@ -1051,6 +1041,7 @@ const BinderCollection = ({ isWanted = false }) => {
                             onRename={handleRenameBinder}
                             onDelete={handleDeleteBinder}
                             onClear={handleClearBinder}
+                            onImport={setImportBinder}
                         />
                     )}
 
@@ -1257,9 +1248,10 @@ const BinderCollection = ({ isWanted = false }) => {
                     )}
             </Page>
 
-            <FabraryImportDialog
-                open={importOpen}
-                onClose={() => setImportOpen(false)}
+            <CardImportDialog
+                open={Boolean(importBinder)}
+                binder={importBinder}
+                onClose={() => setImportBinder(null)}
                 onImported={async () => {
                     await loadBinders();
                     await loadEntries();
