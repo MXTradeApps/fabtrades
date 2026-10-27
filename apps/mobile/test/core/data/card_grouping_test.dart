@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fabtrades/core/data/card_repository.dart';
+import 'package:fabtrades/core/models/card_model.dart';
 
 import '../../support/fixtures.dart';
 
@@ -291,6 +292,87 @@ void main() {
     test('always includes the requested card', () {
       final card = buildCard(id: 'lonely', productId: 9, isFoil: true);
       expect(finishesForCard(const [], card).single.id, 'lonely');
+    });
+  });
+
+  group('cardGroupName across inconsistent catalog names', () {
+    CardModel usurp(String id, String name, {double? market}) => buildCard(
+          id: id,
+          productId: int.parse(id.split('-').first),
+          name: name,
+          pitch: '3',
+          collectorNumber: 'IAR110',
+          tcgMarket: market,
+        );
+
+    test('adds the pitch color when the name leaves it out', () {
+      expect(cardGroupName(usurp('1-base', 'Usurp the Shadow Throne')),
+          'Usurp the Shadow Throne (Blue)');
+      expect(
+          cardGroupName(
+              usurp('1-cold-foil', 'Usurp the Shadow Throne (Blue) (Marvel)')),
+          'Usurp the Shadow Throne (Blue)');
+      expect(cardGroupName(usurp('2-x', 'Usurp the Shadow Throne (Marvel)')),
+          'Usurp the Shadow Throne (Blue)');
+      expect(cardGroupName(buildCard(name: 'Anothos (Golden) - FAB061')),
+          'Anothos');
+    });
+
+    test('a pitch color in the name wins over the pitch column', () {
+      expect(cardGroupName(buildCard(name: 'Snatch (Red)', pitch: '3')),
+          'Snatch (Red)');
+    });
+
+    test('every Usurp version is one group and one printing list', () {
+      final catalog = [
+        usurp('711437-rainbow-foil', 'Usurp the Shadow Throne (Blue)',
+            market: 59.18),
+        usurp('711436-cold-foil', 'Usurp the Shadow Throne (Blue) (Marvel)',
+            market: 248.53),
+        usurp('9-normal', 'Usurp the Shadow Throne'),
+      ];
+      final groups = groupCardsByName(catalog, CardSort.nameAsc);
+      expect(groups, hasLength(1));
+      expect(groups.single.name, 'Usurp the Shadow Throne (Blue)');
+      expect(groups.single.versions, hasLength(3));
+      expect(printingsForCard(catalog, catalog.last), hasLength(3));
+    });
+  });
+
+  group('linkBaseToNormal', () {
+    CardModel row(String id, {double? market}) => buildCard(
+          id: id,
+          productId: int.parse(id.split('-').first),
+          name: 'Usurp the Shadow Throne',
+          tcgMarket: market,
+        );
+
+    test('drops an unpriced blank row next to any real finish', () {
+      final kept = linkBaseToNormal([
+        row('711436-base'),
+        row('711436-cold-foil', market: 248.53),
+        row('711437-base'),
+        row('711437-rainbow-foil', market: 59.18),
+      ]);
+      expect(kept.map((c) => c.id),
+          ['711436-cold-foil', '711437-rainbow-foil']);
+    });
+
+    test('keeps a priced blank row, and a blank row on its own', () {
+      final kept = linkBaseToNormal([
+        row('9-base', market: 2),
+        row('9-rainbow-foil', market: 20),
+        row('42-base'),
+      ]);
+      expect(kept.map((c) => c.id), ['9-base', '9-rainbow-foil', '42-base']);
+    });
+
+    test('still drops a blank row when Normal exists', () {
+      final kept = linkBaseToNormal([
+        row('5-base', market: 1),
+        row('5-normal', market: 1),
+      ]);
+      expect(kept.map((c) => c.id), ['5-normal']);
     });
   });
 }
