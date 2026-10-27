@@ -5,7 +5,7 @@ import {
     CollectionsBookmarkOutlined,
 } from '@mui/icons-material';
 import { tk } from '../../theme/tokens.js';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { pickBinderCover } from '../../utils/binderCover.js';
 import { isPricedField } from '../../utils/binderValueSnapshot.js';
 import { gridOrderBinders, isProtectedBinder, TRADE_BINDER_ID, WANT_BINDER_ID } from '../../services/binder.js';
@@ -37,14 +37,37 @@ function formatBinderTileValue(ownedRows) {
     return formatTileUsd(amount);
 }
 
-function ownedInBinder(entries, binderId) {
-    if (binderId === WANT_BINDER_ID) {
-        return (entries || []).filter((e) => e.isWanted && (e.quantity || 0) > 0);
+/**
+ * Bucket entries by tile in one pass. Filtering the whole collection once per
+ * tile, and resolving each card again on every render, was the bulk of the
+ * grid's render cost for collections in the thousands.
+ */
+function rowsByBinder(entries, resolveCard) {
+    const buckets = new Map();
+    for (const entry of entries || []) {
+        if (!((entry.quantity || 0) > 0)) continue;
+        const binderId = entry.isWanted ? WANT_BINDER_ID : (entry.binderId || TRADE_BINDER_ID);
+        const card = resolveCard ? resolveCard(entry) : (entry.card || {});
+        const row = {
+            ...entry,
+            printingId: entry.cardId || entry.printingId,
+            name: card.name || entry.name || '',
+            tcgMarket: card.market ?? card.tcgMarket ?? entry.tcgMarket,
+            market: card.market ?? card.tcgMarket ?? entry.tcgMarket,
+            imageUrl: card.imageUrl,
+            imageUrlFallback: card.imageUrlFallback,
+            isFoil: Boolean(card.isFoil),
+            condition: entry.condition || 'NM',
+            quantity: entry.quantity || 1,
+        };
+        const bucket = buckets.get(binderId);
+        if (bucket) bucket.push(row);
+        else buckets.set(binderId, [row]);
     }
-    return (entries || []).filter((e) =>
-        !e.isWanted && (e.binderId || TRADE_BINDER_ID) === binderId && (e.quantity || 0) > 0,
-    );
+    return buckets;
 }
+
+const NO_ROWS = [];
 
 /** Tile art: CDN first, then catalog/TCG fallback when the CDN 404s. */
 function BinderTileCover({ imageUrl, fallbackUrl, alt, binderId }) {
@@ -101,7 +124,8 @@ export default function BinderGrid({
     onClear,
     onSettings,
 }) {
-    const ordered = gridOrderBinders(binders);
+    const ordered = useMemo(() => gridOrderBinders(binders), [binders]);
+    const rowsById = useMemo(() => rowsByBinder(entries, resolveCard), [entries, resolveCard]);
 
     return (
         <Box
@@ -119,8 +143,7 @@ export default function BinderGrid({
                 <BinderTile
                     key={binder.clientId}
                     binder={binder}
-                    entries={entries}
-                    resolveCard={resolveCard}
+                    rows={rowsById.get(binder.clientId) || NO_ROWS}
                     onOpen={onOpen}
                     onRename={onRename}
                     onDelete={isProtectedBinder(binder) ? undefined : onDelete}
@@ -134,8 +157,7 @@ export default function BinderGrid({
 
 function BinderTile({
     binder,
-    entries,
-    resolveCard,
+    rows,
     onOpen,
     onRename,
     onDelete,
@@ -144,21 +166,6 @@ function BinderTile({
 }) {
     const [menuEl, setMenuEl] = useState(null);
     const id = binder.clientId;
-    const rows = ownedInBinder(entries, id).map((entry) => {
-        const card = resolveCard ? resolveCard(entry) : (entry.card || {});
-        return {
-            ...entry,
-            printingId: entry.cardId || entry.printingId,
-            name: card.name || entry.name || '',
-            tcgMarket: card.market ?? card.tcgMarket ?? entry.tcgMarket,
-            market: card.market ?? card.tcgMarket ?? entry.tcgMarket,
-            imageUrl: card.imageUrl,
-            imageUrlFallback: card.imageUrlFallback,
-            isFoil: Boolean(card.isFoil),
-            condition: entry.condition || 'NM',
-            quantity: entry.quantity || 1,
-        };
-    });
     const copies = rows.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
     const value = formatBinderTileValue(rows);
     const cover = pickBinderCover(rows);

@@ -1,5 +1,5 @@
 jest.mock('../../src/lib/supabase.js', () => {
-    const auth = { getUser: jest.fn() };
+    const auth = { getUser: jest.fn(), getSession: jest.fn() };
     const supabase = { auth, from: jest.fn() };
     return { supabase };
 });

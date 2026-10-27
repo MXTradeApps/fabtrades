@@ -256,7 +256,8 @@ describe('Collection Stats entry and page', () => {
         wrap(routes, '/binder/stats');
         const headline = await screen.findByTestId('collection-stats-headline');
         expect(headline).toHaveTextContent('Total Value');
-        expect(headline).toHaveTextContent('$25.00');
+        // The headline mounts before the entries load; wait for the totals.
+        await waitFor(() => expect(headline).toHaveTextContent('$25.00'));
         expect(headline).toHaveTextContent('€20.40');
         expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
         expect(screen.queryByText('€0.00')).not.toBeInTheDocument();
