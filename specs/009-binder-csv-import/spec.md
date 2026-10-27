@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-27
 
-**Status**: Draft — awaiting confirmation
+**Status**: Confirmed 2026-10-27, implemented (web)
 
 **Supersedes (in part)**: [008-fabrary-csv-import](../008-fabrary-csv-import/spec.md)
 
@@ -19,7 +19,7 @@ Importing becomes a per-Binder action. From a Binder tile's **⋯** menu the pla
 - The top-level **Import from Fabrary** button on the Binders grid is removed.
 - Each Binder tile's ⋯ menu has the import item. Want List's tile does not.
 - The import writes into **that** Binder. Other Binders are not written (except the Fabrary-only Want/Extra routing noted below).
-- Once Part 2 ships, the menu label becomes **Import cards** (it is "Import from Fabrary" until then).
+- The menu label is **Import cards**.
 
 ## CSV schema
 
@@ -34,25 +34,26 @@ Headers are matched case-insensitively, ignoring spaces, `_` and `-`. Column ord
 
 A file with no recognizable Name column is refused: "This file needs a Name column."
 
-**Fabrary exports keep working.** If the headers match the Fabrary export, the existing Fabrary matcher (008) is used unchanged: `Have` is added to this Binder, `Set number` is used as the card code, and Want/Extra columns still route to Want List and Trade Binder. *(See open question 1.)*
+**Fabrary exports keep working.** If the headers match the Fabrary export, the existing Fabrary matcher (008) is used unchanged and only `Have` is imported, into this Binder. Want and Extra columns are ignored, so a per-Binder import never writes another pile.
 
 ## Matching one row
 
 1. **Card code.** Look for a code in Name: 2–4 letters followed by 3 digits (`WTR167`, `ROS111`, `FAB123`), optionally with a foil suffix. If found, candidates = catalog printings with that collector number. Strip the code from the name before step 2.
 2. **Name.** Normalize (lowercase, drop punctuation and accents, collapse spaces). Pull out pitch (`red`/`yellow`/`blue`) and treatment words if present.
    - Exact normalized name match first.
-   - Otherwise fuzzy: best catalog card name with similarity ≥ 0.85 (Damerau-Levenshtein, scaled by length). If two different card names tie within 0.03, the row needs review.
+   - Otherwise fuzzy: closest catalog card name by Damerau-Levenshtein distance, allowing 1 typo for names of 4–9 characters and about 15% of the length for longer ones (none under 4). If two different card names score within 0.03 of each other, the row needs review.
    - With a card code, the name only confirms: if the code's card name is not similar to the row's name (< 0.6) the row needs review with the code's printings as choices.
-3. **Narrow by what the row gives** (each filter is skipped when the field is blank):
+3. **Narrow by what the row gives.** Each filter is skipped when its field is blank. A filter that would leave nothing sends the row to review over the printings it had, rather than guessing.
    - Pitch from the name.
    - Set: code or name match against the printing's set.
-   - Foiling: exact finish. Blank Foiling prefers non-foil printings when any exist. *(See open question 2.)*
-   - Treatment: if the name names a treatment, keep those; if not, prefer untreated printings when any exist. *(See open question 2.)*
+   - Foiling: exact finish (`Foil` = any foil).
+   - Treatment: if the name names one, keep those printings.
+   - Then preferences for blank fields: no treatment in the name → prefer untreated printings; blank Foiling → prefer non-foil printings (each only when any exist).
 4. **Pick.**
    - 0 candidates → **Couldn't match** (listed, not written).
    - 1 candidate → matched.
    - 2+ candidates → compare their TCGplayer market price. If (highest − lowest) ≤ **$5.00**, auto-pick the **lowest-priced** printing. If the spread is more than $5.00, the row goes to **Needs review**.
-   - Unpriced candidates are ignored for the spread. If none of the candidates has a price, the row goes to **Needs review**. *(See open question 3.)*
+   - Unpriced candidates are ignored for the spread. If none of the candidates has a price, the row goes to **Needs review**.
 
 Same rule set produces the same result for the same file and catalog every time. Ties on price break by set release order, then collector number.
 
@@ -88,11 +89,11 @@ Same rule set produces the same result for the same file and catalog every time.
 4. `Snach (Red)` (typo) still matches Snatch (Red).
 5. Two candidates at $0.25 and $4.75 → lowest auto-picked. Candidates at $0.25 and $5.50 → review.
 6. Unknown name → Couldn't match, not written; other rows still import.
-7. A Fabrary export still previews and imports, with Haves into the chosen Binder.
+7. A Fabrary export still previews and imports, with only Haves, into the chosen Binder.
 8. Cancel at any step leaves all Binders unchanged.
 
-## Open questions for Max
+## Decisions (Max, 2026-10-27)
 
-1. **Fabrary exports**: keep auto-detecting them (current routing: Have → this Binder, Want → Want List, Extra → Trade Binder), or treat them as the generic schema (Have → this Binder only)? *Recommendation: keep auto-detect but only import Have into this Binder, so a per-Binder import never writes other piles.*
-2. **Blank Foiling / no treatment in the name**: prefer the plain non-foil, untreated printing (fewer review rows), or consider every finish and treatment and let the $5 rule decide (many more review rows, since foils and alt arts are usually > $5 apart)? *Recommendation: prefer plain.*
-3. **Unpriced printings**: send to review when no candidate has a price (recommended), or auto-pick by a fixed order?
+1. Fabrary exports: keep auto-detecting; only Have is imported, into this Binder.
+2. Blank Foiling / no treatment in the name: prefer the plain printing.
+3. No candidate has a price: send the row to review.

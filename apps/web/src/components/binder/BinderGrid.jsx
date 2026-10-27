@@ -269,7 +269,7 @@ function BinderTile({
                             onImport(binder);
                         }}
                     >
-                        Import from Fabrary
+                        Import cards
                     </MenuItem>
                 )}
                 {onRename && (

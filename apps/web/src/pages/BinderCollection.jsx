@@ -47,7 +47,7 @@ import { Page, Panel, EmptyState } from '../components/layout/Page.jsx';
 import { tk } from '../theme/tokens.js';
 import { SearchDialog } from '../components/search/index.js';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
-import FabraryImportDialog from './BinderSettings.jsx';
+import CardImportDialog from '../components/binder/CardImportDialog.jsx';
 import {
     ensureBinderShare,
     getBinderEntries,
@@ -1248,7 +1248,7 @@ const BinderCollection = ({ isWanted = false }) => {
                     )}
             </Page>
 
-            <FabraryImportDialog
+            <CardImportDialog
                 open={Boolean(importBinder)}
                 binder={importBinder}
                 onClose={() => setImportBinder(null)}
