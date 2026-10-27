@@ -46,10 +46,11 @@ async function readPickedFile(file) {
     });
 }
 
-function destinationBinderId(destination) {
+/** Haves go to the Binder the import was opened from; Wants and Extras keep their own piles. */
+function destinationBinderId(destination, haveBinderId) {
     if (destination === FABRARY_DESTINATION.want) return null;
     if (destination === FABRARY_DESTINATION.trade) return TRADE_BINDER_ID;
-    return COLLECTION_BINDER_ID;
+    return haveBinderId;
 }
 
 function unmatchedLabel(row) {
@@ -58,8 +59,10 @@ function unmatchedLabel(row) {
         .join(' · ');
 }
 
-const FabraryImportDialog = ({ open, onClose, onImported }) => {
+const FabraryImportDialog = ({ open, binder, onClose, onImported }) => {
     const { cards } = useCardData();
+    const haveBinderId = binder?.clientId || COLLECTION_BINDER_ID;
+    const haveBinderName = binder?.name || 'Collection';
     const fileInputRef = useRef(null);
     const [working, setWorking] = useState(false);
     const [applying, setApplying] = useState(false);
@@ -134,7 +137,7 @@ const FabraryImportDialog = ({ open, onClose, onImported }) => {
         if (!plan?.ok || applying) return;
         setApplying(true);
         setError('');
-        if (plan.restoreCollection) {
+        if (plan.restoreCollection && haveBinderId === COLLECTION_BINDER_ID) {
             const restored = await ensureCollectionBinder();
             if (restored.error) {
                 setError(restored.error.message || 'Could not restore Collection');
@@ -147,10 +150,13 @@ const FabraryImportDialog = ({ open, onClose, onImported }) => {
             ...(entryRes.data?.binder || []),
             ...(entryRes.data?.wants || []),
         ];
-        const combined = applyImportAddsToEntries(latest, plan.adds);
+        const combined = applyImportAddsToEntries(latest, plan.adds, {
+            collectionBinderId: haveBinderId,
+            tradeBinderId: TRADE_BINDER_ID,
+        });
         const rows = plan.adds.map((add) => {
             const wanted = add.destination === FABRARY_DESTINATION.want;
-            const binderId = destinationBinderId(add.destination);
+            const binderId = destinationBinderId(add.destination, haveBinderId);
             const entry = combined.find((row) => {
                 const id = row.cardId || row.printingId;
                 if (id !== add.printingId) return false;
@@ -202,6 +208,11 @@ const FabraryImportDialog = ({ open, onClose, onImported }) => {
                 }}
             >
                 Import from Fabrary
+                {binder?.name && (
+                    <Typography component="span" sx={{ display: 'block', color: mutedColor, fontSize: '0.875rem' }}>
+                        into {binder.name}
+                    </Typography>
+                )}
                 <IconButton
                     aria-label="close"
                     onClick={handleClose}
@@ -269,14 +280,14 @@ const FabraryImportDialog = ({ open, onClose, onImported }) => {
                             </Alert>
                         )}
                         <Typography>Rows with quantities: {plan.ownedCount}</Typography>
-                        <Typography>Collection: {copiesForDestination(plan.adds, FABRARY_DESTINATION.collection)}</Typography>
+                        <Typography>{haveBinderName}: {copiesForDestination(plan.adds, FABRARY_DESTINATION.collection)}</Typography>
                         <Typography>Want List: {copiesForDestination(plan.adds, FABRARY_DESTINATION.want)}</Typography>
                         <Typography>Trade Binder: {copiesForDestination(plan.adds, FABRARY_DESTINATION.trade)}</Typography>
                         <Typography>Matched: {plan.matchedCount}</Typography>
                         <Typography>Won&apos;t be imported: {plan.unmatched.length}</Typography>
                         <Typography>Copies to add: {plan.copiesToAdd}</Typography>
                         <Typography sx={{ mt: 1, color: mutedColor }}>
-                            Haves will be added to the Collection Binder
+                            Haves will be added to {haveBinderName}
                         </Typography>
                         <Typography sx={{ mt: 1, color: mutedColor }}>
                             Wants will be added to the Want List

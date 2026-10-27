@@ -135,8 +135,9 @@ const renderImport = (path = '/binder') =>
         </ThemeProvider>,
     );
 
-async function openImportDialog() {
-    fireEvent.click(await screen.findByTestId('import-fabrary'));
+async function openImportDialog(binderId = 'system:collection') {
+    fireEvent.click(await screen.findByTestId(`binder-tile-menu-${binderId}`));
+    fireEvent.click(await screen.findByTestId(`binder-import-${binderId}`));
     return screen.findByRole('dialog');
 }
 
@@ -153,22 +154,26 @@ describe('Fabrary import', () => {
         });
     });
 
-    test('grid shows Import from Fabrary next to New Binder, not on a Binder', async () => {
+    test('grid has no top-level import; each Binder tile menu has one', async () => {
         renderImport('/binder');
-        expect(await screen.findByTestId('import-fabrary')).toBeInTheDocument();
-        expect(screen.getByTestId('binder-create')).toBeInTheDocument();
-        fireEvent.click(await screen.findByTestId('binder-tile-system:collection'));
-        expect(screen.queryByTestId('binder-settings')).not.toBeInTheDocument();
+        expect(await screen.findByTestId('binder-create')).toBeInTheDocument();
         expect(screen.queryByTestId('import-fabrary')).not.toBeInTheDocument();
+        fireEvent.click(await screen.findByTestId('binder-tile-menu-system:collection'));
+        expect(await screen.findByTestId('binder-import-system:collection')).toHaveTextContent('Import from Fabrary');
     });
 
-    test('tile menu has no Settings; Import opens a modal', async () => {
+    test('Want List tile menu has no import', async () => {
         renderImport('/binder');
-        fireEvent.click(await screen.findByTestId('binder-tile-menu-system:trade'));
-        expect(screen.queryByTestId('binder-tile-settings-system:trade')).not.toBeInTheDocument();
-        const dialog = await openImportDialog();
+        fireEvent.click(await screen.findByTestId('binder-tile-menu-system:want'));
+        expect(screen.queryByTestId('binder-import-system:want')).not.toBeInTheDocument();
+    });
+
+    test('tile menu Import opens a modal for that Binder', async () => {
+        renderImport('/binder');
+        const dialog = await openImportDialog('system:trade');
         expect(within(dialog).getByText('Import from Fabrary')).toBeInTheDocument();
-        expect(screen.queryByTestId('binder-settings-back')).not.toBeInTheDocument();
+        expect(within(dialog).getByText('into Trade Binder')).toBeInTheDocument();
+        expect(screen.queryByTestId('binder-tile-settings-system:trade')).not.toBeInTheDocument();
         expect(within(dialog).getByTestId('fabrary-file')).toBeInTheDocument();
         expect(within(dialog).getByTestId('fabrary-choose')).toBeInTheDocument();
     });
@@ -233,7 +238,7 @@ describe('Fabrary import', () => {
         expect(screen.getByText(/Unknown Junk/)).toBeInTheDocument();
         expect(screen.getByText(/Cards we couldn't match/)).toBeInTheDocument();
         expect(screen.getByText(/aren't in the FAB Trades catalog/)).toBeInTheDocument();
-        expect(screen.getByText(/Haves will be added to the Collection Binder/)).toBeInTheDocument();
+        expect(screen.getByText(/Haves will be added to Collection/)).toBeInTheDocument();
         expect(screen.getByTestId('fabrary-unmatched')).toBeInTheDocument();
         expect(screen.getByTestId('fabrary-confirm')).not.toBeDisabled();
 
@@ -311,6 +316,35 @@ describe('Fabrary import', () => {
         expect(second.find((row) => row.binderId === 'system:collection').quantity).toBe(4);
         expect(second.find((row) => row.isWanted).quantity).toBe(18);
         expect(second.find((row) => row.binderId === 'system:trade').quantity).toBe(16);
+    });
+
+    test('Haves go to the Binder whose menu opened the import', async () => {
+        mockGetBinders.mockResolvedValue({
+            data: {
+                binders: [
+                    ...defaultBinders.data.binders,
+                    { clientId: 'custom-1', name: 'Blitz Deck', role: 'standard', deletedAt: null },
+                ],
+            },
+            error: null,
+        });
+        renderImport();
+        const dialog = await openImportDialog('custom-1');
+        fireEvent.change(within(dialog).getByTestId('fabrary-file'), {
+            target: { files: [makeFile(ownedCsv)] },
+        });
+        await screen.findByTestId('fabrary-preview');
+        expect(screen.getByText(/Blitz Deck: 2/)).toBeInTheDocument();
+        expect(screen.getByText(/Haves will be added to Blitz Deck/)).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('fabrary-confirm'));
+        await waitFor(() => expect(mockUpsertEntries).toHaveBeenCalledTimes(1));
+        expect(mockEnsureCollectionBinder).not.toHaveBeenCalled();
+        const rows = mockUpsertEntries.mock.calls[0][0];
+        expect(rows).toEqual(expect.arrayContaining([
+            expect.objectContaining({ quantity: 2, binderId: 'custom-1', isWanted: false }),
+            expect.objectContaining({ quantity: 8, binderId: 'system:trade', isWanted: false }),
+        ]));
+        expect(rows.find((row) => row.binderId === 'system:collection')).toBeUndefined();
     });
 
     test('confirm shows a spinner while the import is in progress', async () => {
