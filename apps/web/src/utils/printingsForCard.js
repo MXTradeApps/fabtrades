@@ -1,6 +1,10 @@
+import { cardKey } from './cardIdentity.js';
+
 /**
- * Sibling Printings of the opened card (same catalog `name`), including
- * reprints across sets. Grain is Printing (set + finish), not displayName.
+ * Sibling Printings of the opened card, including reprints across sets and
+ * treatments (Marvel, Extended Art, …). Matched by card identity (base name +
+ * pitch), since catalog names disagree on qualifiers between printings.
+ * Grain is Printing (set + finish), not displayName.
  *
  * @param {Array} catalog - In-memory catalog card objects
  * @param {Object} printing - The opened Printing
@@ -8,8 +12,8 @@
  */
 export function printingsForCard(catalog, printing) {
     if (!printing?.name || !Array.isArray(catalog)) return [];
-    const name = printing.name;
-    return catalog.filter((card) => card?.name === name && card._uniqueId);
+    const key = printing.cardKey || cardKey(printing);
+    return catalog.filter((card) => card?._uniqueId && (card.cardKey || cardKey(card)) === key);
 }
 
 /**

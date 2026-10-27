@@ -94,10 +94,35 @@ describe('matchImportRow', () => {
         expect(match({ name: 'Snatch (Blue)' })).toEqual({ status: 'matched', printingId: 'snatch-blue' });
     });
 
-    test('no treatment in the name prefers the plain printing', () => {
+    test('no treatment in the name keeps treated versions; blank Foiling still prefers non-foil', () => {
         expect(match({ name: 'Aether Quickening', foiling: 'Rainbow' })).toEqual({ status: 'matched', printingId: 'aq-ros-ea' });
         expect(match({ name: 'ROS111 Aether Quickening' })).toEqual({ status: 'matched', printingId: 'aq-ros' });
         expect(match({ name: 'Aether Quickening (Extended Art)' })).toEqual({ status: 'matched', printingId: 'aq-ros-ea' });
+    });
+
+    describe('a card whose only versions are foil or treated (Usurp the Shadow Throne)', () => {
+        const usurp = buildImportIndex([
+            printing('usurp-rf', 'Usurp the Shadow Throne (Blue)', 'IAR110', 'Usurp the Shadow Throne', 'Rainbow Foil', 59.18, { extPitchValue: 3 }),
+            printing('usurp-mv-cf', 'Usurp the Shadow Throne (Blue) (Marvel)', 'IAR110', 'Usurp the Shadow Throne', 'Cold Foil', 248.53, { extPitchValue: 3 }),
+            printing('gloom-n', 'Sinspeaker Gloomblade (Red)', 'IAR112', 'Usurp the Shadow Throne', 'Normal', 1, { extPitchValue: 1 }),
+            printing('gloom-mv', 'Sinspeaker Gloomblade (Red) (Marvel)', 'IAR112', 'Usurp the Shadow Throne', 'Normal', 3, { extPitchValue: 1 }),
+        ]);
+
+        test('versions over $5 apart go to review', () => {
+            expect(matchImportRow({ name: 'Usurp the Shadow Throne' }, usurp)).toEqual({
+                status: 'review',
+                reason: 'price_spread',
+                candidates: ['usurp-mv-cf', 'usurp-rf'],
+            });
+        });
+
+        test('versions within $5 still auto-pick the cheapest', () => {
+            expect(matchImportRow({ name: 'Sinspeaker Gloomblade' }, usurp)).toEqual({ status: 'matched', printingId: 'gloom-n' });
+        });
+
+        test('naming the treatment picks it', () => {
+            expect(matchImportRow({ name: 'Usurp the Shadow Throne (Marvel)' }, usurp)).toEqual({ status: 'matched', printingId: 'usurp-mv-cf' });
+        });
     });
 
     test('several unpriced candidates → review', () => {

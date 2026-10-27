@@ -145,7 +145,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const { user } = useAuth();
     const { isPro } = useEntitlement();
     const { openDetail } = useCardDetail();
-    const { cards, cardGroups, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
+    const { cards, cardGroups, cardIdLookup, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
     const [allOwned, setAllOwned] = useState([]);
     const [wants, setWants] = useState([]);
@@ -261,8 +261,12 @@ const BinderCollection = ({ isWanted = false }) => {
         for (const card of cards) {
             if (card._uniqueId) map.set(card._uniqueId, card);
         }
+        // Entries saved on a retired blank-finish id resolve to its real printing.
+        for (const [id, card] of Object.entries(cardIdLookup || {})) {
+            if (!map.has(id)) map.set(id, card);
+        }
         return map;
-    }, [cards]);
+    }, [cards, cardIdLookup]);
 
     /** cardId → sibling printings (Normal / Rainbow Foil / …) from catalog groups. */
     const editionsByCardId = useMemo(() => {

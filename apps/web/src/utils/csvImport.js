@@ -18,6 +18,9 @@ import {
 } from './fabraryMatch.js';
 import { parseQty } from './fabraryImportApply.js';
 import { collectorNumberPrefix } from './setAbbreviation.js';
+import { baseCardName } from './cardIdentity.js';
+
+export { baseCardName };
 
 /** Auto-pick the cheapest printing when every candidate is within this many dollars. */
 export const PRICE_SPREAD_LIMIT = 5;
@@ -138,18 +141,6 @@ export function nameSimilarity(a, b) {
     return 1 - editDistance(x, y) / Math.max(x.length, y.length);
 }
 
-/** Card name without trailing `(Red)` / `(Extended Art)` / ` - WTR` qualifiers. */
-export function baseCardName(name) {
-    let text = String(name ?? '').trim();
-    text = text.replace(/\s+-\s+[A-Z0-9]{2,}\s*$/i, '');
-    let previous;
-    do {
-        previous = text;
-        text = text.replace(/\s*[([][^)\]]*[)\]]\s*$/, '').trim();
-    } while (text !== previous);
-    return text;
-}
-
 function parentheticals(name) {
     return [...String(name ?? '').matchAll(/[([]([^)\]]*)[)\]]/g)].map((m) => m[1].trim().toLowerCase());
 }
@@ -220,10 +211,6 @@ function cardHasTreatment(card, treatment) {
     const needles = TREATMENT_ALIASES[treatment] || [treatment];
     const tokens = parentheticals(card?.name);
     return needles.some((needle) => tokens.some((token) => token.includes(needle)));
-}
-
-function cardIsPlain(card) {
-    return !treatmentOfName(card?.name);
 }
 
 export function priceOf(card) {
@@ -362,8 +349,10 @@ export function matchImportRow(row, index) {
         pool = step.pool;
     }
 
-    // Explicit details first; preferences for blank fields only apply after,
+    // Explicit details first; the blank-Foiling preference only applies after,
     // so `(Extended Art)` with no Foiling can still land on a foil-only art.
+    // No treatment in the name keeps every version (Marvel, Extended Art, …)
+    // in play: the price spread decides whether the player must pick.
     const foil = parseFoiling(row?.foiling);
     if (foil) {
         const keep = foil === 'foil'
@@ -378,8 +367,6 @@ export function matchImportRow(row, index) {
         const step = narrow(pool, (card) => cardHasTreatment(card, parsed.treatment), 'treatment');
         if (step.result) return step.result;
         pool = step.pool;
-    } else {
-        pool = preferWhenAny(pool, cardIsPlain);
     }
 
     if (!foil) pool = preferWhenAny(pool, (card) => finishOf(card) === 'normal');
