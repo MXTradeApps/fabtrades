@@ -100,7 +100,6 @@ export default function BinderGrid({
     onDelete,
     onClear,
     onSettings,
-    onImport,
 }) {
     const ordered = gridOrderBinders(binders);
 
@@ -127,7 +126,6 @@ export default function BinderGrid({
                     onDelete={isProtectedBinder(binder) ? undefined : onDelete}
                     onClear={onClear}
                     onSettings={onSettings}
-                    onImport={binder.clientId === WANT_BINDER_ID ? undefined : onImport}
                 />
             ))}
         </Box>
@@ -143,7 +141,6 @@ function BinderTile({
     onDelete,
     onClear,
     onSettings,
-    onImport,
 }) {
     const [menuEl, setMenuEl] = useState(null);
     const id = binder.clientId;
@@ -224,7 +221,7 @@ function BinderTile({
                     </Box>
                 </Box>
             </CardActionArea>
-            {(onRename || onDelete || onClear || onSettings || onImport) && (
+            {(onRename || onDelete || onClear || onSettings) && (
                 <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
                     <IconButton
                         size="small"
@@ -259,17 +256,6 @@ function BinderTile({
                         }}
                     >
                         Settings
-                    </MenuItem>
-                )}
-                {onImport && (
-                    <MenuItem
-                        data-testid={`binder-import-${id}`}
-                        onClick={() => {
-                            setMenuEl(null);
-                            onImport(binder);
-                        }}
-                    >
-                        Import cards
                     </MenuItem>
                 )}
                 {onRename && (

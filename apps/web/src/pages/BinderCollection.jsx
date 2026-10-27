@@ -14,6 +14,7 @@ import {
     FormControlLabel,
     IconButton,
     InputAdornment,
+    Menu,
     MenuItem,
     Select,
     Snackbar,
@@ -27,6 +28,7 @@ import {
     CollectionsBookmarkOutlined,
     FileDownloadOutlined,
     InsightsOutlined,
+    MoreHoriz as MoreHorizIcon,
     SortRounded,
     StyleOutlined,
     Add as AddIcon,
@@ -178,6 +180,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const [pendingClear, setPendingClear] = useState(null);
     const [clearBusy, setClearBusy] = useState(false);
     const [importBinder, setImportBinder] = useState(null);
+    const [binderMenuEl, setBinderMenuEl] = useState(null);
 
     const viewingWants = isWanted || openBinderId === WANT_BINDER_ID;
     const listLabel = viewingWants ? 'Want List' : 'Binder';
@@ -1007,6 +1010,34 @@ const BinderCollection = ({ isWanted = false }) => {
                                 {viewingWants ? 'Clear Want List' : 'Clear Binder'}
                             </Button>
                         )}
+                        {!showingGrid && !viewingWants && openBinder && (
+                            <>
+                                <IconButton
+                                    data-testid="binder-open-menu"
+                                    aria-label={`${openBinder.name} options`}
+                                    onClick={(e) => setBinderMenuEl(e.currentTarget)}
+                                >
+                                    <MoreHorizIcon />
+                                </IconButton>
+                                <Menu
+                                    anchorEl={binderMenuEl}
+                                    open={Boolean(binderMenuEl)}
+                                    onClose={() => setBinderMenuEl(null)}
+                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                                >
+                                    <MenuItem
+                                        data-testid="binder-import"
+                                        onClick={() => {
+                                            setBinderMenuEl(null);
+                                            setImportBinder(openBinder);
+                                        }}
+                                    >
+                                        Import cards
+                                    </MenuItem>
+                                </Menu>
+                            </>
+                        )}
                         {showingGrid && (
                             <>
                                 <Button
@@ -1041,7 +1072,6 @@ const BinderCollection = ({ isWanted = false }) => {
                             onRename={handleRenameBinder}
                             onDelete={handleDeleteBinder}
                             onClear={handleClearBinder}
-                            onImport={setImportBinder}
                         />
                     )}
 

@@ -12,14 +12,13 @@
 
 ## Summary
 
-Importing becomes a per-Binder action. From a Binder tile's **⋯** menu the player picks **Import cards**, chooses a CSV, and every row is matched against the catalog with a forgiving search. Rows that resolve to one printing (or to several printings within $5 of each other) are added automatically. Rows that are ambiguous by more than $5 go to a **Needs review** step in the same modal, where the player picks the right printing. Nothing is written until the player confirms.
+Importing becomes a per-Binder action. From the ⋯ menu at the top right of an open Binder's page, the player picks **Import cards**, chooses a CSV, and every row is matched against the catalog with a forgiving search. Rows that resolve to one printing (or to several printings within $5 of each other) are added automatically. Rows that are ambiguous by more than $5 go to a **Needs review** step in the same modal, where the player picks the right printing. Nothing is written until the player confirms.
 
-## Entry point (Part 1 — already built on this branch)
+## Entry point
 
-- The top-level **Import from Fabrary** button on the Binders grid is removed.
-- Each Binder tile's ⋯ menu has the import item. Want List's tile does not.
-- The import writes into **that** Binder. Other Binders are not written (except the Fabrary-only Want/Extra routing noted below).
-- The menu label is **Import cards**.
+- The My Binders page has no import: not in the header, not in the Binder tile menus.
+- An open Binder's page has a **⋯** button at the top right of the header. Its menu has **Import cards**, which imports into that Binder. Want List has no ⋯ import menu.
+- Other Binders and Want List are not written.
 
 ## CSV schema
 
@@ -83,7 +82,7 @@ Same rule set produces the same result for the same file and catalog every time.
 
 ## Acceptance checks
 
-1. Binders grid has no import button; each Binder tile ⋯ menu (not Want List) has it, and it imports into that Binder.
+1. My Binders has no import; an open Binder's ⋯ menu (not Want List) has it, and it imports into that Binder.
 2. `Name,Set,Foiling,Quantity` / `Snatch WTR167,,,3` adds 3 of the WTR167 non-foil Snatch printing (the cheapest if several are within $5).
 3. `Name` only / `Enlightened Strike` with printings spread over $5 → row appears in Needs review; picking one adds it.
 4. `Snach (Red)` (typo) still matches Snatch (Red).
