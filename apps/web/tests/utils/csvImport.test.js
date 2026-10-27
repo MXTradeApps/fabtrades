@@ -186,3 +186,41 @@ describe('planCsvImport', () => {
         expect(plan.unmatched).toEqual([expect.objectContaining({ name: 'Junk', set: 'ZZZ999' })]);
     });
 });
+
+describe('Code, Pitch and Treatment columns', () => {
+    test('a Code column works like a code in the name', () => {
+        expect(match({ name: 'Snatch', code: 'HP167' })).toEqual({ status: 'matched', printingId: 'snatch-hp-n' });
+    });
+
+    test('a Pitch column narrows like (Blue) in the name', () => {
+        expect(match({ name: 'Snatch', pitch: 'Blue' })).toEqual({ status: 'matched', printingId: 'snatch-blue' });
+    });
+
+    test('a Treatment column picks the treated version', () => {
+        expect(match({ name: 'Aether Quickening', treatment: 'Extended Art' }))
+            .toEqual({ status: 'matched', printingId: 'aq-ros-ea' });
+    });
+
+    test('a blank Treatment cell prefers untreated; no Treatment column keeps both', () => {
+        const both = buildImportIndex([
+            printing('ss-n', 'Scar for a Scar (Red)', 'WTR191', 'Welcome to Rathe', 'Normal', 1),
+            printing('ss-ea', 'Scar for a Scar (Red) (Extended Art)', 'WTR191', 'Welcome to Rathe', 'Normal', 30),
+        ]);
+        expect(matchImportRow({ name: 'Scar for a Scar', treatment: '' }, both))
+            .toEqual({ status: 'matched', printingId: 'ss-n' });
+        expect(matchImportRow({ name: 'Scar for a Scar' }, both))
+            .toMatchObject({ status: 'review', reason: 'price_spread' });
+    });
+
+    test('planCsvImport reads the binder export headers', () => {
+        const csv = 'Name,Pitch,Set,Code,Foiling,Treatment,Quantity,Price,Total Price\n'
+            + 'Snatch,Red,History Pack 1,HP167,Normal,,2,0.25,0.50\n'
+            + 'Aether Quickening,Red,Rosetta,ROS111,Rainbow,Extended Art,1,25.00,25.00\n';
+        const plan = planCsvImport({ csv, catalog });
+        expect(plan).toMatchObject({ ok: true, kind: 'generic', rowCount: 2, review: [], unmatched: [] });
+        expect(plan.matched).toEqual([
+            { printingId: 'snatch-hp-n', quantity: 2 },
+            { printingId: 'aq-ros-ea', quantity: 1 },
+        ]);
+    });
+});

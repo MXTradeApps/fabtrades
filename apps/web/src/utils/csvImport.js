@@ -1,7 +1,8 @@
 /**
  * General CSV → Binder import (spec 009).
  *
- * Accepts `Name, Set, Foiling, Quantity` (only Name required) and Fabrary
+ * Accepts `Name, Set, Foiling, Quantity` (only Name required), optional
+ * `Code, Pitch, Treatment` columns (so a binder export round-trips), and Fabrary
  * collection exports. Each row resolves to one Printing, to a short list the
  * player must pick from (Needs review), or to nothing (Couldn't match).
  */
@@ -37,6 +38,9 @@ const HEADER_ALIASES = {
     set: ['set', 'setcode', 'setname', 'edition'],
     foiling: ['foiling', 'foil', 'finish'],
     quantity: ['quantity', 'qty', 'count', 'have'],
+    code: ['code', 'cardcode', 'collectornumber', 'cardnumber', 'setnumber'],
+    pitch: ['pitch', 'color', 'colour'],
+    treatment: ['treatment', 'arttreatment', 'art'],
 };
 
 const PITCHES = ['red', 'yellow', 'blue'];
@@ -180,6 +184,20 @@ export function parseNameField(raw) {
     return { code, name: baseCardName(cleaned), pitch, treatment };
 }
 
+/** `Red` / `1` → `red`; anything else → ''. */
+function parsePitch(raw) {
+    const text = normalizeText(raw);
+    if (PITCHES.includes(text)) return text;
+    return PITCH_BY_VALUE[text] || '';
+}
+
+/** `Marvel` / `Extended Art` → a TREATMENTS entry; unknown → ''. */
+function parseTreatment(raw) {
+    const text = String(raw ?? '').trim().toLowerCase();
+    if (!text) return '';
+    return TREATMENTS.find((t) => text.includes(t)) || '';
+}
+
 /** @returns {'normal'|'rainbow'|'cold'|'gold'|'foil'|''} */
 export function parseFoiling(raw) {
     const text = normalizeText(raw);
@@ -304,7 +322,8 @@ function preferWhenAny(pool, keep) {
 /**
  * Resolve one generic CSV row.
  *
- * @param {{ name?: string, set?: string, foiling?: string }} row
+ * @param {{ name?: string, code?: string, pitch?: string, set?: string,
+ *   foiling?: string, treatment?: string }} row
  * @param {ReturnType<typeof buildImportIndex>} index
  * @returns {{ status: 'matched', printingId: string }
  *   | { status: 'review', reason: string, candidates: string[] }
@@ -312,6 +331,13 @@ function preferWhenAny(pool, keep) {
  */
 export function matchImportRow(row, index) {
     const parsed = parseNameField(row?.name);
+    // Separate Code / Pitch / Treatment columns fill in what the name leaves out.
+    if (!parsed.code) {
+        const codeMatch = CARD_CODE_RE.exec(String(row?.code ?? ''));
+        if (codeMatch) parsed.code = codeMatch[1].toUpperCase();
+    }
+    if (!parsed.pitch) parsed.pitch = parsePitch(row?.pitch);
+    if (!parsed.treatment) parsed.treatment = parseTreatment(row?.treatment);
     let pool = [];
 
     if (parsed.code) {
@@ -370,6 +396,11 @@ export function matchImportRow(row, index) {
     }
 
     if (!foil) pool = preferWhenAny(pool, (card) => finishOf(card) === 'normal');
+    // A Treatment column left blank (e.g. our own binder export) means "no
+    // treatment"; without the column, untreated names keep every version.
+    if (!parsed.treatment && row?.treatment === '') {
+        pool = preferWhenAny(pool, (card) => !treatmentOfName(card?.name));
+    }
 
     return pickByPrice(pool);
 }
@@ -475,6 +506,9 @@ export function planCsvImport({ csv, catalog }) {
                 foiling: cell('foiling'),
                 quantity: cell('quantity'),
             };
+            for (const field of ['code', 'pitch', 'treatment']) {
+                if (columns[field] != null) row[field] = cell(field);
+            }
             if (!row.name && !row.set && !row.foiling && !row.quantity) return;
             const qty = row.quantity === '' ? { kind: 'owned', quantity: 1 } : parseQty(row.quantity);
             if (qty.kind === 'empty') return;

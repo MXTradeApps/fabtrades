@@ -339,3 +339,67 @@ describe('Binder CSV import', () => {
         expect(mockUpsertEntries).not.toHaveBeenCalled();
     });
 });
+
+describe('Binder CSV export', () => {
+    const OriginalBlob = global.Blob;
+    let blobs;
+    let downloads;
+
+    beforeEach(() => {
+        mockUser = { id: 'user-1' };
+        mockIsPro = true;
+        mockGetBinders.mockResolvedValue(defaultBinders);
+        blobs = [];
+        downloads = [];
+        global.Blob = jest.fn((parts, options) => {
+            const blob = { parts, options };
+            blobs.push(blob);
+            return blob;
+        });
+        URL.createObjectURL = jest.fn(() => 'blob:export');
+        URL.revokeObjectURL = jest.fn();
+        jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function click() {
+            downloads.push(this.download);
+        });
+    });
+
+    afterEach(() => {
+        global.Blob = OriginalBlob;
+        jest.restoreAllMocks();
+    });
+
+    test('⋯ → Export cards downloads only this Binder as CSV', async () => {
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    { cardId: pricedPrinting._uniqueId, quantity: 2, isWanted: false, binderId: 'system:collection', card: pricedPrinting },
+                    { cardId: reprintSibling._uniqueId, quantity: 1, isWanted: false, binderId: 'system:trade', card: reprintSibling },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        renderImport();
+        fireEvent.click(await screen.findByTestId('binder-tile-system:collection'));
+        fireEvent.click(await screen.findByTestId('binder-open-menu'));
+        expect(await screen.findByTestId('binder-export')).toHaveTextContent('Export cards');
+        fireEvent.click(screen.getByTestId('binder-export'));
+
+        expect(downloads).toEqual([expect.stringMatching(/^collection-\d{4}-\d{2}-\d{2}\.csv$/)]);
+        expect(blobs[0].parts.join('')).toBe(
+            'Name,Pitch,Set,Code,Foiling,Treatment,Quantity,Price,Total Price\n'
+            + 'Lightning Press,,Super Slam,SUP001,Normal,,2,12.50,25.00\n',
+        );
+        expect(await screen.findByText('Exported 1 printing')).toBeInTheDocument();
+    });
+
+    test('an empty Binder says there is nothing to export', async () => {
+        mockGetBinderEntries.mockResolvedValue(emptyEntries);
+        renderImport();
+        fireEvent.click(await screen.findByTestId('binder-tile-system:collection'));
+        fireEvent.click(await screen.findByTestId('binder-open-menu'));
+        fireEvent.click(await screen.findByTestId('binder-export'));
+        expect(await screen.findByText('Nothing to export')).toBeInTheDocument();
+        expect(downloads).toEqual([]);
+    });
+});

@@ -76,6 +76,11 @@ import {
     fabraryExportFilename,
     toFabraryCsv,
 } from '../utils/fabraryExport.js';
+import {
+    binderExportFilename,
+    buildBinderExportRows,
+    toBinderCsv,
+} from '../utils/binderCsvExport.js';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
 import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 import SalePostDialog from '../components/binder/SalePostDialog.jsx';
@@ -562,6 +567,19 @@ const BinderCollection = ({ isWanted = false }) => {
         setToast(`Exported ${rows.length} printings for Fabrary`);
     };
 
+    const handleExportBinder = () => {
+        const rows = buildBinderExportRows({
+            entries,
+            resolveCard: (entry) => catalogById.get(entry.cardId),
+        });
+        if (rows.length === 0) {
+            setToast('Nothing to export');
+            return;
+        }
+        downloadCsv(toBinderCsv(rows), binderExportFilename(openBinder?.name));
+        setToast(`Exported ${rows.length} ${rows.length === 1 ? 'printing' : 'printings'}`);
+    };
+
     const handleCreateBinder = async () => {
         const name = promptName('New Binder');
         if (name == null) return;
@@ -1038,6 +1056,15 @@ const BinderCollection = ({ isWanted = false }) => {
                                         }}
                                     >
                                         Import cards
+                                    </MenuItem>
+                                    <MenuItem
+                                        data-testid="binder-export"
+                                        onClick={() => {
+                                            setBinderMenuEl(null);
+                                            handleExportBinder();
+                                        }}
+                                    >
+                                        Export cards
                                     </MenuItem>
                                 </Menu>
                             </>
