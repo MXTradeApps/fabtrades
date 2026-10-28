@@ -15,6 +15,15 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# Shared trade links (/?trade=…) unfurl with the trade's cards and totals in
+# Discord, iMessage and Facebook: netlify/edge-functions/trade-meta.js rewrites
+# the SPA's <head> for those URLs, and netlify/functions/trade-image.mjs draws
+# the og:image at /og/trade.png. resvg ships a native binary, so it is left
+# out of the bundle and installed alongside the function instead.
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@resvg/resvg-js"]
+
 [build.environment]
   NODE_VERSION = "18"
   # Tell Netlify to ignore these environment variables in secret scanning
