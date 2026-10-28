@@ -41,8 +41,8 @@ dependencies:
   fl_chart: ^1.2.0
   flutter_riverpod: ^3.3.2
   shared_preferences: ^2.5.5
-  camera: ^0.12.0+1
-  google_mlkit_text_recognition: ^0.16.0
+  camera: ^0.12.1
+  google_mlkit_text_recognition: ^0.17.1
   google_fonts: ^8.1.0
   package_info_plus: ^10.2.1
   url_launcher: ^6.3.2
@@ -50,23 +50,23 @@ dependencies:
   # RevenueCat: FABTrades Pro subscriptions. purchases_ui_flutter provides the
   # remotely-configured Paywall and Customer Center; keep both on the same
   # version, they ship in lockstep.
-  purchases_flutter: ^10.4.3
-  purchases_ui_flutter: ^10.4.3
+  purchases_flutter: ^10.18.1
+  purchases_ui_flutter: ^10.18.1
   # Native Sign in with Apple. The browser OAuth flow also works, but App Review
   # expects the system sheet, and it is the only provider Apple requires us to
   # offer once any third-party sign-in exists (guideline 4.8).
-  sign_in_with_apple: ^7.0.1
+  sign_in_with_apple: ^8.2.0
   # SHA-256 for the Apple sign-in nonce. Apple gets the hash, Supabase gets the
   # raw value, and comparing them is what stops a replayed identity token.
   crypto: ^3.0.7
   flutter_svg: ^2.3.0
   showcaseview: 5.1.0
-  posthog_flutter: ^5.34.2
+  posthog_flutter: ^5.56.2
   wakelock_plus: ^1.7.0
   # Round countdown for Life Tracker (count-down mode, start/pause/reset).
   stop_watch_timer: ^3.2.2
   # Local Fabrary collection export picker (Binder settings import).
-  file_picker: ^12.2.0
+  file_picker: ^13.2.0
   # System rating sheet (SKStoreReviewController / Play In-App Review), asked
   # only after positive moments — see lib/core/logic/review_prompt.dart.
   in_app_review: ^2.0.12
@@ -74,7 +74,7 @@ dependencies:
   # APNs). Configured from dart-defines; without them push stays off. See
   # docs/PRICE_ALERTS.md.
   firebase_core: ^5.0.0
-  firebase_messaging: ^17.0.0
+  firebase_messaging: ^17.0.1
 
 dev_dependencies:
   flutter_test:
