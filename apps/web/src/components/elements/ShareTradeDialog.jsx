@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box,
     Button,
@@ -22,8 +22,10 @@ const pricedOnLabel = () =>
  * "Share Trade" on the web trade screen: a WTT or WTS post to paste into
  * Discord or a Facebook group. The trade link is copied separately (it is too
  * long to sit in the post); pasted on its own it opens (and unfurls a
- * preview of) the trade on fabtrades.net. The short `/t/` form is fetched as
- * soon as the dialog opens, so copying stays a synchronous click.
+ * preview of) the trade on fabtrades.net. The short `/t/` form is requested as
+ * soon as the dialog opens; a click that beats it still copies the short link,
+ * by handing the clipboard a promise (Safari rejects a write made after an
+ * `await` outside the click).
  *
  * @param {object} props
  * @param {boolean} props.open
@@ -41,19 +43,29 @@ export default function ShareTradeDialog({ open, onClose, items, wants, getLink,
     const [copied, setCopied] = useState(() => new Set());
 
     const longLink = useMemo(() => getLink(mode) || '', [getLink, mode]);
+    // One request per long link, shared by the effect and an early click.
+    const pending = useRef(new Map());
+    const shortLinkFor = (url) => {
+        if (!pending.current.has(url)) {
+            pending.current.set(url, shorten(url).then((short) => short || url, () => url));
+        }
+        return pending.current.get(url);
+    };
     const [shortLinks, setShortLinks] = useState({});
-    const link = shortLinks[longLink] || longLink;
+    const shortLink = shortLinks[longLink];
 
     useEffect(() => {
-        if (!longLink || shortLinks[longLink]) return undefined;
+        if (!longLink) return undefined;
         let live = true;
-        shorten(longLink).then((short) => {
-            if (live && short) setShortLinks((prev) => ({ ...prev, [longLink]: short }));
+        shortLinkFor(longLink).then((short) => {
+            if (live) setShortLinks((prev) => ({ ...prev, [longLink]: short }));
         });
         return () => {
             live = false;
         };
-    }, [longLink, shortLinks, shorten]);
+        // shortLinkFor only reads a ref and the `shorten` prop.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [longLink, shorten]);
     const messages = useMemo(
         () => buildTradePost({ mode, wants, items, percent, pricedOn: pricedOnLabel() }),
         [mode, wants, items, percent],
@@ -71,6 +83,24 @@ export default function ShareTradeDialog({ open, onClose, items, wants, getLink,
         } catch {
             // Clipboard can be blocked; the preview stays selectable.
         }
+    };
+
+    const copyLink = async () => {
+        if (shortLink) return copy('link', shortLink);
+        const text = shortLinkFor(longLink);
+        try {
+            if (navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'text/plain': text.then((t) => new Blob([t], { type: 'text/plain' })) }),
+                ]);
+            } else {
+                await navigator.clipboard.writeText(await text);
+            }
+            setCopied((prev) => new Set(prev).add('link'));
+        } catch {
+            // Clipboard can be blocked; the link stays selectable below.
+        }
+        return undefined;
     };
 
     const copyLabel = (index) => {
@@ -159,15 +189,26 @@ export default function ShareTradeDialog({ open, onClose, items, wants, getLink,
                     </Box>
                 ))}
             </DialogContent>
-            <DialogActions sx={{ justifyContent: 'space-between' }}>
-                <Button
-                    startIcon={copied.has('link') ? <CheckIcon /> : <LinkIcon />}
-                    onClick={() => copy('link', link)}
-                    disabled={!link}
-                    data-testid="share-trade-copy-link"
-                >
-                    {copied.has('link') ? 'Link copied' : 'Copy link'}
-                </Button>
+            <DialogActions sx={{ justifyContent: 'space-between', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <Button
+                        startIcon={copied.has('link') ? <CheckIcon /> : <LinkIcon />}
+                        onClick={copyLink}
+                        disabled={!longLink}
+                        data-testid="share-trade-copy-link"
+                        sx={{ flexShrink: 0 }}
+                    >
+                        {copied.has('link') ? 'Link copied' : 'Copy link'}
+                    </Button>
+                    {longLink && (
+                        <Typography
+                            data-testid="share-trade-link"
+                            sx={{ fontSize: '0.75rem', color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', userSelect: 'all' }}
+                        >
+                            {shortLink ? shortLink.replace(/^https?:\/\//, '') : 'Making a short link…'}
+                        </Typography>
+                    )}
+                </Box>
                 <Button onClick={onClose}>Done</Button>
             </DialogActions>
         </Dialog>
