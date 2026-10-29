@@ -47,3 +47,10 @@ export function validateBinderName({ proposedName, binders, binderId = null }) {
         role: selfRole || 'standard',
     };
 }
+
+/** "Max's Binder"; "James' Binder" for names ending in s. */
+export function sharedBinderTitle(ownerName) {
+    const name = (ownerName || '').trim();
+    if (!name) return 'Shared Binder';
+    return `${name}${/s$/i.test(name) ? '\u2019' : '\u2019s'} Binder`;
+}

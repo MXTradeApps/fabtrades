@@ -19,7 +19,8 @@ import { SortRounded, LinkOffRounded, CollectionsBookmarkOutlined } from '@mui/i
 import { getPublicBinder } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
 import { addCardToTradeDraft } from '../utils/tradeDraft.js';
-import BinderEntryList from '../components/binder/BinderEntryList.jsx';
+import BinderCardGrid from '../components/binder/BinderCardGrid.jsx';
+import { sharedBinderTitle } from '../utils/binderNames.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -79,6 +80,7 @@ const SharedBinder = () => {
     const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
     const [entries, setEntries] = useState([]);
+    const [ownerName, setOwnerName] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [sort, setSort] = useState('priceDesc');
@@ -95,8 +97,10 @@ const SharedBinder = () => {
             if (fetchError) {
                 setError(fetchError.message || 'This binder link is unavailable');
                 setEntries([]);
+                setOwnerName(null);
             } else {
                 setEntries(data.entries || []);
+                setOwnerName(data.ownerName || null);
             }
             setLoading(false);
         })();
@@ -200,7 +204,7 @@ const SharedBinder = () => {
 
             <Page>
                 <PageHeader
-                    title="Shared Binder"
+                    title={sharedBinderTitle(ownerName)}
                     subtitle={!loading && !error ? (
                         <>
                             {entries.length} {entries.length === 1 ? 'card' : 'cards'}
@@ -250,12 +254,10 @@ const SharedBinder = () => {
                             <EmptyState icon={<CollectionsBookmarkOutlined />} title="This binder is empty." />
                         </Panel>
                     ) : (
-                        <BinderEntryList
+                        <BinderCardGrid
                             entries={sorted}
                             resolveCard={resolveCard}
                             resetKey={`${token}|${sort}`}
-                            catalogById={catalogById}
-                            variant="shared"
                             onOpenDetail={openEntryDetail}
                             onAddToTrade={handleAddToTrade}
                         />
