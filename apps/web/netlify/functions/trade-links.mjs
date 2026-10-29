@@ -26,6 +26,16 @@ export default async (request) => {
         });
     }
 
+    // A read-only health check: is the function routed, and can it reach Blobs?
+    if (request.method === 'GET') {
+        try {
+            await getStore(TRADE_LINK_STORE).get('health-check');
+            return json({ ok: true });
+        } catch (err) {
+            return json({ ok: false, error: String(err?.message || err) }, 500);
+        }
+    }
+
     let trade;
     try {
         ({ trade } = await request.json());
@@ -47,4 +57,4 @@ export default async (request) => {
     }
 };
 
-export const config = { path: '/api/trade-links', method: ['POST', 'OPTIONS'] };
+export const config = { path: '/api/trade-links', method: ['GET', 'POST', 'OPTIONS'] };
