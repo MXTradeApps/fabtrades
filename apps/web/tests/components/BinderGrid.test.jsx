@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { loadTradeDraft, TRADE_DRAFT_KEY } from '../../src/utils/tradeDraft.js';
 import BinderCollection from '../../src/pages/BinderCollection.jsx';
 import { ThemeModeProvider } from '../../src/contexts/ThemeContext.jsx';
 import { pricedPrinting, unpricedPrinting, otherCard } from '../fixtures/printings.js';
@@ -799,5 +800,50 @@ describe('BinderGrid', () => {
         expect(await screen.findByText('Removed 2 cards')).toBeInTheDocument();
         expect(screen.queryByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).not.toBeInTheDocument();
         expect(screen.queryByTestId('binder-selection-bar')).not.toBeInTheDocument();
+    });
+
+    test('Add to trade appends Binder picks to Cards I Have and Want List picks to Cards I Want', async () => {
+        localStorage.setItem(TRADE_DRAFT_KEY, JSON.stringify({
+            v: 1,
+            have: [{ uniqueId: 'already-here', name: 'Existing', subTypeName: 'Normal', quantity: 1, price: 1 }],
+            want: [],
+        }));
+        const owned = {
+            cardId: pricedPrinting._uniqueId,
+            quantity: 3,
+            isWanted: false,
+            binderId: 'system:trade',
+            condition: 'NM',
+            card: pricedPrinting,
+        };
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [owned],
+                wants: [{ cardId: unpricedPrinting._uniqueId, quantity: 1, isWanted: true, card: unpricedPrinting }],
+            },
+            error: null,
+        });
+
+        const { unmount } = renderCollection(false);
+        fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
+        await screen.findByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`);
+        fireEvent.click(screen.getByLabelText(`Select ${pricedPrinting.name}`));
+        fireEvent.click(screen.getByTestId('binder-bulk-trade'));
+        expect(await screen.findByText('Added 1 card to Cards I Have')).toBeInTheDocument();
+        expect(screen.getByTestId('binder-trade-toast-view')).toBeInTheDocument();
+        expect(screen.queryByTestId('binder-selection-bar')).not.toBeInTheDocument();
+        unmount();
+
+        renderCollection(true, { path: '/wants' });
+        await screen.findByTestId(`binder-entry-row-${unpricedPrinting._uniqueId}`);
+        fireEvent.click(screen.getByLabelText(`Select ${unpricedPrinting.name}`));
+        fireEvent.click(screen.getByTestId('binder-bulk-trade'));
+        expect(await screen.findByText('Added 1 card to Cards I Want')).toBeInTheDocument();
+
+        const draft = loadTradeDraft();
+        expect(draft.have.map((c) => c.uniqueId)).toEqual(['already-here', pricedPrinting._uniqueId]);
+        expect(draft.have[1].quantity).toBe(1);
+        expect(draft.want.map((c) => c.uniqueId)).toEqual([unpricedPrinting._uniqueId]);
+        localStorage.removeItem(TRADE_DRAFT_KEY);
     });
 });
