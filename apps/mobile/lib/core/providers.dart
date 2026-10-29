@@ -24,6 +24,7 @@ import 'data/set_logo_cache.dart';
 import 'data/set_logos.dart';
 import 'data/set_published_on.dart';
 import 'data/settings_repository.dart';
+import 'data/trade_link_shortener.dart';
 import 'data/trade_repository.dart';
 import 'logic/confirm_trade.dart';
 import 'logic/fabrary_import_apply.dart';
@@ -78,6 +79,10 @@ final appUpdateRepositoryProvider = Provider<AppUpdateRepository>(
 final reviewPromptRepositoryProvider = Provider<ReviewPromptRepository>(
   (ref) => ReviewPromptRepository(ref.watch(sharedPreferencesProvider)),
 );
+
+/// Short `fabtrades.net/t/…` links for shared trades.
+final tradeLinkShortenerProvider =
+    Provider<TradeLinkShortener>((ref) => TradeLinkShortener());
 
 /// Soft update prompt when the installed version/build is behind `fab_app_config`.
 /// Resolves to null when up to date, dismissed, or the check fails
