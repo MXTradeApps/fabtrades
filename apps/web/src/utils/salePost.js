@@ -182,8 +182,8 @@ export const TRADE_POST_MODES = ['wtt', 'wts'];
  *
  * WTT lists "Looking for" from `wants` and "Have" from `items`, unpriced.
  * WTS lists only `items`, priced at `percent` of market, with a total.
- * Either way the post ends with `link`, the shared trade URL, which unfurls
- * into a preview of the trade.
+ * The shared trade link is left out (it is too long); the dialog copies it
+ * separately.
  *
  * Web only for now; it has no Dart twin or shared contract yet.
  *
@@ -195,7 +195,6 @@ export const TRADE_POST_MODES = ['wtt', 'wts'];
  * @param {string} [options.symbol='$']
  * @param {string} [options.sourceLabel='TCGplayer']
  * @param {string} [options.pricedOn]
- * @param {string} [options.link] - Shared trade URL
  * @param {number} [options.limit=DISCORD_MESSAGE_LIMIT]
  * @returns {string[]}
  */
@@ -207,7 +206,6 @@ export const buildTradePost = ({
     symbol = '$',
     sourceLabel = 'TCGplayer',
     pricedOn = '',
-    link = '',
     limit = DISCORD_MESSAGE_LIMIT,
 } = {}) => {
     const isSale = mode === 'wts';
@@ -232,7 +230,7 @@ export const buildTradePost = ({
         blocks.push('');
     }
     blocks.push(isSale ? 'All NM unless noted. DM me!' : 'Looking to trade, all NM unless noted. DM me!');
-    blocks.push(link ? `See the trade: ${link}` : 'Made on fabtrades.net');
+    blocks.push('Made on fabtrades.net');
 
     // packMessages joins on newlines, so blank spacer lines become empty blocks;
     // fold each one into the line after it so a split never starts with a gap.
