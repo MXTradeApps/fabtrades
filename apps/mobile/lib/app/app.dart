@@ -294,16 +294,19 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 selectedIcon: Icon(Icons.collections_bookmark),
                 label: 'Binder',
               ),
+              // Trade is the app's main job, so it sits in the middle and
+              // gets an accent disc the other tabs don't have.
               NavigationDestination(
+                key: const Key('tradeTab'),
                 icon: Badge(
                   isLabelVisible: tradeCount > 0,
                   label: Text('$tradeCount'),
-                  child: const Icon(Icons.swap_horiz_rounded),
+                  child: const _TradeTabIcon(selected: false),
                 ),
                 selectedIcon: Badge(
                   isLabelVisible: tradeCount > 0,
                   label: Text('$tradeCount'),
-                  child: const Icon(Icons.swap_horiz_rounded),
+                  child: const _TradeTabIcon(selected: true),
                 ),
                 label: 'Trade',
               ),
@@ -319,6 +322,32 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The Trade tab's icon: a small accent disc, filled when the tab is active
+/// and a soft wash otherwise, so Trade stands out without shouting.
+class _TradeTabIcon extends StatelessWidget {
+  const _TradeTabIcon({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: selected ? t.accent : t.accentSoft,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        Icons.swap_horiz_rounded,
+        size: 24,
+        color: selected ? t.onAccent : t.accent,
       ),
     );
   }
