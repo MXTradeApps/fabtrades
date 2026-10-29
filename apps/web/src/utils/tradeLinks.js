@@ -26,9 +26,14 @@ const ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 export const isTradeLinkCode = (code) =>
     typeof code === 'string' && /^[0-9A-Za-z]{8,12}$/.test(code);
 
-/** A base62 code taken from the SHA-256 of the `trade` param. */
-export const tradeLinkCode = async (tradeParam, length = CODE_LENGTH) => {
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tradeParam));
+const webSha256 = async (text) => crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+
+/**
+ * A base62 code taken from the SHA-256 of the `trade` param. `sha256` can be
+ * swapped for node:crypto where Web Crypto is not a global (Node 18).
+ */
+export const tradeLinkCode = async (tradeParam, length = CODE_LENGTH, sha256 = webSha256) => {
+    const digest = await sha256(tradeParam);
     let code = '';
     for (const byte of new Uint8Array(digest)) {
         code += ALPHABET[byte % ALPHABET.length];
@@ -41,13 +46,13 @@ export const tradeLinkCode = async (tradeParam, length = CODE_LENGTH) => {
  * Store `trade` under its code and return the code. `store` is a Netlify Blobs
  * store (anything with async `get`/`set`).
  */
-export const saveTradeLink = async (store, trade) => {
-    let code = await tradeLinkCode(trade);
+export const saveTradeLink = async (store, trade, sha256 = webSha256) => {
+    let code = await tradeLinkCode(trade, CODE_LENGTH, sha256);
     const existing = await store.get(code);
     if (existing === trade) return code;
     if (existing !== null && existing !== undefined) {
         // Another trade already owns this code; fall back to a longer one.
-        code = await tradeLinkCode(trade, LONG_CODE_LENGTH);
+        code = await tradeLinkCode(trade, LONG_CODE_LENGTH, sha256);
         if ((await store.get(code)) === trade) return code;
     }
     await store.set(code, trade);

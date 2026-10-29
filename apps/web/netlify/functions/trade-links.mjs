@@ -4,9 +4,22 @@
  * Trade dialog and the mobile app's Share sheet. See src/utils/tradeLinks.js.
  */
 
+import { createHash } from 'node:crypto';
 import { getStore } from '@netlify/blobs';
 import { decodeTradeParam } from '../../src/utils/tradePreview.js';
-import { TRADE_LINK_PATH, TRADE_LINK_STORE, saveTradeLink } from '../../src/utils/tradeLinks.js';
+import {
+    TRADE_LINK_PATH,
+    TRADE_LINK_STORE,
+    saveTradeLink,
+    tradeLinkCode
+} from '../../src/utils/tradeLinks.js';
+
+// node:crypto rather than Web Crypto, which is not a global on every Node
+// runtime Netlify may pick for functions.
+const sha256 = async (text) => createHash('sha256').update(text).digest();
+
+// A tiny real trade for the health check.
+const SAMPLE_TRADE = Buffer.from(JSON.stringify({ v: 1, h: [['health-check', 1, 1]], w: [] })).toString('base64');
 
 const json = (body, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -26,13 +39,20 @@ export default async (request) => {
         });
     }
 
-    // A read-only health check: is the function routed, and can it reach Blobs?
+    // Health check: runs every step a POST does on a fixed sample trade and
+    // reports the first one that fails, so the live setup can be checked from
+    // a browser.
     if (request.method === 'GET') {
+        let step = 'decode';
         try {
-            await getStore(TRADE_LINK_STORE).get('health-check');
-            return json({ ok: true });
+            if (!decodeTradeParam(SAMPLE_TRADE)) throw new Error('sample trade did not decode');
+            step = 'code';
+            await tradeLinkCode(SAMPLE_TRADE, undefined, sha256);
+            step = 'store';
+            await saveTradeLink(getStore(TRADE_LINK_STORE), SAMPLE_TRADE, sha256);
+            return json({ ok: true, node: process.version });
         } catch (err) {
-            return json({ ok: false, error: String(err?.message || err) }, 500);
+            return json({ ok: false, step, node: process.version, error: String(err?.message || err) }, 500);
         }
     }
 
@@ -48,12 +68,12 @@ export default async (request) => {
     }
 
     try {
-        const code = await saveTradeLink(getStore(TRADE_LINK_STORE), trade);
+        const code = await saveTradeLink(getStore(TRADE_LINK_STORE), trade, sha256);
         const origin = new URL(request.url).origin;
         return json({ code, url: `${origin}${TRADE_LINK_PATH}${code}` });
     } catch (err) {
         console.error('[trade-links]', err);
-        return json({ error: 'Could not save the link.' }, 500);
+        return json({ error: 'Could not save the link.', detail: String(err?.message || err) }, 500);
     }
 };
 
