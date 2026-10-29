@@ -337,17 +337,26 @@ class _TradeTabIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: selected ? t.accent : t.accentSoft,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        Icons.swap_horiz_rounded,
-        size: 24,
-        color: selected ? t.onAccent : t.accent,
+    // Lay out at plain icon size so the label lines up with the other tabs;
+    // the disc spills a few pixels past that box.
+    return SizedBox.square(
+      dimension: 24,
+      child: OverflowBox(
+        maxWidth: 36,
+        maxHeight: 36,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: selected ? t.accent : t.accentSoft,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.swap_horiz_rounded,
+            size: 24,
+            color: selected ? t.onAccent : t.accent,
+          ),
+        ),
       ),
     );
   }
