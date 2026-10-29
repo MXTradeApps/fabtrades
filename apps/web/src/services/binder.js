@@ -893,7 +893,9 @@ export async function getPublicBinder(token) {
             updatedAt: row.updated_at,
         }));
 
-        return { data: { entries }, error: null };
+        const ownerName = typeof data.owner_name === 'string' ? data.owner_name.trim() : '';
+
+        return { data: { entries, ownerName: ownerName || null }, error: null };
     } catch (error) {
         console.error('Error fetching public binder:', error);
         return { data: null, error };
