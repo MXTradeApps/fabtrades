@@ -1,4 +1,4 @@
-import { buildSalePost, buildTradePost } from '../../src/utils/salePost.js';
+import { buildTradePost } from '../../src/utils/salePost.js';
 
 const wants = [
     { name: 'Fleeing Starbreeze (Extended Art) (MST040)', finish: 'Cold Foil', quantity: 2, price: 39.99 },
@@ -10,71 +10,64 @@ const items = [
     { name: 'Command and Conquer (Red)', finish: 'Rainbow Foil', quantity: 2, price: 12 },
 ];
 
+const link = 'https://fabtrades.net/?trade=abc';
+
 describe('buildTradePost', () => {
-    it('writes Looking for and a priced Have list for Discord', () => {
-        expect(buildTradePost({ mode: 'wtt-wts', platform: 'discord', wants, items, pricedOn: 'Oct 26, 2026' })).toEqual([
+    it('writes an unpriced WTT post with both sides and the trade link', () => {
+        expect(buildTradePost({ mode: 'wtt', wants, items, link })).toEqual([
             [
-                '**WTT/WTS** · prices are TCGplayer market (Oct 26, 2026)',
+                'WTT - Flesh and Blood singles',
                 '',
-                '**Looking for**',
+                'Looking for:',
                 '2x CF EA Fleeing Starbreeze',
                 'NF Enlightened Strike (Red)',
                 '',
-                '**Have**',
-                '2x RF Command and Conquer (Red) $12 ea',
-                'NF Sink Below (Red) (LP) $4.50',
+                'Have:',
+                '2x RF Command and Conquer (Red)',
+                'NF Sink Below (Red) (LP)',
                 '',
-                'Happy to trade or sell, all NM unless noted. DM me!',
-                'Made on fabtrades.net',
+                'Looking to trade, all NM unless noted. DM me!',
+                `See the trade: ${link}`,
             ].join('\n'),
         ]);
     });
 
-    it('leaves prices out in WTT mode', () => {
-        const [post] = buildTradePost({ mode: 'wtt', platform: 'discord', wants, items });
-        expect(post.startsWith('**WTT**\n')).toBe(true);
-        expect(post).not.toMatch(/\$/);
-        expect(post).toContain('Looking to trade, all NM unless noted. DM me!');
-    });
-
-    it('drops an empty side', () => {
-        const [post] = buildTradePost({ mode: 'wtt-wts', platform: 'discord', wants, items: [] });
-        expect(post).toContain('**Looking for**');
-        expect(post).not.toContain('**Have**');
-        expect(post.split('\n')[0]).toBe('**WTT/WTS**');
-    });
-
-    it('returns nothing for an empty trade', () => {
-        expect(buildTradePost({ mode: 'wtt', platform: 'discord', wants: [], items: [] })).toEqual([]);
-    });
-
-    it('is the plain sale post in WTS mode', () => {
-        const options = { platform: 'discord', items, percent: 90, pricedOn: 'Oct 26, 2026' };
-        expect(buildTradePost({ ...options, mode: 'wts', wants })).toEqual(buildSalePost(options));
-    });
-
-    it('writes one Facebook message with both sections', () => {
-        const posts = buildTradePost({ mode: 'wtt-wts', platform: 'facebook', wants, items, link: 'https://fabtrades.net/b/abc' });
-        expect(posts).toHaveLength(1);
-        expect(posts[0].split('\n')).toEqual([
-            'WTT/WTS - Flesh and Blood singles',
-            'Happy to trade or sell. Prices are TCGplayer market. All NM unless noted. Comment or message me!',
-            '',
-            'Looking for:',
-            '2x Fleeing Starbreeze (EA, Cold Foil)',
-            'Enlightened Strike (Red)',
-            '',
-            'Have:',
-            '2x Command and Conquer (Red) (Rainbow Foil) - $12 each',
-            'Sink Below (Red) (LP) - $4.50',
-            '',
-            'Full list: https://fabtrades.net/b/abc',
+    it('writes a priced WTS post of only the cards you have', () => {
+        expect(buildTradePost({ mode: 'wts', wants, items, percent: 90, pricedOn: 'Oct 26, 2026', link })).toEqual([
+            [
+                'WTS - Flesh and Blood singles',
+                'Prices are 90% of TCGplayer market (Oct 26, 2026)',
+                '',
+                '2x RF Command and Conquer (Red) $11 ea',
+                'NF Sink Below (Red) (LP) $4.05',
+                '',
+                '3 cards · $26 total',
+                'All NM unless noted. DM me!',
+                `See the trade: ${link}`,
+            ].join('\n'),
         ]);
     });
 
-    it('splits long Discord posts under the limit without leading blank lines', () => {
+    it('defaults to WTT and drops an empty side', () => {
+        const [post] = buildTradePost({ wants, items: [] });
+        expect(post).toContain('Looking for:');
+        expect(post).not.toContain('Have:');
+        expect(post.endsWith('Made on fabtrades.net')).toBe(true);
+    });
+
+    it('returns nothing when there is nothing to post', () => {
+        expect(buildTradePost({ mode: 'wtt', wants: [], items: [] })).toEqual([]);
+        expect(buildTradePost({ mode: 'wts', wants, items: [] })).toEqual([]);
+    });
+
+    it('uses no Discord-only markdown', () => {
+        buildTradePost({ mode: 'wtt', wants, items }).concat(buildTradePost({ mode: 'wts', items }))
+            .forEach((post) => expect(post).not.toContain('**'));
+    });
+
+    it('splits long posts under the limit without leading blank lines', () => {
         const many = Array.from({ length: 80 }, (_, i) => ({ name: `Card number ${i}`, finish: 'Normal', quantity: 1, price: i + 1 }));
-        const posts = buildTradePost({ mode: 'wtt-wts', platform: 'discord', wants: many, items: many, limit: 500 });
+        const posts = buildTradePost({ mode: 'wtt', wants: many, items: many, limit: 500 });
         expect(posts.length).toBeGreaterThan(1);
         posts.forEach((post) => {
             expect(post.length).toBeLessThanOrEqual(500);
