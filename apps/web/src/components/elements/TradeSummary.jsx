@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { 
     Box, 
     Typography, 
@@ -18,9 +18,10 @@ import {
     Warning as WarningIcon,
     Clear as ClearIcon,
     CheckCircle as CheckCircleIcon,
-    Campaign as CampaignIcon,
+    IosShare as IosShareIcon,
 } from '@mui/icons-material';
-import SalePostDialog from "../binder/SalePostDialog.jsx";
+import ShareTradeDialog from "./ShareTradeDialog.jsx";
+import { encodeTradeToURL } from "../../utils/urlEncoding.js";
 import { confirmTrade } from "../../services/confirmTrade.js";
 import { FreeLimits } from "../../utils/freeLimits.js";
 import { useAuth } from "../../contexts/AuthContext.jsx";
@@ -109,7 +110,7 @@ const TradeSummary = ({
 }) => {
     const { user } = useAuth();
     const [showClearConfirm, setShowClearConfirm] = useState(false);
-    const [showTradePost, setShowTradePost] = useState(false);
+    const [showShareTrade, setShowShareTrade] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [removeGiven, setRemoveGiven] = useState(true);
     const [addReceived, setAddReceived] = useState(true);
@@ -135,6 +136,11 @@ const TradeSummary = ({
         }));
     const postHave = useMemo(() => toPostItems(haveList), [haveList]);
     const postWant = useMemo(() => toPostItems(wantList), [wantList]);
+    // A WTS post sells only the cards you have, so its link leaves the wants out.
+    const getShareLink = useCallback(
+        (mode) => encodeTradeToURL(haveList, mode === 'wts' ? [] : wantList),
+        [haveList, wantList],
+    );
 
     const handleClearTradeData = () => {
         clearURLTradeData();
@@ -257,19 +263,19 @@ const TradeSummary = ({
         </Tooltip>
     );
 
-    const tradePostButton = (
+    const shareTradeButton = (
         <Button
             variant="outlined"
             color="inherit"
             size={isLandscape ? 'medium' : 'small'}
-            startIcon={<CampaignIcon sx={{ fontSize: '1rem !important' }} />}
-            onClick={() => setShowTradePost(true)}
+            startIcon={<IosShareIcon sx={{ fontSize: '1rem !important' }} />}
+            onClick={() => setShowShareTrade(true)}
             disabled={!hasCards}
             fullWidth={isLandscape}
             sx={{ color: 'text.primary' }}
-            data-testid="trade-post-button"
+            data-testid="share-trade-button"
         >
-            Post WTT/WTS
+            Share Trade
         </Button>
     );
 
@@ -340,13 +346,7 @@ const TradeSummary = ({
                 {ageWarning}
 
                 {confirmButton}
-
-                <Box sx={{ pt: 2, borderTop: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Posting your own WTT/WTS?
-                    </Typography>
-                    {tradePostButton}
-                </Box>
+                {shareTradeButton}
             </Box>
         ) : (
             <Box
@@ -396,7 +396,7 @@ const TradeSummary = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
                     {ageWarning}
                     {confirmButton}
-                    {tradePostButton}
+                    {shareTradeButton}
                     {clearUrlButton}
                 </Box>
             </Box>
@@ -419,12 +419,13 @@ const TradeSummary = ({
             </DialogActions>
         </Dialog>
 
-        {showTradePost && (
-            <SalePostDialog
+        {showShareTrade && (
+            <ShareTradeDialog
                 open
-                onClose={() => setShowTradePost(false)}
+                onClose={() => setShowShareTrade(false)}
                 items={postHave}
                 wants={postWant}
+                getLink={getShareLink}
             />
         )}
 

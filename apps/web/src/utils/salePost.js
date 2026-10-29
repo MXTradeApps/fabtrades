@@ -174,26 +174,34 @@ export const buildSalePost = ({
     return packMessages([header, ...sorted.map((item) => discordLine(item, symbol)), footer], limit);
 };
 
-export const TRADE_POST_MODES = ['wtt-wts', 'wtt', 'wts'];
-
-const TRADE_POST_HEADERS = { 'wtt-wts': 'WTT/WTS', wtt: 'WTT', wts: 'WTS' };
+export const TRADE_POST_MODES = ['wtt', 'wts'];
 
 /**
- * Build a WTT/WTS post: a "Looking for" section from `wants` and a "Have"
- * section from `items`. Wants never show prices; haves are priced in
- * WTT/WTS mode and unpriced in WTT mode. WTS mode is the plain sale post.
+ * Build the web trade screen's "Share Trade" post: one plain-text format that
+ * reads the same pasted into Discord or a Facebook group.
+ *
+ * WTT lists "Looking for" from `wants` and "Have" from `items`, unpriced.
+ * WTS lists only `items`, priced at `percent` of market, with a total.
+ * Either way the post ends with `link`, the shared trade URL, which unfurls
+ * into a preview of the trade.
  *
  * Web only for now; it has no Dart twin or shared contract yet.
  *
- * @param {object} options - Same as `buildSalePost`, plus:
- * @param {'wtt-wts'|'wtt'|'wts'} [options.mode='wtt-wts']
- * @param {Array} [options.wants] - Cards the poster is looking for
+ * @param {object} options
+ * @param {'wtt'|'wts'} [options.mode='wtt']
+ * @param {Array} [options.wants] - Cards the poster is looking for (WTT only)
+ * @param {Array} [options.items] - Cards the poster has
+ * @param {number} [options.percent=100]
+ * @param {string} [options.symbol='$']
+ * @param {string} [options.sourceLabel='TCGplayer']
+ * @param {string} [options.pricedOn]
+ * @param {string} [options.link] - Shared trade URL
+ * @param {number} [options.limit=DISCORD_MESSAGE_LIMIT]
  * @returns {string[]}
  */
 export const buildTradePost = ({
-    mode = 'wtt-wts',
+    mode = 'wtt',
     wants = [],
-    platform,
     items = [],
     percent = 100,
     symbol = '$',
@@ -202,38 +210,29 @@ export const buildTradePost = ({
     link = '',
     limit = DISCORD_MESSAGE_LIMIT,
 } = {}) => {
-    if (mode === 'wts') {
-        return buildSalePost({ platform, items, percent, symbol, sourceLabel, pricedOn, link, limit });
-    }
-
-    const priced = mode === 'wtt-wts';
+    const isSale = mode === 'wts';
     const unpriced = (list) => list.map((item) => ({ ...item, cents: null }));
-    const wanted = unpriced(sortItems(Array.isArray(wants) ? wants : [], 100));
+    const wanted = isSale ? [] : unpriced(sortItems(Array.isArray(wants) ? wants : [], 100));
     const haveSorted = sortItems(Array.isArray(items) ? items : [], percent);
-    const have = priced ? haveSorted : unpriced(haveSorted);
+    const have = isSale ? haveSorted : unpriced(haveSorted);
     if (wanted.length === 0 && have.length === 0) return [];
 
-    const label = TRADE_POST_HEADERS[mode] || TRADE_POST_HEADERS['wtt-wts'];
-    const basis = priceBasis(percent, sourceLabel, pricedOn);
-    const pricedHave = priced && have.some((item) => item.cents != null);
-    const invite = priced ? 'Happy to trade or sell' : 'Looking to trade';
-    const footerLink = link ? `Full list: ${link}` : 'Made on fabtrades.net';
+    const line = (item) => discordLine(item, symbol);
+    const blocks = [`${isSale ? 'WTS' : 'WTT'} - Flesh and Blood singles`];
 
-    if (platform === 'facebook') {
-        const lines = [
-            `${label} - Flesh and Blood singles`,
-            `${invite}. ${pricedHave ? `Prices are ${basis}. ` : ''}All NM unless noted. Comment or message me!`,
-        ];
-        if (wanted.length) lines.push('', 'Looking for:', ...wanted.map((item) => facebookLine(item, symbol)));
-        if (have.length) lines.push('', 'Have:', ...have.map((item) => facebookLine(item, symbol)));
-        lines.push('', footerLink);
-        return [lines.join('\n')];
+    if (isSale) {
+        const cardCount = have.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+        const totalCents = have.reduce((sum, item) => sum + (item.cents ?? 0) * (Number(item.quantity) || 1), 0);
+        const total = totalCents > 0 ? ` · ${formatSalePrice(totalCents, symbol)} total` : '';
+        blocks.push(`Prices are ${priceBasis(percent, sourceLabel, pricedOn)}`, '', ...have.map(line));
+        blocks.push('', `${cardCount} ${cardCount === 1 ? 'card' : 'cards'}${total}`);
+    } else {
+        if (wanted.length) blocks.push('', 'Looking for:', ...wanted.map(line));
+        if (have.length) blocks.push('', 'Have:', ...have.map(line));
+        blocks.push('');
     }
-
-    const blocks = [`**${label}**${pricedHave ? ` · prices are ${basis}` : ''}`];
-    if (wanted.length) blocks.push('', '**Looking for**', ...wanted.map((item) => discordLine(item, symbol)));
-    if (have.length) blocks.push('', '**Have**', ...have.map((item) => discordLine(item, symbol)));
-    blocks.push('', `${invite}, all NM unless noted. DM me!`, footerLink);
+    blocks.push(isSale ? 'All NM unless noted. DM me!' : 'Looking to trade, all NM unless noted. DM me!');
+    blocks.push(link ? `See the trade: ${link}` : 'Made on fabtrades.net');
 
     // packMessages joins on newlines, so blank spacer lines become empty blocks;
     // fold each one into the line after it so a split never starts with a gap.
