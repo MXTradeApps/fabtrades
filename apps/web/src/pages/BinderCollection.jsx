@@ -38,6 +38,7 @@ import {
     Search as SearchIcon,
     SellOutlined,
     Share as ShareIcon,
+    SwapHorizRounded,
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -69,6 +70,7 @@ import {
     WANT_BINDER_ID,
 } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
+import { addCardToTradeDraft } from '../utils/tradeDraft.js';
 import { formatBinderAsText } from '../utils/binderText.js';
 import {
     buildFabraryExportRows,
@@ -173,6 +175,8 @@ const BinderCollection = ({ isWanted = false }) => {
     const [signInOpen, setSignInOpen] = useState(false);
     const [busyCardId, setBusyCardId] = useState(null);
     const [toast, setToast] = useState('');
+    // While this message is the toast, it offers View to open the trade calculator.
+    const [tradeToast, setTradeToast] = useState('');
     const [shareOpen, setShareOpen] = useState(false);
     // Entries the sale post lists; null while the dialog is closed.
     const [saleEntries, setSaleEntries] = useState(null);
@@ -775,6 +779,33 @@ const BinderCollection = ({ isWanted = false }) => {
         [saleEntries, resolveCard],
     );
 
+    /**
+     * Appends one copy of each selected card to the trade draft: Want List
+     * cards go on the side I want, Binder cards on the side I have. Cards
+     * stay in the Binder until the trade is confirmed.
+     */
+    const addSelectedToTrade = () => {
+        const rows = selectedEntries;
+        if (rows.length === 0) return;
+        const side = viewingWants ? 'want' : 'have';
+        for (const entry of rows) {
+            const live = catalogById.get(entry.cardId);
+            const stub = entry.card || {};
+            addCardToTradeDraft(side, {
+                uniqueId: entry.cardId || live?._uniqueId || null,
+                name: live?.displayName || live?.name || stub.name || 'Card',
+                subTypeName: resolveCard(entry).finish,
+                quantity: 1,
+                price: resolveCard(entry).market,
+            });
+        }
+        setSelectedKeys(new Set());
+        const label = `${rows.length} ${rows.length === 1 ? 'card' : 'cards'}`;
+        const message = `Added ${label} to ${viewingWants ? 'Cards I Want' : 'Cards I Have'}`;
+        setTradeToast(message);
+        setToast(message);
+    };
+
     const confirmBulkRemove = async () => {
         const rows = selectedEntries;
         setBulkBusy(true);
@@ -1262,10 +1293,19 @@ const BinderCollection = ({ isWanted = false }) => {
                             >
                                 Select all
                             </Button>
+                            <Button
+                                size="small"
+                                variant="contained"
+                                data-testid="binder-bulk-trade"
+                                startIcon={<SwapHorizRounded />}
+                                onClick={addSelectedToTrade}
+                            >
+                                Add to trade
+                            </Button>
                             {!viewingWants && (
                                 <Button
                                     size="small"
-                                    variant="contained"
+                                    variant="outlined"
                                     data-testid="binder-bulk-sell"
                                     startIcon={<SellOutlined />}
                                     onClick={() => setSaleEntries(selectedEntries)}
@@ -1533,6 +1573,16 @@ const BinderCollection = ({ isWanted = false }) => {
             >
                 <Alert
                     onClose={() => setToast('')}
+                    action={toast && toast === tradeToast ? (
+                        <Button
+                            color="inherit"
+                            size="small"
+                            data-testid="binder-trade-toast-view"
+                            onClick={() => navigate('/')}
+                        >
+                            View
+                        </Button>
+                    ) : undefined}
                     severity="success"
                     variant="filled"
                     sx={{ width: '100%' }}

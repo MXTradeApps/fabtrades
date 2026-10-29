@@ -75,7 +75,12 @@ class _WantListPaneState extends ConsumerState<WantListPane> {
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () => refreshBinderSync(context, ref),
-                    child: _WantGrid(entries: wanted, editing: _editing),
+                    child: _WantGrid(
+                      entries: wanted,
+                      editing: _editing,
+                      // Only the Binder host shows the selection action bar.
+                      selectable: !widget.showFab,
+                    ),
                   ),
                 ),
               ],
@@ -113,10 +118,15 @@ class _WantListPaneState extends ConsumerState<WantListPane> {
 }
 
 class _WantGrid extends ConsumerWidget {
-  const _WantGrid({required this.entries, required this.editing});
+  const _WantGrid({
+    required this.entries,
+    required this.editing,
+    required this.selectable,
+  });
 
   final List<BinderEntry> entries;
   final bool editing;
+  final bool selectable;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -134,6 +144,7 @@ class _WantGrid extends ConsumerWidget {
       itemBuilder: (context, i) => _WantCard(
         entry: entries[i],
         editing: editing,
+        selectable: selectable,
         onRemove: () => ref
             .read(binderProvider.notifier)
             .remove(entries[i].card.id, true),
@@ -165,12 +176,17 @@ class _WantCard extends ConsumerWidget {
   const _WantCard({
     required this.entry,
     required this.editing,
+    required this.selectable,
     required this.onRemove,
   });
 
   final BinderEntry entry;
   final bool editing;
+  final bool selectable;
   final VoidCallback onRemove;
+
+  void _toggle(WidgetRef ref) =>
+      ref.read(binderSelectionProvider.notifier).toggle(binderRowKey(entry));
 
   Future<void> _pickVersion(BuildContext context, WidgetRef ref) async {
     final card = entry.card;
@@ -190,24 +206,36 @@ class _WantCard extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final card = entry.card;
     final version = card.setVersionLabel;
+    final selection =
+        selectable ? ref.watch(binderSelectionProvider) : const <String>{};
+    // Same as the Binder list: long-press starts selecting, then taps toggle.
+    final selecting = selection.isNotEmpty;
+    final selected = selection.contains(binderRowKey(entry));
 
     return Stack(
       children: [
         Positioned.fill(
           child: GestureDetector(
-            onTap: editing
-                ? () => _pickVersion(context, ref)
-                : () => Navigator.of(context).push(MaterialPageRoute(
-                      settings: const RouteSettings(name: 'Card Detail'),
-                      builder: (_) =>
-                          CardDetailScreen(card: card, source: 'want_list'),
-                    )),
+            key: Key('wantCard-${card.id}'),
+            onTap: selecting
+                ? () => _toggle(ref)
+                : editing
+                    ? () => _pickVersion(context, ref)
+                    : () => Navigator.of(context).push(MaterialPageRoute(
+                          settings: const RouteSettings(name: 'Card Detail'),
+                          builder: (_) => CardDetailScreen(
+                              card: card, source: 'want_list'),
+                        )),
+            onLongPress:
+                selectable && !selecting && !editing ? () => _toggle(ref) : null,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                border: card.isFoil
-                    ? Border.all(color: const Color(0xFFB794F6), width: 2)
-                    : Border.all(color: scheme.outlineVariant, width: 0.5),
+                border: selected
+                    ? Border.all(color: scheme.primary, width: 3)
+                    : card.isFoil
+                        ? Border.all(color: const Color(0xFFB794F6), width: 2)
+                        : Border.all(color: scheme.outlineVariant, width: 0.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.16),
@@ -264,7 +292,23 @@ class _WantCard extends ConsumerWidget {
               ),
             ),
           ),
-        if (editing)
+        if (selecting)
+          Positioned(
+            right: 6,
+            top: 6,
+            child: IgnorePointer(
+              child: _Badge(
+                color: selected ? scheme.primary : Colors.black54,
+                padding: const EdgeInsets.all(5),
+                child: Icon(
+                  selected ? Icons.check : Icons.circle_outlined,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+          )
+        else if (editing)
           Positioned(
             right: 6,
             top: 6,

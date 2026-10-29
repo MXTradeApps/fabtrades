@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fabtrades/core/models/binder.dart';
+import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/binder/binder_screen.dart';
 import 'package:fabtrades/features/onboarding/onboarding_repository.dart';
@@ -144,5 +145,43 @@ void main() {
     expect(idsIn(container, BinderIds.trade),
         ['a-Normal', 'b-Normal', 'c-Normal']);
     expect(find.byKey(const Key('binderBulkTradeSnack')), findsOneWidget);
+  });
+
+  testWidgets('Want List selection adds cards to the side I want',
+      (tester) async {
+    final container = await pumpTradeBinder(tester);
+    final binder = container.read(binderProvider.notifier);
+    binder.add(buildCard(id: 'w1-Normal', name: 'Wanted One', tcgMarket: 2),
+        isWanted: true);
+    binder.add(buildCard(id: 'w2-Normal', name: 'Wanted Two', tcgMarket: 4),
+        isWanted: true);
+    container
+        .read(tradeDraftProvider.notifier)
+        .addCard(TradeSide.want, buildCard(id: 'x-Normal', name: 'Existing'));
+    container.read(openBinderIdProvider.notifier).open(BinderIds.want);
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('wantCard-w1-Normal')));
+    await tester.pumpAndSettle();
+    expect(find.text('1 selected'), findsOneWidget);
+    // Wants can't be moved between Binders or sold.
+    expect(find.byKey(const Key('binderBulkMove')), findsNothing);
+    expect(find.byKey(const Key('binderBulkSell')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('wantCard-w2-Normal')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 selected'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('binderBulkTrade')));
+    await tester.pumpAndSettle();
+
+    final draft = container.read(tradeDraftProvider);
+    // Appended after what was already on that side.
+    final wantIds = draft.wantItems.map((i) => i.card.id).toList();
+    expect(wantIds.first, 'x-Normal');
+    expect(wantIds.skip(1).toList()..sort(), ['w1-Normal', 'w2-Normal']);
+    expect(draft.haveItems, isEmpty);
+    expect(find.text('Added 2 cards to Cards I Want'), findsOneWidget);
+    expect(find.byKey(const Key('binderSelectionBar')), findsNothing);
   });
 }
