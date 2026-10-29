@@ -10,11 +10,9 @@ const items = [
     { name: 'Command and Conquer (Red)', finish: 'Rainbow Foil', quantity: 2, price: 12 },
 ];
 
-const link = 'https://fabtrades.net/?trade=abc';
-
 describe('buildTradePost', () => {
-    it('writes an unpriced WTT post with both sides and the trade link', () => {
-        expect(buildTradePost({ mode: 'wtt', wants, items, link })).toEqual([
+    it('writes an unpriced WTT post with both sides', () => {
+        expect(buildTradePost({ mode: 'wtt', wants, items })).toEqual([
             [
                 'WTT - Flesh and Blood singles',
                 '',
@@ -27,13 +25,13 @@ describe('buildTradePost', () => {
                 'NF Sink Below (Red) (LP)',
                 '',
                 'Looking to trade, all NM unless noted. DM me!',
-                `See the trade: ${link}`,
+                'Made on fabtrades.net',
             ].join('\n'),
         ]);
     });
 
     it('writes a priced WTS post of only the cards you have', () => {
-        expect(buildTradePost({ mode: 'wts', wants, items, percent: 90, pricedOn: 'Oct 26, 2026', link })).toEqual([
+        expect(buildTradePost({ mode: 'wts', wants, items, percent: 90, pricedOn: 'Oct 26, 2026' })).toEqual([
             [
                 'WTS - Flesh and Blood singles',
                 'Prices are 90% of TCGplayer market (Oct 26, 2026)',
@@ -43,7 +41,7 @@ describe('buildTradePost', () => {
                 '',
                 '3 cards · $26 total',
                 'All NM unless noted. DM me!',
-                `See the trade: ${link}`,
+                'Made on fabtrades.net',
             ].join('\n'),
         ]);
     });

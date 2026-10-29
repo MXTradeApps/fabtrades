@@ -19,7 +19,8 @@ const pricedOnLabel = () =>
 
 /**
  * "Share Trade" on the web trade screen: a WTT or WTS post to paste into
- * Discord or a Facebook group, ending in a link that opens (and unfurls a
+ * Discord or a Facebook group. The trade link is copied separately (it is too
+ * long to sit in the post); pasted on its own it opens (and unfurls a
  * preview of) the trade on fabtrades.net.
  *
  * @param {object} props
@@ -37,8 +38,8 @@ export default function ShareTradeDialog({ open, onClose, items, wants, getLink 
 
     const link = useMemo(() => getLink(mode) || '', [getLink, mode]);
     const messages = useMemo(
-        () => buildTradePost({ mode, wants, items, percent, pricedOn: pricedOnLabel(), link }),
-        [mode, wants, items, percent, link],
+        () => buildTradePost({ mode, wants, items, percent, pricedOn: pricedOnLabel() }),
+        [mode, wants, items, percent],
     );
 
     const update = (fn) => {
@@ -66,7 +67,7 @@ export default function ShareTradeDialog({ open, onClose, items, wants, getLink 
             <DialogTitle>Share Trade</DialogTitle>
             <DialogContent>
                 <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem', mb: 2 }}>
-                    Paste it into Discord or a Facebook group. The link shows a preview of the trade.
+                    Paste it into Discord or a Facebook group. Copy the link too to share a preview of the trade.
                 </Typography>
                 <ToggleButtonGroup
                     exclusive
@@ -148,7 +149,7 @@ export default function ShareTradeDialog({ open, onClose, items, wants, getLink 
                     disabled={!link}
                     data-testid="share-trade-copy-link"
                 >
-                    {copied.has('link') ? 'Link copied' : 'Copy link only'}
+                    {copied.has('link') ? 'Link copied' : 'Copy link'}
                 </Button>
                 <Button onClick={onClose}>Done</Button>
             </DialogActions>
