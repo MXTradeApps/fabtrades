@@ -78,6 +78,16 @@ kotlin {
     }
 }
 
+// purchases_flutter pulls in RevenueCat's Amazon Appstore add-on, whose bundled R8
+// rules contain `-dontoptimize`. That one line turns R8 optimisation off for the
+// whole app, which Play Console flags as "DEX code optimisation 0%". We only sell
+// through Google Play, so leave it (and the Amazon SDK it brings) out. RevenueCat's
+// core already tolerates the SDK being absent (`-dontwarn com.amazon.**`) and only
+// touches it when configured for the Amazon store, which this app never is.
+configurations.configureEach {
+    exclude(group = "com.revenuecat.purchases", module = "purchases-store-amazon")
+}
+
 flutter {
     source = "../.."
 }

@@ -1,0 +1,21 @@
+{
+  "bundleId": "com.fabtrades.app",
+  "version": "1.0.4",
+  "build": "14",
+  "primaryCategory": "REFERENCE",
+  "secondaryCategory": "UTILITIES",
+  "screenshots": {
+    "APP_IPHONE_67": "screenshots/v2/final/6.9",
+    "APP_IPHONE_65": "screenshots/v2/final/6.5"
+  },
+  "localizations": {
+    "en-US": {
+      "name": "FAB Trades: Flesh and Blood",
+      "subtitle": "TCG Card Scanner & Price Guide",
+      "keywords": "fabtcg,trade,balancer,binder,collection,tracker,value,calculator,life,counter,wishlist,foil,armory",
+      "promotionalText": "New: Life Tracker with Classic Constructed & Silver Age round timers, multiple binders, Fabrary import, and daily price movers. No account needed, no ads.",
+      "whatsNew": "• Life Tracker: crisper life totals and a clearer tap divider and +/- markers, readable from across the table\n• Small fixes and polish",
+      "description": "The trade app for Flesh and Blood players. Scan a card, see what it's worth, and know a trade is fair before you shake on it. No account needed.\n\nWhether you're trading at Armory night, a Calling, or a Pro Tour, FAB Trades makes every trade fair, fast, and informed.\n\nBALANCE ANY TRADE IN SECONDS\nAdd cards to each side and watch the totals update live. See who's up, who's down, and by how much. Trade close but not quite even? Tap Find Trade Filler and FAB Trades suggests cards from your Binder and Want List to close the gap.\n\nSCAN CARDS WITH YOUR CAMERA\nPoint your camera at a card and FAB Trades identifies it automatically. No shutter button, no typing.\n\nREAL MARKET PRICES, UPDATED DAILY\nTCGplayer (USD) and Cardmarket (EUR) prices, refreshed every day. Compare Market, Low, Mid and High across every printing (Normal, Rainbow Foil, Cold Foil, alternate arts) and check price history before you deal. Home opens on the biggest recent gainers and losers.\n\nYOUR BINDERS, DIGITIZED\nTrade Binder, Collection, and as many binders as you like, each with its total value and recent movers. Build a Want List and hand your phone across the table so the other player can check it against their binder. Confirm a trade and your binders update automatically. Already on Fabrary? Import your collection CSV in seconds.\n\nLIFE TRACKER FOR THE TABLE\nA two-player life counter with a change log and a round timer for Classic Constructed (55:00) and Silver Age (35:00).\n\nNEVER LOSE TRACK OF A LOAN\nLent a friend a deck? Borrowed a Cold Foil for a tournament? The Lend tab tracks every card going out or coming in, by person, with running values.\n\nBROWSE THE FULL CATALOG\nEvery set from Welcome to Rathe to the latest release, with official set logos. Search everything, filter foils, and sort by name, price or collector number.\n\nALSO INCLUDES\n• Trade history\n• Switch between USD and EUR\n• Condition grades (NM, LP, MP, HP, DMG)\n• Dark mode\n• Instant startup with offline-friendly catalog caching\n\nQuestions or ideas? We read every message: mxbloombusiness@gmail.com\n\nFAB Trades is a fan-made app. Not affiliated with Legend Story Studios, TCGplayer or Cardmarket. Card names and images are property of their respective owners.\n\nTerms of Use (EULA): https://fabtrades.net/terms\nPrivacy Policy: https://fabtrades.net/privacy"
+    }
+  }
+}
