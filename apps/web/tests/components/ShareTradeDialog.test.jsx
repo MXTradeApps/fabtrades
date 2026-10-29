@@ -4,10 +4,12 @@ import ShareTradeDialog from '../../src/components/elements/ShareTradeDialog.jsx
 const items = [{ name: 'Sink Below (Red)', finish: 'Normal', quantity: 1, price: 4.5 }];
 const wants = [{ name: 'Enlightened Strike (Red)', finish: 'Rainbow Foil', quantity: 1, price: 3 }];
 const getLink = (mode) => `https://fabtrades.net/?trade=${mode}`;
+// Shortening fails by default, as it does off Netlify: the long link is used.
+const noShorten = async (url) => url;
 
 describe('ShareTradeDialog', () => {
     it('writes a WTT post without the trade link', () => {
-        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={wants} getLink={getLink} />);
+        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={wants} getLink={getLink} shorten={noShorten} />);
         const preview = screen.getByTestId('share-trade-preview-0').textContent;
         expect(preview).toMatch(/^WTT - /);
         expect(preview).toContain('Looking for:\nRF Enlightened Strike (Red)');
@@ -19,7 +21,7 @@ describe('ShareTradeDialog', () => {
     });
 
     it('switches to a priced WTS post', () => {
-        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={wants} getLink={getLink} />);
+        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={wants} getLink={getLink} shorten={noShorten} />);
         fireEvent.click(screen.getByTestId('share-trade-mode-wts'));
         const preview = screen.getByTestId('share-trade-preview-0').textContent;
         expect(preview).toMatch(/^WTS - /);
@@ -29,19 +31,31 @@ describe('ShareTradeDialog', () => {
     });
 
     it('opens on WTS when there are only cards to sell', () => {
-        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={[]} getLink={getLink} />);
+        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={[]} getLink={getLink} shorten={noShorten} />);
         expect(screen.getByTestId('share-trade-preview-0').textContent).toMatch(/^WTS - /);
     });
 
     it('copies the link on its own, with the WTS link leaving out wants', async () => {
         const writeText = jest.fn().mockResolvedValue();
         Object.assign(navigator, { clipboard: { writeText } });
-        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={wants} getLink={getLink} />);
+        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={wants} getLink={getLink} shorten={noShorten} />);
         fireEvent.click(screen.getByTestId('share-trade-copy-link'));
         expect(writeText).toHaveBeenCalledWith('https://fabtrades.net/?trade=wtt');
         expect(await screen.findByText('Link copied')).toBeInTheDocument();
         fireEvent.click(screen.getByTestId('share-trade-mode-wts'));
         fireEvent.click(screen.getByTestId('share-trade-copy-link'));
         expect(writeText).toHaveBeenLastCalledWith('https://fabtrades.net/?trade=wts');
+    });
+
+    it('copies the short link once it is ready', async () => {
+        const writeText = jest.fn().mockResolvedValue();
+        Object.assign(navigator, { clipboard: { writeText } });
+        const shorten = jest.fn(async (url) => url.replace('/?trade=', '/t/short'));
+        render(<ShareTradeDialog open onClose={jest.fn()} items={items} wants={wants} getLink={getLink} shorten={shorten} />);
+        await screen.findByTestId('share-trade-copy-link');
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        fireEvent.click(screen.getByTestId('share-trade-copy-link'));
+        expect(writeText).toHaveBeenCalledWith('https://fabtrades.net/t/shortwtt');
+        expect(shorten).toHaveBeenCalledTimes(1);
     });
 });

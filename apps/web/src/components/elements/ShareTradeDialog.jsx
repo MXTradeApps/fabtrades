@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     Box,
     Button,
@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Check as CheckIcon, ContentCopy as ContentCopyIcon, Link as LinkIcon } from '@mui/icons-material';
 import { SALE_POST_PERCENTS, buildTradePost } from '../../utils/salePost.js';
+import { shortenTradeLink } from '../../utils/tradeLinks.js';
 
 const pricedOnLabel = () =>
     new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -21,7 +22,8 @@ const pricedOnLabel = () =>
  * "Share Trade" on the web trade screen: a WTT or WTS post to paste into
  * Discord or a Facebook group. The trade link is copied separately (it is too
  * long to sit in the post); pasted on its own it opens (and unfurls a
- * preview of) the trade on fabtrades.net.
+ * preview of) the trade on fabtrades.net. The short `/t/` form is fetched as
+ * soon as the dialog opens, so copying stays a synchronous click.
  *
  * @param {object} props
  * @param {boolean} props.open
@@ -30,13 +32,28 @@ const pricedOnLabel = () =>
  * @param {Array} props.wants - "Cards I Want", as post items
  * @param {(mode: 'wtt'|'wts') => string|null} props.getLink - The shared trade
  *   URL for a mode; WTS links only the cards being sold.
+ * @param {(url: string) => Promise<string>} [props.shorten] - Long URL to short;
+ *   resolves to the long URL when shortening fails.
  */
-export default function ShareTradeDialog({ open, onClose, items, wants, getLink }) {
+export default function ShareTradeDialog({ open, onClose, items, wants, getLink, shorten = shortenTradeLink }) {
     const [mode, setMode] = useState(items.length > 0 && wants.length === 0 ? 'wts' : 'wtt');
     const [percent, setPercent] = useState(100);
     const [copied, setCopied] = useState(() => new Set());
 
-    const link = useMemo(() => getLink(mode) || '', [getLink, mode]);
+    const longLink = useMemo(() => getLink(mode) || '', [getLink, mode]);
+    const [shortLinks, setShortLinks] = useState({});
+    const link = shortLinks[longLink] || longLink;
+
+    useEffect(() => {
+        if (!longLink || shortLinks[longLink]) return undefined;
+        let live = true;
+        shorten(longLink).then((short) => {
+            if (live && short) setShortLinks((prev) => ({ ...prev, [longLink]: short }));
+        });
+        return () => {
+            live = false;
+        };
+    }, [longLink, shortLinks, shorten]);
     const messages = useMemo(
         () => buildTradePost({ mode, wants, items, percent, pricedOn: pricedOnLabel() }),
         [mode, wants, items, percent],
