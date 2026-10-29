@@ -1,6 +1,5 @@
 import 'package:fabtrades/core/logic/recent_movers.dart';
 import 'package:fabtrades/core/models/binder.dart';
-import 'package:fabtrades/core/models/binder_entry.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/search/home_dashboard.dart';
 import 'package:fabtrades/features/search/search_screen.dart';
@@ -22,14 +21,6 @@ RecentLowChange change(
   percentChange: (latestLow - startLow) / startLow,
   amountChange: latestLow - startLow,
 );
-
-BinderEntry owned(String id, {int qty = 1, DateTime? at, String? binder}) =>
-    BinderEntry(
-      card: buildCard(id: id, name: 'Card $id', tcgMarket: 10, tcgLow: 9),
-      quantity: qty,
-      addedAt: at ?? DateTime(2026, 10, 1),
-      binderId: binder ?? BinderIds.trade,
-    );
 
 void main() {
   group('collection math', () {
@@ -58,20 +49,6 @@ void main() {
       ], copies);
       expect(rows.map((r) => r.cardId), ['b', 'a', 'c']);
     });
-
-    test('recently added is newest first, one per printing, owned only', () {
-      final rows = recentlyAdded([
-        owned('old', at: DateTime(2026, 9, 1)),
-        owned('new', at: DateTime(2026, 10, 10)),
-        owned('new', at: DateTime(2026, 10, 9), binder: BinderIds.collection),
-        BinderEntry(
-          card: buildCard(id: 'want'),
-          isWanted: true,
-          addedAt: DateTime(2026, 10, 12),
-        ),
-      ]);
-      expect(rows.map((e) => e.card.id), ['new', 'old']);
-    });
   });
 
   testWidgets('empty collection shows a start prompt', (tester) async {
@@ -83,7 +60,7 @@ void main() {
     expect(find.byKey(const Key('seeTrending')), findsOneWidget);
   });
 
-  testWidgets('owned cards show value, weekly change, movers and recents', (
+  testWidgets('owned cards show value, weekly change, and movers', (
     tester,
   ) async {
     final container = await pumpApp(
@@ -110,7 +87,7 @@ void main() {
     expect(find.byKey(const Key('homeCollectionChange')), findsOneWidget);
     expect(find.textContaining('+\$8.00 (+40%) this week'), findsOneWidget);
     expect(find.byKey(const Key('homeOwnedMover-alpha')), findsOneWidget);
-    expect(find.byKey(const Key('homeRecent-alpha')), findsOneWidget);
+    expect(find.byKey(const Key('homeRecent-alpha')), findsNothing);
   });
 
   testWidgets('summary asks the shell to open the Binder tab', (tester) async {

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../app/ui.dart';
-import '../../app/widgets.dart';
 import '../../core/logic/binder_value_snapshot.dart';
 import '../../core/logic/recent_movers.dart';
 import '../../core/models/binder.dart';
@@ -69,22 +68,8 @@ List<RecentLowChange> collectionMovers(
   return rows.take(limit).toList(growable: false);
 }
 
-/// Most recently added owned printings, newest first, one per printing.
-List<BinderEntry> recentlyAdded(
-  Iterable<BinderEntry> entries, {
-  int limit = 10,
-}) {
-  final owned = entries.where((e) => !e.isWanted && e.quantity > 0).toList()
-    ..sort((a, b) => b.addedAt.compareTo(a.addedAt));
-  final seen = <String>{};
-  return [
-    for (final e in owned)
-      if (seen.add(e.card.id)) e,
-  ].take(limit).toList(growable: false);
-}
-
 /// Personal top of Home: collection value and recent change, the biggest
-/// movers among owned cards, and recently added cards.
+/// movers among owned cards.
 class HomeDashboard extends ConsumerStatefulWidget {
   const HomeDashboard({super.key});
 
@@ -162,7 +147,6 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard> {
     final total = chosenSourceHeadlineAmount(entries, source: settings.source);
     final change = collectionRecentChange(_changes, copies);
     final movers = collectionMovers(_changes, copies);
-    final added = recentlyAdded(entries);
     final cardsById = {for (final e in entries) e.card.id: e.card};
 
     return Column(
@@ -208,31 +192,6 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard> {
                     },
                   ),
               ],
-            ),
-          ),
-        ],
-        if (added.isNotEmpty) ...[
-          SectionTitle(
-            'Recently added',
-            key: const Key('homeRecentlyAddedTitle'),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            trailing: TextButton(
-              onPressed: _openBinders,
-              child: const Text('My Binders'),
-            ),
-          ),
-          SizedBox(
-            height: 138,
-            child: ListView.separated(
-              key: const Key('homeRecentlyAdded'),
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: added.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
-              itemBuilder: (context, i) => _RecentCard(
-                entry: added[i],
-                onTap: () => _openCard(added[i].card),
-              ),
             ),
           ),
         ],
@@ -332,45 +291,6 @@ class _CollectionSummary extends StatelessWidget {
           ),
           Icon(Icons.chevron_right, color: t.textFaint),
         ],
-      ),
-    );
-  }
-}
-
-class _RecentCard extends StatelessWidget {
-  const _RecentCard({required this.entry, required this.onTap});
-
-  final BinderEntry entry;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final card = entry.card;
-    return InkWell(
-      key: Key('homeRecent-${card.id}'),
-      onTap: onTap,
-      borderRadius: AppRadii.mdAll,
-      child: SizedBox(
-        width: 76,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CardThumbnail(
-              url: card.imageUrl,
-              fallbackUrl: card.artViewerFallbackUrl,
-              foil: card.isFoil,
-              width: 76,
-              height: 106,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              card.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-          ],
-        ),
       ),
     );
   }
