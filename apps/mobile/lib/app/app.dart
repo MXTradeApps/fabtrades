@@ -294,19 +294,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 selectedIcon: Icon(Icons.collections_bookmark),
                 label: 'Binder',
               ),
-              // Trade is the app's main job, so it sits in the middle and
-              // gets an accent disc the other tabs don't have.
               NavigationDestination(
-                key: const Key('tradeTab'),
                 icon: Badge(
                   isLabelVisible: tradeCount > 0,
                   label: Text('$tradeCount'),
-                  child: const _TradeTabIcon(selected: false),
+                  child: const Icon(Icons.swap_horiz_rounded),
                 ),
                 selectedIcon: Badge(
                   isLabelVisible: tradeCount > 0,
                   label: Text('$tradeCount'),
-                  child: const _TradeTabIcon(selected: true),
+                  child: const Icon(Icons.swap_horiz_rounded),
                 ),
                 label: 'Trade',
               ),
@@ -320,41 +317,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 label: 'More',
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The Trade tab's icon: a small accent disc, filled when the tab is active
-/// and a soft wash otherwise, so Trade stands out without shouting.
-class _TradeTabIcon extends StatelessWidget {
-  const _TradeTabIcon({required this.selected});
-
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-    // Lay out at plain icon size so the label lines up with the other tabs;
-    // the disc spills a few pixels past that box.
-    return SizedBox.square(
-      dimension: 24,
-      child: OverflowBox(
-        maxWidth: 36,
-        maxHeight: 36,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: selected ? t.accent : t.accentSoft,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.swap_horiz_rounded,
-            size: 24,
-            color: selected ? t.onAccent : t.accent,
           ),
         ),
       ),
