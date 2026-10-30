@@ -3,13 +3,15 @@
  * `/?trade=<base64>` URL, which grows with every card in the trade.
  *
  *   POST /api/trade-links  {trade}  -> {code, url}   netlify/functions/trade-links.mjs
- *   GET  /t/<code>                  -> 302 /?trade=  netlify/functions/trade-link.mjs
+ *   GET  /t/<code>                  -> the app page  netlify/functions/trade-link.mjs
  *
  * The code is derived from the trade itself, so sharing the same trade twice
- * gives the same link and a stored link never changes. The redirect lands on
- * the long URL, so the app, the edge-rendered link preview and old long links
- * all keep working unchanged. The mobile app calls the same endpoint
- * (lib/core/data/trade_link_shortener.dart).
+ * gives the same link and a stored link never changes. `/t/<code>` answers
+ * with the app page itself, carrying the trade's link preview tags (chat apps
+ * often won't follow a redirect to find them) and a script that switches the
+ * address to the long `/?trade=` URL before the app starts, so the app and
+ * old long links keep working unchanged. The mobile app calls the same
+ * endpoint (lib/core/data/trade_link_shortener.dart).
  */
 
 export const TRADE_LINKS_ENDPOINT = '/api/trade-links';
@@ -57,6 +59,19 @@ export const saveTradeLink = async (store, trade, sha256 = webSha256) => {
     }
     await store.set(code, trade);
     return code;
+};
+
+/**
+ * Make the app page served at `/t/<code>` open the trade: an inline script at
+ * the top of <head>, so it runs before the app's module bundle, moves the
+ * address to `/?trade=<param>`, which is where the app reads a trade from.
+ */
+export const withTradeAddress = (html, tradeParam) => {
+    const path = `/?${new URLSearchParams({ trade: tradeParam })}`;
+    // JSON is a valid JS string literal; escape `<` so it cannot close the tag.
+    const literal = JSON.stringify(path).replace(/</g, '\\u003c');
+    const script = `<script>history.replaceState(null, '', ${literal} + location.hash);</script>`;
+    return html.replace(/<head([^>]*)>/i, (tag) => `${tag}\n    ${script}`);
 };
 
 /**
