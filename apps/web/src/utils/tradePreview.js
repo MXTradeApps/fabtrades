@@ -158,48 +158,72 @@ export const summarizeTrade = (trade, printings = new Map()) => {
 export const formatDollars = (amount) =>
     `$${Math.round(Math.abs(amount)).toLocaleString('en-US')}`;
 
-const cardLabel = (card) =>
-    [card.quantity > 1 ? `${card.quantity}x` : null, card.tag || null, card.name]
-        .filter(Boolean)
-        .join(' ');
-
-const sideHeadline = (side) => {
-    if (side.cards.length === 0) return null;
-    const [top] = side.cards;
-    const rest = side.cards.length - 1;
-    return rest > 0 ? `${top.name} + ${rest} more` : cardLabel(top);
+// Spelled out: a preview is read by people who may not know the shorthand.
+const FINISH_NAMES = { CF: 'Cold Foil', RF: 'Rainbow Foil', GF: 'Gold Foil', Foil: 'Foil' };
+const ART_NAMES = {
+    EA: 'Extended Art', AA: 'Alternate Art', FA: 'Full Art', NN: 'Nexus Night', JPN: 'Japanese Exclusive', CC: 'CC Tag'
 };
 
-const sideLine = (label, side, limit = 4) => {
-    const names = side.cards.slice(0, limit).map(cardLabel);
-    const more = side.cards.length - limit;
-    if (more > 0) names.push(`+${more} more`);
-    return `${label} (${formatDollars(side.total)}): ${names.join(', ')}`;
+/** "2× In the Palm of Your Hand (Red, Cold Foil)" */
+export const readableCardName = (card) => {
+    const extras = (card.tag || '')
+        .split(' ')
+        .filter(Boolean)
+        .map((t) => FINISH_NAMES[t] || ART_NAMES[t] || t);
+    let name = card.name;
+    if (extras.length) {
+        // Fold into the pitch color's parentheses when there is one.
+        name = /\)$/.test(name)
+            ? `${name.slice(0, -1)}, ${extras.join(', ')})`
+            : `${name} (${extras.join(', ')})`;
+    }
+    return card.quantity > 1 ? `${card.quantity}× ${name}` : name;
+};
+
+const cardCount = (n) => `${n} card${n === 1 ? '' : 's'}`;
+
+// One card (in any quantity) by name, otherwise a count.
+const sideHeadline = (side) =>
+    side.cards.length === 1
+        ? readableCardName({ ...side.cards[0], tag: '' })
+        : cardCount(side.count);
+
+const sideLine = (label, side, limit = 3) => {
+    const names = side.cards.slice(0, limit).map(readableCardName);
+    const more = side.cards.slice(limit).reduce((n, c) => n + c.quantity, 0);
+    if (more > 0) names.push(`${more} more card${more === 1 ? '' : 's'}`);
+    const list = names.length > 1
+        ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+        : names[0];
+    return `${label} (${formatDollars(side.total)}): ${list}`;
 };
 
 /** The og:title / og:description text for a summarized trade. */
 export const tradeMeta = (summary) => {
     const { have, want, diff } = summary;
-    const haveHead = sideHeadline(have);
-    const wantHead = sideHeadline(want);
+    const hasHave = have.cards.length > 0;
+    const hasWant = want.cards.length > 0;
 
     let title;
-    if (haveHead && wantHead) title = `Trade: ${haveHead} for ${wantHead}`;
-    else if (haveHead) title = `Trade offer: ${haveHead}`;
-    else title = `Looking for: ${wantHead}`;
+    if (hasHave && hasWant) title = `Trade offer: ${sideHeadline(have)} for ${sideHeadline(want)}`;
+    else if (hasHave) title = `For trade: ${sideHeadline(have)}`;
+    else title = `Looking for: ${sideHeadline(want)}`;
 
-    const parts = [];
-    if (have.cards.length) parts.push(sideLine('Have', have));
-    if (want.cards.length) parts.push(sideLine('Want', want));
-    if (have.cards.length && want.cards.length) {
-        parts.push(Math.abs(diff) < 0.5
-            ? 'Even at TCGplayer prices'
-            : `${formatDollars(diff)} apart at TCGplayer prices`);
+    // One idea per line: Discord keeps the line breaks.
+    const lines = [];
+    if (hasHave) lines.push(sideLine('Have', have));
+    if (hasWant) lines.push(sideLine('Want', want));
+    if (hasHave && hasWant) {
+        lines.push(Math.abs(diff) < 0.5
+            ? 'An even trade at TCGplayer prices.'
+            : `The ${diff > 0 ? 'Have' : 'Want'} side is worth ${formatDollars(diff)} more at TCGplayer prices.`);
+    } else {
+        lines.push('Prices from TCGplayer.');
     }
 
     return {
         title: title.length > 90 ? `${title.slice(0, 87)}…` : title,
-        description: `${parts.join(' · ')}. Open it on FAB Trades to balance or counter.`
+        description: lines.join('\n')
     };
 };
 

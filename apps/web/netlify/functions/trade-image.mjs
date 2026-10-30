@@ -18,9 +18,12 @@ import {
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-const CARDS_PER_SIDE = 4;
-const CARD_W = 124;
-const CARD_H = 173;
+// Chat apps show this at a third of its size or less, so everything is big:
+// up to three cards per side, fanned so the art stays large.
+const CARDS_PER_SIDE = 3;
+const CARD_W = 230;
+const CARD_H = 321;
+const SIDE_W = 500;
 
 // Dark theme tokens from src/theme/tokens.js.
 const C = {
@@ -72,64 +75,58 @@ const toDataUri = async (url) => {
     }
 };
 
-const ellipsis = { overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' };
-
-const cardTile = (card, image) =>
+const cardTile = (card, image, left) =>
     h('div', {
-        position: 'relative', width: CARD_W, height: CARD_H, borderRadius: 8,
-        overflow: 'hidden', backgroundColor: C.sunken, border: `1px solid ${C.border}`,
+        position: 'absolute', left, top: 0, width: CARD_W, height: CARD_H, borderRadius: 12,
+        overflow: 'hidden', backgroundColor: C.sunken, border: `2px solid ${C.bg}`,
         alignItems: 'center', justifyContent: 'center'
     },
         image
             ? img(image, { width: CARD_W, height: CARD_H, objectFit: 'cover' })
-            : h('div', { padding: 10, fontSize: 16, color: C.muted, textAlign: 'center' }, card.name),
+            : h('div', { padding: 16, fontSize: 26, color: C.muted, textAlign: 'center' }, card.name),
         card.quantity > 1
             ? h('div', {
-                position: 'absolute', top: 6, right: 6, padding: '2px 8px', borderRadius: 999,
-                backgroundColor: C.bg, color: C.text, fontSize: 16, fontWeight: 700
-            }, `${card.quantity}x`)
+                position: 'absolute', top: 10, right: 10, padding: '4px 14px', borderRadius: 999,
+                backgroundColor: C.bg, color: C.text, fontSize: 30, fontWeight: 700
+            }, `${card.quantity}×`)
             : null
     );
 
-const moreTile = (count) =>
-    h('div', {
-        width: CARD_W, height: CARD_H, borderRadius: 8, backgroundColor: C.surface,
-        border: `1px dashed ${C.border}`, alignItems: 'center', justifyContent: 'center',
-        fontSize: 30, fontWeight: 700, color: C.muted
-    }, `+${count}`);
-
 const sideColumn = (label, side, images, cash) => {
-    const shown = side.cards.length > CARDS_PER_SIDE
-        ? side.cards.slice(0, CARDS_PER_SIDE - 1)
-        : side.cards;
-    const hidden = side.cards.length - shown.length;
-    const names = side.cards.slice(0, 2).map((c) =>
-        [c.quantity > 1 ? `${c.quantity}x` : null, c.tag || null, c.name].filter(Boolean).join(' '));
+    const shown = side.cards.slice(0, CARDS_PER_SIDE);
+    const hidden = side.cards.slice(CARDS_PER_SIDE).reduce((n, c) => n + c.quantity, 0);
+    // Spread the cards across the column, overlapping only when they must.
+    const step = shown.length > 1 ? Math.min(CARD_W + 16, (SIDE_W - CARD_W) / (shown.length - 1)) : 0;
 
-    return h('div', { flexDirection: 'column', width: 516 },
-        h('div', { fontSize: 22, fontWeight: 700, letterSpacing: 3, color: C.faint }, label.toUpperCase()),
-        h('div', { alignItems: 'baseline', marginTop: 4 },
-            h('div', { fontSize: 56, fontWeight: 700, color: C.text },
-                side.cards.length ? formatDollars(side.total) : '—'),
-            cash ? h('div', { marginLeft: 16, fontSize: 26, fontWeight: 700, color: C.gain }, `+ ${cash} cash`) : null
+    return h('div', { flexDirection: 'column', width: SIDE_W },
+        h('div', { alignItems: 'baseline', height: 80 },
+            h('div', { fontSize: 34, fontWeight: 700, color: C.muted }, label),
+            h('div', { marginLeft: 18, fontSize: 64, fontWeight: 700, color: C.text },
+                side.cards.length ? formatDollars(side.total) : '')
         ),
         side.cards.length
-            ? h('div', { marginTop: 18, gap: 12 },
-                shown.map((card, i) => cardTile(card, images[i])),
-                hidden > 0 ? moreTile(hidden) : null)
+            ? h('div', { position: 'relative', marginTop: 20, width: SIDE_W, height: CARD_H },
+                shown.map((card, i) => cardTile(card, images[i], i * step)),
+                hidden > 0
+                    ? h('div', {
+                        position: 'absolute', right: 0, bottom: 12, padding: '8px 20px', borderRadius: 999,
+                        backgroundColor: C.bg, border: `2px solid ${C.border}`,
+                        color: C.text, fontSize: 32, fontWeight: 700
+                    }, `+${hidden} more`)
+                    : null)
             : h('div', {
-                marginTop: 18, height: CARD_H, borderRadius: 8, border: `1px dashed ${C.border}`,
-                alignItems: 'center', justifyContent: 'center', fontSize: 26, color: C.muted
+                marginTop: 20, height: CARD_H, borderRadius: 12, border: `3px dashed ${C.border}`,
+                alignItems: 'center', justifyContent: 'center', fontSize: 38, color: C.muted
             }, 'Open to offers'),
-        h('div', { flexDirection: 'column', marginTop: 14 },
-            names.map((name) => h('div', { fontSize: 21, color: C.muted, maxWidth: 516, ...ellipsis }, name)))
+        h('div', { marginTop: 18, height: 44, fontSize: 36, fontWeight: 700, color: C.gain },
+            cash ? `+ ${cash} cash` : '')
     );
 };
 
 const swapIcon =
     'data:image/svg+xml;base64,' +
     Buffer.from(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="${C.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h15l-4-4"/><path d="M20 16H5l4 4"/></svg>`
+        `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="${C.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h15l-4-4"/><path d="M20 16H5l4 4"/></svg>`
     ).toString('base64');
 
 export const renderTradeImage = async (summary, { origin, fetchImages = toDataUri } = {}) => {
@@ -145,25 +142,20 @@ export const renderTradeImage = async (summary, { origin, fetchImages = toDataUr
     const cash = bothSides && Math.abs(summary.diff) >= 0.5 ? formatDollars(summary.diff) : null;
 
     const tree = h('div', {
-        width: WIDTH, height: HEIGHT, flexDirection: 'column', padding: '44px 56px',
+        width: WIDTH, height: HEIGHT, flexDirection: 'column', padding: '36px 48px',
         backgroundColor: C.bg, color: C.text, fontFamily: 'Onest'
     },
-        h('div', { justifyContent: 'space-between', alignItems: 'center' },
-            h('div', { alignItems: 'baseline', fontSize: 30, fontWeight: 700 },
-                h('div', { color: C.accent }, 'FAB Trades'),
-                h('div', { color: C.faint, marginLeft: 14, fontSize: 24, fontWeight: 500 }, 'Trade offer')),
-            h('div', { fontSize: 22, color: C.faint }, 'fabtrades.net')
+        h('div', { justifyContent: 'space-between', alignItems: 'baseline' },
+            h('div', { fontSize: 34, fontWeight: 700, color: C.accent }, 'FAB Trades'),
+            h('div', { fontSize: 28, fontWeight: 500, color: C.muted },
+                bothSides && !cash ? 'Even trade · TCGplayer prices' : 'TCGplayer prices')
         ),
-        h('div', { flexGrow: 1, marginTop: 30, justifyContent: 'space-between' },
+        h('div', { flexGrow: 1, marginTop: 24, justifyContent: 'space-between' },
             sideColumn('Have', summary.have, haveImages, summary.diff < 0 ? cash : null),
-            h('div', { width: 56, alignItems: 'center', justifyContent: 'center', paddingBottom: 40 },
-                img(swapIcon, { width: 48, height: 48 })),
+            h('div', { width: 80, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+                img(swapIcon, { width: 64, height: 64 })),
             sideColumn('Want', summary.want, wantImages, summary.diff > 0 ? cash : null)
-        ),
-        h('div', { fontSize: 20, color: C.faint },
-            bothSides && !cash
-                ? 'Even trade at TCGplayer prices · open the link to counter'
-                : 'TCGplayer prices · open the link to balance or counter')
+        )
     );
 
     const svg = await satori(tree, { width: WIDTH, height: HEIGHT, fonts });
