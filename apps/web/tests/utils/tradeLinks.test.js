@@ -4,7 +4,8 @@ import {
     isTradeLinkCode,
     saveTradeLink,
     shortenTradeLink,
-    tradeLinkCode
+    tradeLinkCode,
+    withTradeAddress
 } from '../../src/utils/tradeLinks.js';
 
 // jsdom lacks these; Netlify's runtimes and browsers have them.
@@ -82,5 +83,22 @@ describe('shortenTradeLink', () => {
         expect(await shortenTradeLink(longUrl, { fetchImpl: bad })).toBe(longUrl);
         expect(await shortenTradeLink(longUrl, { fetchImpl: foreign })).toBe(longUrl);
         expect(await shortenTradeLink('', { fetchImpl: down })).toBe('');
+    });
+});
+
+describe('withTradeAddress', () => {
+    const shell = '<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <script type="module" src="/assets/app.js"></script>\n  </head>\n</html>';
+
+    it('moves the address to the long trade URL before the app bundle runs', () => {
+        const html = withTradeAddress(shell, 'eyJ2IjoxfQ==');
+        const script = html.indexOf("<script>history.replaceState(null, '', \"/?trade=eyJ2IjoxfQ%3D%3D\" + location.hash);</script>");
+        expect(script).toBeGreaterThan(html.indexOf('<head>'));
+        expect(script).toBeLessThan(html.indexOf('/assets/app.js'));
+    });
+
+    it('cannot be used to close the script tag', () => {
+        const html = withTradeAddress(shell, '</script><script>alert(1)</script>');
+        expect(html).not.toContain('</script><script>alert');
+        expect(html.match(/<\/script>/g)).toHaveLength(2);
     });
 });
