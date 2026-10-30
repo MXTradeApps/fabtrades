@@ -53,19 +53,11 @@ jest.mock('../../src/services/binder.js', () => ({
     countableLiveBinders: (binders) =>
         (binders || []).filter((b) => !b.deletedAt && b.clientId !== 'system:want'),
     gridOrderBinders: (binders) => {
-        const live = (binders || []).filter((b) => !b.deletedAt);
+        const live = (binders || []).filter((b) => !b.deletedAt && b.clientId !== 'system:want');
         const trade = live.find((b) => b.role === 'trade');
-        const want = live.find((b) => b.clientId === 'system:want') || {
-            clientId: 'system:want',
-            name: 'Want List',
-            role: 'standard',
-            deletedAt: null,
-        };
         const collection = live.find((b) => b.clientId === 'system:collection');
-        const rest = live.filter((b) =>
-            b !== trade && b !== want && b !== collection && b.clientId !== 'system:want',
-        );
-        return [...(trade ? [trade] : []), want, ...(collection ? [collection] : []), ...rest];
+        const rest = live.filter((b) => b !== trade && b !== collection);
+        return [...(trade ? [trade] : []), ...(collection ? [collection] : []), ...rest];
     },
     getBinderEntries: (...args) => mockGetBinderEntries(...args),
     getBinders: (...args) => mockGetBinders(...args),
@@ -174,13 +166,6 @@ describe('Binder CSV import', () => {
         expect(await screen.findByTestId('binder-import')).toHaveTextContent('Import cards');
     });
 
-    test('Want List has no ⋯ import menu', async () => {
-        renderImport('/binder');
-        fireEvent.click(await screen.findByTestId('binder-tile-system:want'));
-        await waitFor(() => screen.getByRole('heading', { name: 'Want List' }));
-        expect(screen.queryByTestId('binder-open-menu')).not.toBeInTheDocument();
-    });
-
     test('/wants and the Header have no import', async () => {
         render(
             <ThemeProvider theme={createTheme()}>
@@ -194,6 +179,7 @@ describe('Binder CSV import', () => {
             </ThemeProvider>,
         );
         await waitFor(() => screen.getByRole('heading', { name: 'Want List' }));
+        expect(screen.queryByTestId('binder-open-menu')).not.toBeInTheDocument();
         expect(screen.queryByText('Import cards')).not.toBeInTheDocument();
 
         render(
