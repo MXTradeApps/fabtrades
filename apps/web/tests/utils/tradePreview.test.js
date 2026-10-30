@@ -5,6 +5,7 @@ import {
     injectTradeMeta,
     summarizeTrade,
     tradeImageUrl,
+    readableCardName,
     tradeMeta
 } from '../../src/utils/tradePreview.js';
 
@@ -64,12 +65,26 @@ describe('summarizeTrade + tradeMeta', () => {
         expect(summary.diff).toBe(16);
 
         const meta = tradeMeta(summary);
-        expect(meta.title).toBe("Trade: Fyendal's Spring Tunic + 1 more for RF Mask of Momentum");
+        expect(meta.title).toBe("Trade offer: 4 cards for Mask of Momentum");
         expect(meta.description).toBe(
-            "Have ($406): CF Fyendal's Spring Tunic, 3x EA Fleeing Starbreeze · " +
-            'Want ($390): RF Mask of Momentum · $16 apart at TCGplayer prices. ' +
-            'Open it on FAB Trades to balance or counter.'
+            "Have ($406): Fyendal's Spring Tunic (Cold Foil) and 3× Fleeing Starbreeze (Extended Art)\n" +
+            'Want ($390): Mask of Momentum (Rainbow Foil)\n' +
+            'The Have side is worth $16 more at TCGplayer prices.'
         );
+    });
+
+    it('spells out finishes and art, folding them into the pitch color', () => {
+        expect(readableCardName({ name: 'In the Palm of Your Hand (Red)', tag: 'CF', quantity: 2 }))
+            .toBe('2× In the Palm of Your Hand (Red, Cold Foil)');
+        expect(readableCardName({ name: 'Bolt', tag: 'RF EA', quantity: 1 })).toBe('Bolt (Rainbow Foil, Extended Art)');
+        expect(readableCardName({ name: 'Bolt', tag: '', quantity: 1 })).toBe('Bolt');
+    });
+
+    it('lists the three most valuable cards and counts the rest', () => {
+        const have = Array.from({ length: 6 }, (_, i) => [`c${i}`, 10 - i, i === 5 ? 2 : 1]);
+        const meta = tradeMeta(summarizeTrade(decodeTradeParam(encode({ v: 1, h: have, w: [] }))));
+        expect(meta.title).toBe('For trade: 7 cards');
+        expect(meta.description).toBe('Have ($50): c0, 2× c5, c1 and 3 more cards\nPrices from TCGplayer.');
     });
 
     it('handles one-sided trades and unknown ids', () => {
@@ -80,7 +95,7 @@ describe('summarizeTrade + tradeMeta', () => {
             decodeTradeParam(encode({ v: 1, h: [['tunic-cf', 10, 1]], w: [['mask-rf', 10.2, 1]] })),
             printings
         ));
-        expect(even.description).toContain('Even at TCGplayer prices');
+        expect(even.description).toContain('An even trade at TCGplayer prices.');
     });
 });
 
