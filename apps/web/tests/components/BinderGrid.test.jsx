@@ -58,19 +58,11 @@ jest.mock('../../src/services/binder.js', () => ({
     countableLiveBinders: (binders) =>
         (binders || []).filter((b) => !b.deletedAt && b.clientId !== 'system:want'),
     gridOrderBinders: (binders) => {
-        const live = (binders || []).filter((b) => !b.deletedAt);
+        const live = (binders || []).filter((b) => !b.deletedAt && b.clientId !== 'system:want');
         const trade = live.find((b) => b.role === 'trade');
-        const want = live.find((b) => b.clientId === 'system:want') || {
-            clientId: 'system:want',
-            name: 'Want List',
-            role: 'standard',
-            deletedAt: null,
-        };
         const collection = live.find((b) => b.clientId === 'system:collection');
-        const rest = live.filter((b) =>
-            b !== trade && b !== want && b !== collection && b.clientId !== 'system:want',
-        );
-        return [...(trade ? [trade] : []), want, ...(collection ? [collection] : []), ...rest];
+        const rest = live.filter((b) => b !== trade && b !== collection);
+        return [...(trade ? [trade] : []), ...(collection ? [collection] : []), ...rest];
     },
     getBinderEntries: (...args) => mockGetBinderEntries(...args),
     getBinders: (...args) => mockGetBinders(...args),
@@ -170,7 +162,7 @@ describe('BinderGrid', () => {
         renderCollection(false);
         expect(await screen.findByTestId('binder-grid')).toBeInTheDocument();
         expect(await screen.findByTestId('binder-tile-system:trade')).toBeInTheDocument();
-        expect(screen.getByTestId('binder-tile-system:want')).toBeInTheDocument();
+        expect(screen.queryByTestId('binder-tile-system:want')).not.toBeInTheDocument();
         expect(screen.getByTestId('binder-tile-system:collection')).toBeInTheDocument();
         expect(screen.queryByTestId('binder-count-chip')).not.toBeInTheDocument();
 
@@ -395,8 +387,6 @@ describe('BinderGrid', () => {
 
         fireEvent.click(screen.getByTestId('binder-tile-menu-system:trade'));
         expect(screen.queryByTestId('binder-delete-system:trade')).not.toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('binder-tile-menu-system:want'));
-        expect(screen.queryByTestId('binder-delete-system:want')).not.toBeInTheDocument();
         prompt.mockRestore();
     });
 
@@ -586,7 +576,7 @@ describe('BinderGrid', () => {
         expect(screen.getAllByTestId(/binder-entry-row-/)).toHaveLength(10);
     });
 
-    test('Want List tile is undeletable and opens wants', async () => {
+    test('My Binders has no Want List tile; the Want List lives at /wants', async () => {
         mockGetBinderEntries.mockResolvedValue({
             data: {
                 binder: [],
@@ -602,24 +592,9 @@ describe('BinderGrid', () => {
             error: null,
         });
         renderCollection(false);
-        expect(await screen.findByTestId('binder-tile-name-system:want')).toHaveTextContent('Want List');
-        await waitFor(() => {
-            expect(screen.getByTestId('binder-tile-count-system:want')).toHaveTextContent('2');
-        });
-        expect(screen.queryByTestId('binder-count-chip')).not.toBeInTheDocument();
-
-        fireEvent.click(screen.getByTestId('binder-tile-menu-system:want'));
-        expect(screen.queryByTestId('binder-delete-system:want')).not.toBeInTheDocument();
-        expect(screen.getByTestId('binder-clear-system:want')).toBeInTheDocument();
-
-        fireEvent.click(screen.getByTestId('binder-tile-system:want'));
-        expect(await screen.findByTestId(`binder-entry-row-${pricedPrinting._uniqueId}`)).toBeInTheDocument();
-        expect(screen.getByTestId('binder-open-name')).toHaveTextContent('Want List');
-        expect(screen.queryByTestId(`binder-move-${pricedPrinting._uniqueId}`)).not.toBeInTheDocument();
-        expect(screen.queryByTestId('collection-stats')).not.toBeInTheDocument();
-
-        fireEvent.click(screen.getByTestId('add-card'));
-        expect(screen.getByTestId('add-card-dialog')).toHaveTextContent('Add to Want List');
+        expect(await screen.findByTestId('binder-tile-system:trade')).toBeInTheDocument();
+        expect(screen.queryByTestId('binder-tile-system:want')).not.toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Want List/i })).toHaveAttribute('href', '/wants');
     });
 
     test('Clear Binder asks to confirm then empties the open Binder', async () => {

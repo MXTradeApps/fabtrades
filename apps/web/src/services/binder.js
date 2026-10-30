@@ -41,19 +41,19 @@ export function entryClientId({ cardId, isWanted, binderId, condition = 'NM' }) 
     return `binder|${binderId || TRADE_BINDER_ID}|${cardId}|${condition || 'NM'}`;
 }
 
+// The Want List has its own sidebar entry (/wants), so it is not a Binder tile.
 export function gridOrderBinders(binders) {
-    const live = (binders || []).filter((b) => !b.deletedAt);
+    const live = (binders || []).filter((b) => !b.deletedAt && !isWantListBinder(b));
     const trade = live.find((b) => b.role === 'trade');
-    const want = live.find((b) => b.clientId === WANT_BINDER_ID) || wantListBinder();
     const collection = live.find((b) => b.clientId === COLLECTION_BINDER_ID);
     const rest = live
-        .filter((b) => b !== trade && b !== want && b !== collection && b.clientId !== WANT_BINDER_ID)
+        .filter((b) => b !== trade && b !== collection)
         .sort((a, b) => {
             const byCreated = String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
             if (byCreated !== 0) return byCreated;
             return String(a.clientId).localeCompare(String(b.clientId));
         });
-    return [...(trade ? [trade] : []), want, ...(collection ? [collection] : []), ...rest];
+    return [...(trade ? [trade] : []), ...(collection ? [collection] : []), ...rest];
 }
 
 /**
