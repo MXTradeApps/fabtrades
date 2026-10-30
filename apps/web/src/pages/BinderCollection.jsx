@@ -86,6 +86,7 @@ import {
 import BinderGrid from '../components/binder/BinderGrid.jsx';
 import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 import SalePostDialog from '../components/binder/SalePostDialog.jsx';
+import MoveCardDialog from '../components/binder/MoveCardDialog.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
@@ -187,6 +188,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const [shareBusy, setShareBusy] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null);
     const [pendingClear, setPendingClear] = useState(null);
+    const [moveEntry, setMoveEntry] = useState(null);
     const [clearBusy, setClearBusy] = useState(false);
     const [importBinder, setImportBinder] = useState(null);
     const [binderMenuEl, setBinderMenuEl] = useState(null);
@@ -701,42 +703,40 @@ const BinderCollection = ({ isWanted = false }) => {
         setToast(`Cleared ${binder.name}`);
     };
 
-    const handleMove = async (entry) => {
-        const dests = binders.filter((b) =>
+    const moveDestinations = useMemo(
+        () => binders.filter((b) =>
             b.clientId !== (openBinderId || TRADE_BINDER_ID) && !isWantListBinder(b),
-        );
-        if (!dests.length) {
+        ),
+        [binders, openBinderId],
+    );
+
+    const handleMove = (entry) => {
+        if (!moveDestinations.length) {
             setToast('No other Binder to move into');
             return;
         }
-        const names = dests.map((b) => b.name).join(', ');
-        const picked = window.prompt(`Move to Binder (${names})`, dests[0].name);
-        if (!picked) return;
-        const dest = dests.find((b) => b.name.toLowerCase() === picked.trim().toLowerCase())
-            || dests.find((b) => b.clientId === picked);
-        if (!dest) {
-            setToast('Want List is not a Binder destination');
-            return;
-        }
-        let qty = entry.quantity || 1;
-        if (qty > 1) {
-            const raw = window.prompt(`How many copies to move? (1–${qty})`, String(Math.min(2, qty)));
-            if (raw == null) return;
-            qty = Number(raw);
-        }
+        setMoveEntry(entry);
+    };
+
+    const confirmMove = async ({ toBinderId, quantity }) => {
+        const entry = moveEntry;
+        if (!entry) return;
         const { error: moveError } = await applyBinderMove({
             binders,
             entries: allOwned,
             fromBinderId: openBinderId || TRADE_BINDER_ID,
-            toBinderId: dest.clientId,
+            toBinderId,
             printingId: entry.cardId,
             condition: entry.condition || 'NM',
-            quantity: qty,
+            quantity,
         });
         if (moveError) {
             setToast(moveError.message || 'Could not move');
             return;
         }
+        setMoveEntry(null);
+        const dest = moveDestinations.find((b) => b.clientId === toBinderId);
+        if (dest) setToast(`Moved to ${dest.name}`);
         await loadEntries();
         await loadBinders();
     };
@@ -1385,6 +1385,15 @@ const BinderCollection = ({ isWanted = false }) => {
                     getLink={openBinderId === TRADE_BINDER_ID ? getSaleLink : null}
                 />
             )}
+
+            <MoveCardDialog
+                open={Boolean(moveEntry)}
+                onClose={() => setMoveEntry(null)}
+                onConfirm={confirmMove}
+                destinations={moveDestinations}
+                cardName={moveEntry ? resolveCard(moveEntry).name : ''}
+                maxQuantity={moveEntry?.quantity || 1}
+            />
 
             <Dialog
                 open={shareOpen}

@@ -354,16 +354,20 @@ describe('BinderGrid', () => {
             error: null,
         });
         const prompt = jest.spyOn(window, 'prompt');
-        prompt.mockReturnValueOnce('Collection').mockReturnValueOnce('2');
         renderCollection(false);
         fireEvent.click(await screen.findByTestId('binder-tile-system:trade'));
         fireEvent.click(await screen.findByTestId(`binder-move-${pricedPrinting._uniqueId}`));
-        expect(mockApplyBinderMove).toHaveBeenCalledWith(expect.objectContaining({
+        expect(await screen.findByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByRole('combobox')).toHaveTextContent('Collection');
+        fireEvent.change(screen.getByTestId('move-card-quantity'), { target: { value: '2' } });
+        fireEvent.click(screen.getByTestId('move-card-confirm'));
+        await waitFor(() => expect(mockApplyBinderMove).toHaveBeenCalledWith(expect.objectContaining({
             fromBinderId: 'system:trade',
             toBinderId: 'system:collection',
             quantity: 2,
             printingId: pricedPrinting._uniqueId,
-        }));
+        })));
+        expect(prompt).not.toHaveBeenCalled();
         prompt.mockRestore();
     });
 
