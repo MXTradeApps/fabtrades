@@ -72,21 +72,16 @@ import {
 } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
 import { addCardToTradeDraft } from '../utils/tradeDraft.js';
-import { formatBinderAsText } from '../utils/binderText.js';
 import {
     buildFabraryExportRows,
     downloadCsv,
     fabraryExportFilename,
     toFabraryCsv,
 } from '../utils/fabraryExport.js';
-import {
-    binderExportFilename,
-    buildBinderExportRows,
-    toBinderCsv,
-} from '../utils/binderCsvExport.js';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
 import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 import SalePostDialog from '../components/binder/SalePostDialog.jsx';
+import BinderExportDialog from '../components/binder/BinderExportDialog.jsx';
 import MoveCardDialog from '../components/binder/MoveCardDialog.jsx';
 import BinderFilters, {
     ActiveFilterBar,
@@ -189,6 +184,7 @@ const BinderCollection = ({ isWanted = false }) => {
     // While this message is the toast, it offers View to open the trade calculator.
     const [tradeToast, setTradeToast] = useState('');
     const [shareOpen, setShareOpen] = useState(false);
+    const [exportOpen, setExportOpen] = useState(false);
     // Entries the sale post lists; null while the dialog is closed.
     const [saleEntries, setSaleEntries] = useState(null);
     const [selectedKeys, setSelectedKeys] = useState(() => new Set());
@@ -596,18 +592,7 @@ const BinderCollection = ({ isWanted = false }) => {
         setToast(`Exported ${rows.length} printings for Fabrary`);
     };
 
-    const handleExportBinder = () => {
-        const rows = buildBinderExportRows({
-            entries,
-            resolveCard: (entry) => catalogById.get(entry.cardId),
-        });
-        if (rows.length === 0) {
-            setToast('Nothing to export');
-            return;
-        }
-        downloadCsv(toBinderCsv(rows), binderExportFilename(openBinder?.name));
-        setToast(`Exported ${rows.length} ${rows.length === 1 ? 'printing' : 'printings'}`);
-    };
+    const catalogCard = useCallback((entry) => catalogById.get(entry.cardId), [catalogById]);
 
     const handleCreateBinder = async () => {
         const name = promptName('New Binder');
@@ -865,29 +850,6 @@ const BinderCollection = ({ isWanted = false }) => {
         return enabled?.isEnabled ? enabled.url : null;
     };
 
-    const copyBinderAsText = async () => {
-        const text = formatBinderAsText({
-            name: viewingWants ? 'Want List' : (openBinder?.name || 'Binder'),
-            entries: entries.map((entry) => {
-                const card = resolveCard(entry);
-                return {
-                    quantity: entry.quantity,
-                    name: card.name,
-                    collectorNumber: card.collectorNumber,
-                    finish: card.finish,
-                    condition: entry.condition || 'NM',
-                    setName: card.setName,
-                };
-            }),
-        });
-        try {
-            await navigator.clipboard.writeText(text);
-            setToast('Binder copied as text');
-        } catch {
-            setToast('Could not copy binder');
-        }
-    };
-
     const toggleShareEnabled = async (enabled) => {
         setShareBusy(true);
         const { data, error: shareError } = await setBinderShareEnabled(enabled);
@@ -1076,6 +1038,17 @@ const BinderCollection = ({ isWanted = false }) => {
                                 Post for sale
                             </Button>
                         )}
+                        {!showingGrid && (
+                            <Button
+                                data-testid="binder-export"
+                                variant="outlined"
+                                color="inherit"
+                                startIcon={<FileDownloadOutlined />}
+                                onClick={() => setExportOpen(true)}
+                            >
+                                Export
+                            </Button>
+                        )}
                         {!isWanted && openBinderId === TRADE_BINDER_ID && (
                             <Button
                                 variant="outlined"
@@ -1124,15 +1097,6 @@ const BinderCollection = ({ isWanted = false }) => {
                                         }}
                                     >
                                         Import cards
-                                    </MenuItem>
-                                    <MenuItem
-                                        data-testid="binder-export"
-                                        onClick={() => {
-                                            setBinderMenuEl(null);
-                                            handleExportBinder();
-                                        }}
-                                    >
-                                        Export cards
                                     </MenuItem>
                                 </Menu>
                             </>
@@ -1472,6 +1436,19 @@ const BinderCollection = ({ isWanted = false }) => {
                 />
             )}
 
+            {exportOpen && (
+                <BinderExportDialog
+                    open
+                    onClose={() => setExportOpen(false)}
+                    title={viewingWants ? 'Want List' : (openBinder?.name || 'Binder')}
+                    entries={entries}
+                    filteredEntries={filtered.length !== entries.length ? filtered : null}
+                    defaultSort={sort}
+                    resolveCard={catalogCard}
+                    onToast={setToast}
+                />
+            )}
+
             <MoveCardDialog
                 open={Boolean(moveEntry)}
                 onClose={() => setMoveEntry(null)}
@@ -1532,18 +1509,21 @@ const BinderCollection = ({ isWanted = false }) => {
                     )}
                     <Divider sx={{ my: 2.5 }} />
                     <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.75, color: textColor }}>
-                        Copy binder as text
+                        Export card list
                     </Typography>
                     <Typography sx={{ color: mutedColor, fontSize: '0.875rem', mb: 1.5 }}>
-                        Copy a list of the cards in this binder to paste into Discord, notes, or a spreadsheet.
+                        Copy or download the cards in this binder as text, Discord, or CSV.
                     </Typography>
                     <Button
                         variant="outlined"
-                        startIcon={<ContentCopyIcon />}
-                        onClick={copyBinderAsText}
-                        data-testid="copy-binder-text"
+                        startIcon={<FileDownloadOutlined />}
+                        onClick={() => {
+                            setShareOpen(false);
+                            setExportOpen(true);
+                        }}
+                        data-testid="share-open-export"
                     >
-                        Copy Binder as Text
+                        Export card list
                     </Button>
                 </DialogContent>
                 <DialogActions sx={{ justifyContent: 'space-between' }}>
