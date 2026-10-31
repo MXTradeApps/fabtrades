@@ -91,9 +91,6 @@ function compareEntries(a, b, sort, resolveCard) {
     }
 }
 
-/**
- * Read-only public binder view at `/b/:token`.
- */
 const PENDING_COPY_KEY = 'fabtrades.pendingBinderCopy';
 
 function writePendingCopy(token) {
@@ -114,6 +111,9 @@ function takePendingCopy(token) {
     }
 }
 
+/**
+ * Read-only public binder view at `/b/:token`.
+ */
 const SharedBinder = () => {
     const { token } = useParams();
     const navigate = useNavigate();
@@ -127,10 +127,17 @@ const SharedBinder = () => {
     const [error, setError] = useState(null);
     const [sort, setSort] = useState('priceDesc');
     const [toast, setToast] = useState('');
+    const [toastSeverity, setToastSeverity] = useState('success');
     const [exportOpen, setExportOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
     const [copiedBinderId, setCopiedBinderId] = useState(null);
+    // null while a signed-in viewer's ownership is still being checked.
     const [isOwnBinder, setIsOwnBinder] = useState(false);
+
+    const showToast = useCallback((message, severity = 'success') => {
+        setToastSeverity(severity);
+        setToast(message);
+    }, []);
 
     // Hide "Copy" on the viewer's own shared Binder.
     useEffect(() => {
@@ -139,6 +146,7 @@ const SharedBinder = () => {
             return undefined;
         }
         let cancelled = false;
+        setIsOwnBinder(null);
         getBinderShare().then(({ data }) => {
             if (!cancelled) setIsOwnBinder(Boolean(data?.token) && data.token === String(token).trim());
         });
@@ -233,12 +241,12 @@ const SharedBinder = () => {
             });
             if (data) binder = data;
             else if (createError?.reason !== 'duplicate') {
-                setToast(createError?.message || 'Could not copy this Binder');
+                showToast(createError?.message || 'Could not copy this Binder', 'error');
                 return;
             }
         }
         if (!binder) {
-            setToast('Could not copy this Binder');
+            showToast('Could not copy this Binder', 'error');
             return;
         }
         const { error: copyError } = await upsertEntries(entries.map((entry) => ({
@@ -251,20 +259,20 @@ const SharedBinder = () => {
         if (copyError) {
             // Don't leave an empty Binder behind to collide with the retry.
             await deleteBinder({ clientId: binder.clientId });
-            setToast(copyError.message || 'Could not copy the cards');
+            showToast(copyError.message || 'Could not copy the cards', 'error');
             return;
         }
         setExportOpen(false);
         setCopiedBinderId(binder.clientId);
-        setToast(`Copied to your Binders as "${binder.name}"`);
-    }, [user, token, ownerName, entries]);
+        showToast(`Copied to your Binders as "${binder.name}"`);
+    }, [user, token, ownerName, entries, showToast]);
 
     // Signing in leaves the page; finish a copy the viewer started signed out.
     useEffect(() => {
-        if (!user || loading || error || entries.length === 0) return;
-        if (!takePendingCopy(token)) return;
+        if (!user || loading || error || entries.length === 0 || isOwnBinder === null) return;
+        if (!takePendingCopy(token) || isOwnBinder) return;
         handleCopyBinder();
-    }, [user, loading, error, entries, token, handleCopyBinder]);
+    }, [user, loading, error, entries, token, isOwnBinder, handleCopyBinder]);
 
     const openEntryDetail = (entry) => {
         const live = catalogById.get(entry.cardId);
@@ -344,7 +352,7 @@ const SharedBinder = () => {
         });
 
         const shortName = live?.name || stub.name || 'Card';
-        setToast(`Added ${shortName} to trade calculator`);
+        showToast(`Added ${shortName} to trade calculator`);
     };
 
     return (
@@ -519,13 +527,20 @@ const SharedBinder = () => {
                     filteredEntries={narrowed ? sorted : null}
                     resolveCard={catalogCard}
                     defaultSort={sort}
-                    onCopyBinder={isOwnBinder ? null : handleCopyBinder}
+                    onCopyBinder={isOwnBinder === false ? handleCopyBinder : null}
                     copyNeedsSignIn={!user}
                     onToast={setToast}
                 />
             )}
 
-            <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
+            <SignInDialog
+                open={signInOpen}
+                onClose={() => {
+                    setSignInOpen(false);
+                    // Dismissed without signing in: don't copy on some later sign-in.
+                    if (!user) takePendingCopy(token);
+                }}
+            />
 
             {showFilters && (
                 <BinderFiltersDrawer
@@ -548,7 +563,7 @@ const SharedBinder = () => {
             >
                 <Alert
                     onClose={() => setToast('')}
-                    severity="success"
+                    severity={toastSeverity}
                     variant="filled"
                     sx={{ width: '100%' }}
                     action={copiedBinderId ? (

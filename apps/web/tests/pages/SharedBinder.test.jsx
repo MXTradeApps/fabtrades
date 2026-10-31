@@ -210,7 +210,17 @@ describe('SharedBinder', () => {
             fireEvent.click(await screen.findByTestId('shared-binder-export'));
             fireEvent.click(await screen.findByTestId('binder-export-copy-binder'));
             expect(await screen.findByText('Network down')).toBeInTheDocument();
+            expect(screen.getByRole('alert')).toHaveClass('MuiAlert-filledError');
             expect(mockDeleteBinder).toHaveBeenCalledWith({ clientId: 'new-binder' });
+        });
+
+        test('an owner returning from sign-in does not copy their own Binder', async () => {
+            mockUser = { id: 'owner' };
+            mockGetBinderShare.mockResolvedValue({ data: { token }, error: null });
+            window.sessionStorage.setItem('fabtrades.pendingBinderCopy', token);
+            renderShared();
+            await waitFor(() => expect(window.sessionStorage.getItem('fabtrades.pendingBinderCopy')).toBeNull());
+            expect(mockCreateBinder).not.toHaveBeenCalled();
         });
 
         test('the owner does not get a Copy option', async () => {
