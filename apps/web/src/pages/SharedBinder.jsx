@@ -21,7 +21,7 @@ import {
     CollectionsBookmarkOutlined,
     FileDownloadOutlined,
 } from '@mui/icons-material';
-import { createBinder, getPublicBinder, upsertEntries } from '../services/binder.js';
+import { createBinder, deleteBinder, getBinderShare, getPublicBinder, upsertEntries } from '../services/binder.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import BinderExportDialog from '../components/binder/BinderExportDialog.jsx';
@@ -82,6 +82,26 @@ function compareEntries(a, b, sort, resolveCard) {
 /**
  * Read-only public binder view at `/b/:token`.
  */
+const PENDING_COPY_KEY = 'fabtrades.pendingBinderCopy';
+
+function writePendingCopy(token) {
+    try {
+        window.sessionStorage.setItem(PENDING_COPY_KEY, token);
+    } catch {
+        // Without storage the viewer just taps Copy again after signing in.
+    }
+}
+
+function takePendingCopy(token) {
+    try {
+        if (window.sessionStorage.getItem(PENDING_COPY_KEY) !== token) return false;
+        window.sessionStorage.removeItem(PENDING_COPY_KEY);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 const SharedBinder = () => {
     const { token } = useParams();
     const navigate = useNavigate();
@@ -97,6 +117,23 @@ const SharedBinder = () => {
     const [toast, setToast] = useState('');
     const [exportOpen, setExportOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
+    const [copiedBinderId, setCopiedBinderId] = useState(null);
+    const [isOwnBinder, setIsOwnBinder] = useState(false);
+
+    // Hide "Copy" on the viewer's own shared Binder.
+    useEffect(() => {
+        if (!user) {
+            setIsOwnBinder(false);
+            return undefined;
+        }
+        let cancelled = false;
+        getBinderShare().then(({ data }) => {
+            if (!cancelled) setIsOwnBinder(Boolean(data?.token) && data.token === String(token).trim());
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [user, token]);
 
 
     useEffect(() => {
@@ -168,8 +205,9 @@ const SharedBinder = () => {
     const catalogCard = useCallback((entry) => catalogById.get(entry.cardId), [catalogById]);
 
     // A personal copy goes into a new standard Binder, so none of it is for trade.
-    const handleCopyBinder = async () => {
+    const handleCopyBinder = useCallback(async () => {
         if (!user) {
+            writePendingCopy(token);
             setSignInOpen(true);
             return;
         }
@@ -197,11 +235,22 @@ const SharedBinder = () => {
             card: entry.stub || entry.card,
         })));
         if (copyError) {
+            // Don't leave an empty Binder behind to collide with the retry.
+            await deleteBinder({ clientId: binder.clientId });
             setToast(copyError.message || 'Could not copy the cards');
             return;
         }
-        navigate(`/binder?b=${encodeURIComponent(binder.clientId)}`);
-    };
+        setExportOpen(false);
+        setCopiedBinderId(binder.clientId);
+        setToast(`Copied to your Binders as "${binder.name}"`);
+    }, [user, token, ownerName, entries]);
+
+    // Signing in leaves the page; finish a copy the viewer started signed out.
+    useEffect(() => {
+        if (!user || loading || error || entries.length === 0) return;
+        if (!takePendingCopy(token)) return;
+        handleCopyBinder();
+    }, [user, loading, error, entries, token, handleCopyBinder]);
 
     const openEntryDetail = (entry) => {
         const live = catalogById.get(entry.cardId);
@@ -336,7 +385,8 @@ const SharedBinder = () => {
                     entries={entries}
                     resolveCard={catalogCard}
                     defaultSort={sort}
-                    onCopyBinder={handleCopyBinder}
+                    onCopyBinder={isOwnBinder ? null : handleCopyBinder}
+                    copyNeedsSignIn={!user}
                     onToast={setToast}
                 />
             )}
@@ -345,8 +395,11 @@ const SharedBinder = () => {
 
             <Snackbar
                 open={Boolean(toast)}
-                autoHideDuration={2500}
-                onClose={() => setToast('')}
+                autoHideDuration={copiedBinderId ? 6000 : 2500}
+                onClose={() => {
+                    setToast('');
+                    setCopiedBinderId(null);
+                }}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
                 <Alert
@@ -354,6 +407,16 @@ const SharedBinder = () => {
                     severity="success"
                     variant="filled"
                     sx={{ width: '100%' }}
+                    action={copiedBinderId ? (
+                        <Button
+                            color="inherit"
+                            size="small"
+                            data-testid="shared-binder-open-copy"
+                            onClick={() => navigate(`/binder?b=${encodeURIComponent(copiedBinderId)}`)}
+                        >
+                            Open
+                        </Button>
+                    ) : null}
                 >
                     {toast}
                 </Alert>

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import SharedBinder from '../../src/pages/SharedBinder.jsx';
@@ -6,9 +6,14 @@ import { sharedBinderTitle } from '../../src/utils/binderNames.js';
 import { ThemeModeProvider } from '../../src/contexts/ThemeContext.jsx';
 
 const mockGetPublicBinder = jest.fn();
+const mockCreateBinder = jest.fn();
+const mockUpsertEntries = jest.fn();
+const mockGetBinderShare = jest.fn();
+const mockDeleteBinder = jest.fn();
+let mockUser = null;
 
 jest.mock('../../src/contexts/AuthContext.jsx', () => ({
-    useAuth: () => ({ user: null }),
+    useAuth: () => ({ user: mockUser }),
 }));
 
 jest.mock('../../src/contexts/EntitlementContext.jsx', () => ({
@@ -32,6 +37,10 @@ jest.mock('../../src/contexts/CardDetailContext.jsx', () => ({
 
 jest.mock('../../src/services/binder.js', () => ({
     getPublicBinder: (...args) => mockGetPublicBinder(...args),
+    createBinder: (...args) => mockCreateBinder(...args),
+    upsertEntries: (...args) => mockUpsertEntries(...args),
+    getBinderShare: (...args) => mockGetBinderShare(...args),
+    deleteBinder: (...args) => mockDeleteBinder(...args),
 }));
 
 jest.mock('../../src/components/search/index.js', () => ({
@@ -94,5 +103,77 @@ describe('SharedBinder', () => {
         expect(sharedBinderTitle('James')).toBe('James’ Binder');
         expect(sharedBinderTitle('  Max ')).toBe('Max’s Binder');
         expect(sharedBinderTitle('')).toBe('Shared Binder');
+    });
+
+    describe('export and copy', () => {
+        const token = 'a'.repeat(32);
+
+        beforeEach(() => {
+            mockUser = null;
+            window.sessionStorage.clear();
+            mockGetPublicBinder.mockResolvedValue({ data: { ownerName: 'Max', entries: [entry] }, error: null });
+            mockGetBinderShare.mockResolvedValue({ data: { token: 'b'.repeat(32) }, error: null });
+            mockCreateBinder.mockResolvedValue({ data: { clientId: 'new-binder', name: 'Max’s Binder' }, error: null });
+            mockUpsertEntries.mockResolvedValue({ data: { rows: [] }, error: null });
+        });
+
+        afterEach(() => {
+            mockUser = null;
+        });
+
+        test('signed out, Copy asks to sign in and remembers the copy', async () => {
+            renderShared();
+            fireEvent.click(await screen.findByTestId('shared-binder-export'));
+            const copy = await screen.findByTestId('binder-export-copy-binder');
+            expect(copy).toHaveTextContent('Sign in to copy');
+            fireEvent.click(copy);
+            expect(window.sessionStorage.getItem('fabtrades.pendingBinderCopy')).toBe(token);
+            expect(mockCreateBinder).not.toHaveBeenCalled();
+        });
+
+        test('signed in, a pending copy finishes on return', async () => {
+            mockUser = { id: 'viewer' };
+            window.sessionStorage.setItem('fabtrades.pendingBinderCopy', token);
+            renderShared();
+            expect(await screen.findByText('Copied to your Binders as "Max’s Binder"')).toBeInTheDocument();
+            expect(mockCreateBinder).toHaveBeenCalledWith({ name: 'Max’s Binder' });
+            expect(mockUpsertEntries).toHaveBeenCalledWith([
+                expect.objectContaining({ cardId: '123-Normal', quantity: 3, binderId: 'new-binder' }),
+            ]);
+            expect(screen.getByTestId('shared-binder-open-copy')).toBeInTheDocument();
+            expect(window.sessionStorage.getItem('fabtrades.pendingBinderCopy')).toBeNull();
+        });
+
+        test('a taken name gets a number', async () => {
+            mockUser = { id: 'viewer' };
+            mockCreateBinder
+                .mockResolvedValueOnce({ data: null, error: { reason: 'duplicate' } })
+                .mockResolvedValueOnce({ data: { clientId: 'new-binder', name: 'Max’s Binder (2)' }, error: null });
+            renderShared();
+            fireEvent.click(await screen.findByTestId('shared-binder-export'));
+            fireEvent.click(await screen.findByTestId('binder-export-copy-binder'));
+            expect(await screen.findByText('Copied to your Binders as "Max’s Binder (2)"')).toBeInTheDocument();
+        });
+
+        test('a failed copy removes the new Binder', async () => {
+            mockUser = { id: 'viewer' };
+            mockUpsertEntries.mockResolvedValue({ data: null, error: { message: 'Network down' } });
+            mockDeleteBinder.mockResolvedValue({ data: {}, error: null });
+            renderShared();
+            fireEvent.click(await screen.findByTestId('shared-binder-export'));
+            fireEvent.click(await screen.findByTestId('binder-export-copy-binder'));
+            expect(await screen.findByText('Network down')).toBeInTheDocument();
+            expect(mockDeleteBinder).toHaveBeenCalledWith({ clientId: 'new-binder' });
+        });
+
+        test('the owner does not get a Copy option', async () => {
+            mockUser = { id: 'owner' };
+            mockGetBinderShare.mockResolvedValue({ data: { token }, error: null });
+            renderShared();
+            await waitFor(() => expect(mockGetBinderShare).toHaveBeenCalled());
+            fireEvent.click(await screen.findByTestId('shared-binder-export'));
+            expect(await screen.findByTestId('binder-export-dialog')).toBeInTheDocument();
+            await waitFor(() => expect(screen.queryByTestId('binder-export-copy-binder')).not.toBeInTheDocument());
+        });
     });
 });

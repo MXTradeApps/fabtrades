@@ -60,6 +60,7 @@ function saveFormat(format) {
 }
 
 const cardCount = (list) => list.reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0);
+const cardsLabel = (n) => `${n} ${n === 1 ? 'card' : 'cards'}`;
 
 /**
  * "Export card list" for a Binder: pick a format, sort, prices and
@@ -74,8 +75,9 @@ const cardCount = (list) => list.reduce((sum, entry) => sum + (Number(entry.quan
  *   filters show, when they hide some; exported by default
  * @param {string} [props.defaultSort] the Binder's current sort
  * @param {(entry: Object) => Object|null} props.resolveCard live catalog lookup
- * @param {(() => Promise<void>)|null} [props.onCopyBinder] shown as "Copy This Binder"
+ * @param {(() => Promise<void>)|null} [props.onCopyBinder] shown as "Copy all N cards"
  *   when set (someone else's shared Binder)
+ * @param {boolean} [props.copyNeedsSignIn] label the copy button "Sign in to copy"
  * @param {(message: string) => void} [props.onToast]
  */
 export default function BinderExportDialog({
@@ -87,6 +89,7 @@ export default function BinderExportDialog({
     defaultSort = 'nameAsc',
     resolveCard,
     onCopyBinder = null,
+    copyNeedsSignIn = false,
     onToast = () => {},
 }) {
     const theme = useTheme();
@@ -123,6 +126,7 @@ export default function BinderExportDialog({
         }),
         [items, title, format, sort, includePrices, priceSource, includeCondition, hasConditions],
     );
+    const exportCount = cardCount(source);
     const overDiscordLimit = format === 'discord' && text.length > DISCORD_LIMIT;
 
     const change = (setter) => (value) => {
@@ -134,7 +138,7 @@ export default function BinderExportDialog({
         try {
             await navigator.clipboard.writeText(text);
             setCopied(true);
-            onToast(`Copied ${items.length} ${items.length === 1 ? 'printing' : 'printings'}`);
+            onToast(`Copied ${cardsLabel(exportCount)}`);
         } catch {
             onToast('Could not copy. Select the preview and copy it instead.');
         }
@@ -146,7 +150,7 @@ export default function BinderExportDialog({
             cardListExportFilename(title, format),
             format === 'csv' ? 'text/csv' : 'text/plain',
         );
-        onToast(`Exported ${items.length} ${items.length === 1 ? 'printing' : 'printings'}`);
+        onToast(`Exported ${cardsLabel(exportCount)}`);
     };
 
     const copyBinder = async () => {
@@ -157,6 +161,51 @@ export default function BinderExportDialog({
             setCopyingBinder(false);
         }
     };
+
+    const formatPicker = (
+        <Box sx={{ display: 'grid', gap: 1, mb: 2 }} role="radiogroup" aria-label="Export format">
+            {EXPORT_FORMATS.map((opt) => {
+                const Icon = FORMAT_ICONS[opt.id];
+                const selected = format === opt.id;
+                return (
+                    <Box
+                        key={opt.id}
+                        component="label"
+                        data-testid={`binder-export-format-${opt.id}`}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            px: 1,
+                            py: 0.25,
+                            borderRadius: 2,
+                            border: 1,
+                            borderColor: selected ? 'primary.main' : 'divider',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <Radio
+                            size="small"
+                            checked={selected}
+                            onChange={() => {
+                                change(setFormat)(opt.id);
+                                saveFormat(opt.id);
+                            }}
+                            value={opt.id}
+                            inputProps={{ 'aria-label': opt.label }}
+                        />
+                        <Icon fontSize="small" sx={{ color: 'text.secondary' }} />
+                        <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>{opt.label}</Typography>
+                        <Typography
+                            sx={{ color: 'text.secondary', fontSize: '0.8rem', display: { xs: 'none', sm: 'block' } }}
+                        >
+                            {opt.description}
+                        </Typography>
+                    </Box>
+                );
+            })}
+        </Box>
+    );
 
     return (
         <Dialog
@@ -174,152 +223,61 @@ export default function BinderExportDialog({
                 {onCopyBinder && (
                     <Box
                         sx={{
-                            p: 2,
-                            mb: 2.5,
+                            p: 1.5,
+                            mb: 2,
                             borderRadius: 2,
                             border: 1,
                             borderColor: 'primary.main',
                             bgcolor: 'action.hover',
                         }}
                     >
-                        <Typography sx={{ fontWeight: 700, mb: 0.5 }}>Make a personal copy</Typography>
-                        <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem', mb: 1.5 }}>
-                            Adds a new Binder with these cards to your collection. It stays private and is
-                            not part of your Trade Binder.
+                        <Typography sx={{ fontWeight: 700, mb: 0.25 }}>Make a personal copy</Typography>
+                        <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem', mb: 1.25 }}>
+                            Adds a new private Binder with all of these cards to your collection. Nothing is
+                            added to your Trade Binder.
                         </Typography>
                         <Button
                             fullWidth
                             variant="contained"
                             data-testid="binder-export-copy-binder"
                             startIcon={copyingBinder ? <CircularProgress size={16} color="inherit" /> : <ContentCopyIcon />}
-                            disabled={copyingBinder || items.length === 0}
+                            disabled={copyingBinder || entries.length === 0}
                             onClick={copyBinder}
                         >
-                            Copy This Binder
+                            {copyNeedsSignIn ? 'Sign in to copy' : `Copy all ${cardsLabel(cardCount(entries))}`}
                         </Button>
                     </Box>
                 )}
 
-                {filteredEntries && (
-                    <Box sx={{ mb: 2 }}>
+                <Typography sx={sectionLabel}>Export format</Typography>
+                {formatPicker}
+
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, mb: 1 }}>
+                    <Typography sx={{ ...sectionLabel, mb: 0 }}>
+                        Preview
+                        <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary', ml: 1 }}>
+                            {cardsLabel(exportCount)}
+                        </Box>
+                    </Typography>
+                    {filteredEntries && (
                         <FormControlLabel
+                            sx={{ ml: 'auto', mr: 0 }}
                             control={(
                                 <Checkbox
+                                    size="small"
                                     checked={onlyFiltered}
                                     onChange={(e) => change(setOnlyFiltered)(e.target.checked)}
                                     inputProps={{ 'data-testid': 'binder-export-only-filtered' }}
                                 />
                             )}
-                            label={`Only the cards shown (${cardCount(filteredEntries)} of ${cardCount(entries)})`}
-                        />
-                    </Box>
-                )}
-
-                <Typography sx={sectionLabel}>Export format</Typography>
-                <Box sx={{ display: 'grid', gap: 1, mb: 2.5 }} role="radiogroup" aria-label="Export format">
-                    {EXPORT_FORMATS.map((opt) => {
-                        const Icon = FORMAT_ICONS[opt.id];
-                        const selected = format === opt.id;
-                        return (
-                            <Box
-                                key={opt.id}
-                                component="label"
-                                data-testid={`binder-export-format-${opt.id}`}
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    px: 1,
-                                    py: 0.75,
-                                    borderRadius: 2,
-                                    border: 1,
-                                    borderColor: selected ? 'primary.main' : 'divider',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                <Radio
-                                    size="small"
-                                    checked={selected}
-                                    onChange={() => {
-                                        change(setFormat)(opt.id);
-                                        saveFormat(opt.id);
-                                    }}
-                                    value={opt.id}
-                                    inputProps={{ 'aria-label': opt.label }}
-                                />
-                                <Icon fontSize="small" sx={{ color: 'text.secondary' }} />
-                                <Box>
-                                    <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>{opt.label}</Typography>
-                                    <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>
-                                        {opt.description}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        );
-                    })}
-                </Box>
-
-                <Typography sx={sectionLabel}>Sort by</Typography>
-                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                    <Select
-                        value={sort}
-                        onChange={(e) => change(setSort)(e.target.value)}
-                        inputProps={{ 'aria-label': 'Sort by', 'data-testid': 'binder-export-sort' }}
-                    >
-                        {EXPORT_SORTS.map((opt) => (
-                            <MenuItem key={opt.id} value={opt.id}>{opt.label}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-
-                <FormControlLabel
-                    control={(
-                        <Checkbox
-                            checked={includePrices}
-                            onChange={(e) => change(setIncludePrices)(e.target.checked)}
-                            inputProps={{ 'data-testid': 'binder-export-prices' }}
+                            label={(
+                                <Typography sx={{ fontSize: '0.85rem' }}>
+                                    Only the cards shown ({cardCount(filteredEntries)} of {cardCount(entries)})
+                                </Typography>
+                            )}
                         />
                     )}
-                    label="Include prices"
-                />
-                {includePrices && (
-                    <Box sx={{ pl: 4, mb: 1 }}>
-                        <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 0.5 }}>
-                            Price source
-                        </Typography>
-                        <FormControl size="small" sx={{ minWidth: 160 }}>
-                            <Select
-                                value={priceSource}
-                                onChange={(e) => change(setPriceSource)(e.target.value)}
-                                inputProps={{ 'aria-label': 'Price source', 'data-testid': 'binder-export-price-source' }}
-                            >
-                                {PRICE_SOURCES.map((opt) => (
-                                    <MenuItem key={opt.id} value={opt.id}>{opt.label}</MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Box>
-                )}
-
-                {hasConditions && (
-                    <FormControlLabel
-                        control={(
-                            <Checkbox
-                                checked={includeCondition}
-                                onChange={(e) => change(setIncludeCondition)(e.target.checked)}
-                                inputProps={{ 'data-testid': 'binder-export-condition' }}
-                            />
-                        )}
-                        label="Include card condition (NM, LP, etc.)"
-                    />
-                )}
-
-                <Typography sx={{ ...sectionLabel, mt: 2 }}>
-                    Preview
-                    <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary', ml: 1 }}>
-                        {cardCount(source)} {cardCount(source) === 1 ? 'card' : 'cards'}
-                    </Box>
-                </Typography>
+                </Box>
                 {overDiscordLimit && (
                     <Typography
                         data-testid="binder-export-discord-limit"
@@ -334,6 +292,7 @@ export default function BinderExportDialog({
                     data-testid="binder-export-preview"
                     sx={{
                         m: 0,
+                        mb: 2,
                         p: 1.5,
                         borderRadius: 1.5,
                         border: 1,
@@ -343,21 +302,90 @@ export default function BinderExportDialog({
                         fontSize: '0.78rem',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
-                        maxHeight: 220,
+                        maxHeight: { xs: 160, sm: 180 },
                         overflowY: 'auto',
                     }}
                 >
                     {items.length ? text : 'This Binder has no cards to export.'}
                 </Box>
+
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 1 }}>
+                    <Box sx={{ flex: '1 1 200px' }}>
+                        <Typography sx={sectionLabel}>Sort by</Typography>
+                        <FormControl fullWidth size="small">
+                            <Select
+                                value={sort}
+                                onChange={(e) => change(setSort)(e.target.value)}
+                                inputProps={{ 'aria-label': 'Sort by', 'data-testid': 'binder-export-sort' }}
+                            >
+                                {EXPORT_SORTS.map((opt) => (
+                                    <MenuItem key={opt.id} value={opt.id}>{opt.label}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+                    <Box sx={{ flex: '1 1 160px' }}>
+                        <Typography sx={sectionLabel}>Price source</Typography>
+                        <FormControl fullWidth size="small" disabled={!includePrices}>
+                            <Select
+                                value={priceSource}
+                                onChange={(e) => change(setPriceSource)(e.target.value)}
+                                inputProps={{ 'aria-label': 'Price source', 'data-testid': 'binder-export-price-source' }}
+                            >
+                                {PRICE_SOURCES.map((opt) => (
+                                    <MenuItem key={opt.id} value={opt.id}>{opt.label}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2 }}>
+                    <FormControlLabel
+                        control={(
+                            <Checkbox
+                                checked={includePrices}
+                                onChange={(e) => change(setIncludePrices)(e.target.checked)}
+                                inputProps={{ 'data-testid': 'binder-export-prices' }}
+                            />
+                        )}
+                        label="Include prices"
+                    />
+                    {hasConditions && (
+                        <FormControlLabel
+                            control={(
+                                <Checkbox
+                                    checked={includeCondition}
+                                    onChange={(e) => change(setIncludeCondition)(e.target.checked)}
+                                    inputProps={{ 'data-testid': 'binder-export-condition' }}
+                                />
+                            )}
+                            label="Include condition (NM, LP, etc.)"
+                        />
+                    )}
+                </Box>
             </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2, flexWrap: 'wrap', gap: 1 }}>
-                <Button onClick={onClose} color="inherit">Cancel</Button>
+            <DialogActions
+                sx={{
+                    px: 3,
+                    pb: 2,
+                    gap: 1,
+                    borderTop: fullScreen ? 1 : 0,
+                    borderColor: 'divider',
+                    pt: fullScreen ? 1.5 : 1,
+                    flexDirection: fullScreen ? 'column-reverse' : 'row',
+                    alignItems: 'stretch',
+                    '& > :not(style) ~ :not(style)': { ml: 0 },
+                }}
+            >
+                <Button onClick={onClose} color="inherit" fullWidth={fullScreen}>Cancel</Button>
                 <Button
                     variant="outlined"
                     data-testid="binder-export-copy"
                     startIcon={copied ? <CheckIcon /> : <ContentCopyIcon />}
                     disabled={items.length === 0}
                     onClick={copy}
+                    fullWidth={fullScreen}
                 >
                     {copied ? 'Copied' : 'Copy to Clipboard'}
                 </Button>
@@ -367,6 +395,7 @@ export default function BinderExportDialog({
                     startIcon={<DownloadIcon />}
                     disabled={items.length === 0}
                     onClick={download}
+                    fullWidth={fullScreen}
                 >
                     Export List
                 </Button>

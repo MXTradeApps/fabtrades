@@ -377,7 +377,7 @@ describe('Binder CSV export', () => {
             'Name,Pitch,Set,Code,Foiling,Treatment,Quantity,Price,Total Price\n'
             + 'Lightning Press,,Super Slam,SUP001,Normal,,2,12.50,25.00\n',
         );
-        expect(await screen.findByText('Exported 1 printing')).toBeInTheDocument();
+        expect(await screen.findByText('Exported 2 cards')).toBeInTheDocument();
     });
 
     test('an empty Binder says there is nothing to export', async () => {

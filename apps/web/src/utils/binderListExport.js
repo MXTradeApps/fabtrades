@@ -39,7 +39,15 @@ function foilingOf(subType, isFoil) {
     return 'Normal';
 }
 
-const FINISH_LABELS = { Rainbow: 'Rainbow Foil', Cold: 'Cold Foil', Gold: 'Gold Foil', Foil: 'Foil' };
+const CONDITION_ORDER = { '': 0, NM: 0, LP: 1, MP: 2, HP: 3, DMG: 4 };
+const FOILING_ORDER = { Normal: 0, Foil: 1, Rainbow: 2, Cold: 3, Gold: 4 };
+
+/** The printing's own finish name for text exports (`Gold Cold Foil`), blank when Normal. */
+function finishName(subType, isFoil) {
+    const name = String(subType || '').trim();
+    if (!name) return isFoil ? 'Foil' : '';
+    return name.toLowerCase() === 'normal' ? '' : name;
+}
 
 /**
  * One item per printing (and per condition when `includeCondition`).
@@ -73,7 +81,9 @@ export function buildExportItems({ entries = [], resolveCard, includeCondition =
             pitch: PITCH_COLORS[cardPitchValue(card)] || '',
             set: live?._setName || stub.setName || '',
             code: live?.extNumber || stub.collectorNumber || '',
+            // Foiling matches what the CSV import reads; finish is the printing's own label.
             foiling: foilingOf(live?.subTypeName || stub.subTypeName, stub.isFoil),
+            finish: finishName(live?.subTypeName || stub.subTypeName, stub.isFoil),
             treatment: cardTreatments(card).join(', '),
             condition: includeCondition ? condition : '',
             quantity,
@@ -89,7 +99,10 @@ export function itemPrice(item, priceSource = 'market') {
 }
 
 function byName(a, b) {
-    return a.name.localeCompare(b.name) || a.code.localeCompare(b.code, undefined, { numeric: true });
+    return a.name.localeCompare(b.name)
+        || a.code.localeCompare(b.code, undefined, { numeric: true })
+        || (FOILING_ORDER[a.foiling] ?? 9) - (FOILING_ORDER[b.foiling] ?? 9)
+        || (CONDITION_ORDER[a.condition] ?? 9) - (CONDITION_ORDER[b.condition] ?? 9);
 }
 
 export function sortExportItems(items, sort = 'nameAsc', priceSource = 'market') {
@@ -125,7 +138,7 @@ export function formatExportLine(item, { format = 'text', includePrices = false,
         parts.push(item.quantity > 1 ? `${money(price)} each` : money(price));
     }
     if (item.code) parts.push(item.code);
-    const details = [FINISH_LABELS[item.foiling], item.condition].filter(Boolean);
+    const details = [item.finish, item.condition].filter(Boolean);
     const line = parts.join(' - ');
     return details.length ? `${line} (${details.join(', ')})` : line;
 }
@@ -186,7 +199,9 @@ export function buildCardListExport({
     if (includePrices && sorted.length) {
         const cards = sorted.reduce((sum, item) => sum + item.quantity, 0);
         const total = sorted.reduce((sum, item) => sum + itemPrice(item, priceSource) * item.quantity, 0);
-        const label = `Total: ${cards} ${cards === 1 ? 'card' : 'cards'} - ${money(total)}`;
+        const unpriced = sorted.reduce((sum, item) => sum + (itemPrice(item, priceSource) > 0 ? 0 : item.quantity), 0);
+        const note = unpriced ? ` (${unpriced} ${unpriced === 1 ? 'card has' : 'cards have'} no price)` : '';
+        const label = `Total: ${cards} ${cards === 1 ? 'card' : 'cards'} - ${money(total)}${note}`;
         out.push('', format === 'discord' ? `**${label}**` : label);
     }
     return out.join('\n');

@@ -60,6 +60,14 @@ describe('binder card list export', () => {
         );
     });
 
+    it('says how many cards the total leaves out', () => {
+        const items = buildExportItems({
+            entries: [...entries, { cardId: 'x', quantity: 2, card: { name: 'Promo', collectorNumber: 'P1' } }],
+        });
+        expect(buildCardListExport({ items, includePrices: true }).split('\n').pop())
+            .toBe('Total: 6 cards - $75.50 (2 cards have no price)');
+    });
+
     it('names the file by format', () => {
         const date = new Date(2026, 9, 31);
         expect(cardListExportFilename('Trade Binder', 'text', date)).toBe('trade-binder-2026-10-31.txt');
