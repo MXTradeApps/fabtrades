@@ -210,7 +210,7 @@ describe('SharedBinder', () => {
             fireEvent.click(await screen.findByTestId('shared-binder-export'));
             fireEvent.click(await screen.findByTestId('binder-export-copy-binder'));
             expect(await screen.findByText('Network down')).toBeInTheDocument();
-            expect(screen.getByRole('alert')).toHaveClass('MuiAlert-filledError');
+            expect(screen.getByText('Network down').closest('.MuiAlert-root')).toHaveClass('MuiAlert-filledError');
             expect(mockDeleteBinder).toHaveBeenCalledWith({ clientId: 'new-binder' });
         });
 
