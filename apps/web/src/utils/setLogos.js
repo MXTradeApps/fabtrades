@@ -2,6 +2,7 @@
 // Missing entries intentionally return null so the UI can fall back to the set name.
 
 let logosCache = null;
+let logosByNameCache = {};
 let logosPromise = null;
 
 const loadSetLogosCached = async () => {
@@ -19,10 +20,15 @@ const loadSetLogosCached = async () => {
             const logos = data?.logos && typeof data.logos === 'object' ? data.logos : {};
             // Normalize to groupId string -> logoUrl string
             const map = {};
+            const byName = {};
             for (const [groupId, entry] of Object.entries(logos)) {
                 const url = typeof entry === 'string' ? entry : entry?.logoUrl;
                 if (url) map[String(groupId)] = url;
+                if (entry?.name && (url || entry.abbreviation)) {
+                    byName[entry.name] = { logoUrl: url || null, abbreviation: entry.abbreviation || '' };
+                }
             }
+            logosByNameCache = byName;
             logosCache = map;
             return logosCache;
         } catch (err) {
@@ -45,3 +51,9 @@ export const getSetLogoUrl = (logoByGroupId, groupId) => {
     if (!logoByGroupId || groupId == null) return null;
     return logoByGroupId[String(groupId)] || null;
 };
+
+/**
+ * Set name -> { logoUrl, abbreviation } from the same file, for cards whose
+ * catalog row (and so groupId) is missing. Empty until `loadSetLogoMap` resolves.
+ */
+export const getSetLogosByName = () => logosByNameCache;

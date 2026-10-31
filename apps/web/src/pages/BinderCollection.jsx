@@ -27,6 +27,7 @@ import {
     BookmarkBorderRounded,
     CollectionsBookmarkOutlined,
     FileDownloadOutlined,
+    FilterListRounded,
     InsightsOutlined,
     MoreHoriz as MoreHorizIcon,
     SortRounded,
@@ -82,7 +83,14 @@ import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 import SalePostDialog from '../components/binder/SalePostDialog.jsx';
 import BinderExportDialog from '../components/binder/BinderExportDialog.jsx';
 import MoveCardDialog from '../components/binder/MoveCardDialog.jsx';
+import BinderFilters, {
+    ActiveFilterBar,
+    BinderFiltersDrawer,
+    BinderFiltersSidebar,
+} from '../components/binder/BinderFilters.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
+import { matchesBinderFilters } from '../utils/binderFilters.js';
+import { useBinderFilters } from '../hooks/useBinderFilters.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -167,6 +175,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sort, setSort] = useState('priceDesc');
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
     const [busyCardId, setBusyCardId] = useState(null);
@@ -344,23 +353,34 @@ const BinderCollection = ({ isWanted = false }) => {
         if (live?._uniqueId) openDetail(live);
     };
 
+    // Filters live in the URL next to `b`, so opening another Binder (which
+    // rewrites the query) starts it unfiltered.
+    const {
+        filters,
+        options: filterOptions,
+        activeCount: filterCount,
+        toggle: toggleFilter,
+        clear: clearFilters,
+        logoByGroupId,
+    } = useBinderFilters(entries, resolveCard);
+
     const filtered = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
-        const list = q
-            ? entries.filter((entry) => {
-                const card = resolveCard(entry);
-                return (
-                    card.name.toLowerCase().includes(q) ||
-                    card.setName.toLowerCase().includes(q) ||
-                    card.finish.toLowerCase().includes(q) ||
-                    card.collectorNumber.toLowerCase().includes(q) ||
-                    card.typeLine.toLowerCase().includes(q)
-                );
-            })
-            : [...entries];
+        const list = entries.filter((entry) => {
+            const card = resolveCard(entry);
+            if (!matchesBinderFilters(card, filters)) return false;
+            if (!q) return true;
+            return (
+                card.name.toLowerCase().includes(q) ||
+                card.setName.toLowerCase().includes(q) ||
+                card.finish.toLowerCase().includes(q) ||
+                card.collectorNumber.toLowerCase().includes(q) ||
+                card.typeLine.toLowerCase().includes(q)
+            );
+        });
         list.sort((a, b) => compareBinderEntries(a, b, sort, resolveCard));
         return list;
-    }, [entries, searchQuery, sort, resolveCard]);
+    }, [entries, searchQuery, filters, sort, resolveCard]);
 
     const totalValue = useMemo(
         () =>
@@ -888,7 +908,21 @@ const BinderCollection = ({ isWanted = false }) => {
         );
     }
 
+    const showFilters = !showingGrid && entries.length > 0;
+    const narrowed = Boolean(searchQuery.trim()) || filterCount > 0;
+    const filterPanel = (
+        <BinderFilters
+            options={filterOptions}
+            filters={filters}
+            onToggle={toggleFilter}
+            onClear={clearFilters}
+            activeCount={filterCount}
+            logoByGroupId={logoByGroupId}
+        />
+    );
+
     const openCount = entries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+    const shownCopies = filtered.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
     const showBreadcrumb = !isWanted && Boolean(openBinderId);
     const headerTitle = isWanted
         ? pageTitle
@@ -1110,7 +1144,9 @@ const BinderCollection = ({ isWanted = false }) => {
                     )}
 
                     {!showingGrid && (
-                    <>
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+                    {showFilters && <BinderFiltersSidebar>{filterPanel}</BinderFiltersSidebar>}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Box
                         sx={{
                             mb: 2,
@@ -1181,6 +1217,23 @@ const BinderCollection = ({ isWanted = false }) => {
                                 ))}
                             </Select>
                         </FormControl>
+                        {showFilters && (
+                            <Button
+                                data-testid="binder-filters-open"
+                                variant="outlined"
+                                color="inherit"
+                                startIcon={<FilterListRounded />}
+                                onClick={() => setFiltersOpen(true)}
+                                sx={{
+                                    display: { xs: 'inline-flex', md: 'none' },
+                                    flexShrink: 0,
+                                    minHeight: 40,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {filterCount > 0 ? `Filters (${filterCount})` : 'Filters'}
+                            </Button>
+                        )}
                         <Button
                             data-testid="add-card"
                             variant="contained"
@@ -1204,14 +1257,33 @@ const BinderCollection = ({ isWanted = false }) => {
                         </Alert>
                     )}
 
+                    {!loading && !error && entries.length > 0 && (
+                        <ActiveFilterBar
+                            options={filterOptions}
+                            filters={filters}
+                            onToggle={toggleFilter}
+                            onClearAll={() => {
+                                clearFilters();
+                                setSearchQuery('');
+                            }}
+                            shownCount={shownCopies}
+                            totalCount={openCount}
+                            narrowed={narrowed}
+                        />
+                    )}
+
                     {!loading && !error && filtered.length === 0 && (
                         <Panel>
                             <EmptyState
-                                icon={searchQuery.trim() ? <SearchIcon /> : <StyleOutlined />}
-                                title={searchQuery.trim()
+                                icon={narrowed ? <SearchIcon /> : <StyleOutlined />}
+                                title={narrowed
                                     ? 'No matching cards in this list'
                                     : `${listLabel} is empty`}
-                                actions={!searchQuery.trim() && (
+                                actions={narrowed ? (filterCount > 0 && (
+                                    <Button variant="outlined" color="inherit" onClick={clearFilters}>
+                                        Clear filters
+                                    </Button>
+                                )) : (
                                     <Button
                                         variant="contained"
                                         startIcon={<AddIcon />}
@@ -1221,8 +1293,10 @@ const BinderCollection = ({ isWanted = false }) => {
                                     </Button>
                                 )}
                             >
-                                {searchQuery.trim()
-                                    ? 'Clear the search or try a different name.'
+                                {narrowed
+                                    ? (filterCount > 0
+                                        ? 'Clear the filters or search to see more cards.'
+                                        : 'Clear the search or try a different name.')
                                     : `Use Add Card to add cards to this ${listLabel.toLowerCase()}.`}
                             </EmptyState>
                         </Panel>
@@ -1255,7 +1329,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                 disabled={filtered.every((e) => selectedKeys.has(rowKey(e)))}
                                 onClick={() => setSelectedKeys(new Set(filtered.map(rowKey)))}
                             >
-                                Select all
+                                {narrowed ? `Select all ${filtered.length} shown` : 'Select all'}
                             </Button>
                             <Button
                                 size="small"
@@ -1301,7 +1375,7 @@ const BinderCollection = ({ isWanted = false }) => {
                         <BinderEntryList
                             entries={filtered}
                             resolveCard={resolveCard}
-                            resetKey={`${openBinderId || 'wants'}|${sort}|${searchQuery}`}
+                            resetKey={`${openBinderId || 'wants'}|${sort}|${searchQuery}|${JSON.stringify(filters)}`}
                             catalogById={catalogById}
                             editionsByCardId={editionsByCardId}
                             busyCardId={busyCardId}
@@ -1317,9 +1391,20 @@ const BinderCollection = ({ isWanted = false }) => {
                             onToggleSelect={toggleSelected}
                         />
                     )}
-                    </>
+                    </Box>
+                    </Box>
                     )}
             </Page>
+
+            {showFilters && (
+                <BinderFiltersDrawer
+                    open={filtersOpen}
+                    onClose={() => setFiltersOpen(false)}
+                    shownCount={shownCopies}
+                >
+                    {filterPanel}
+                </BinderFiltersDrawer>
+            )}
 
             <CardImportDialog
                 open={Boolean(importBinder)}

@@ -5,10 +5,12 @@ import {
     Button,
     CircularProgress,
     FormControl,
+    IconButton,
+    InputAdornment,
     MenuItem,
     Select,
     Snackbar,
-    Typography,
+    TextField,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCardData } from '../hooks/useCardData.jsx';
@@ -16,10 +18,13 @@ import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import Header from '../components/elements/Header.jsx';
 import { Page, PageHeader, Panel, EmptyState } from '../components/layout/Page.jsx';
 import {
-    SortRounded,
-    LinkOffRounded,
+    Clear as ClearIcon,
     CollectionsBookmarkOutlined,
     FileDownloadOutlined,
+    FilterListRounded,
+    LinkOffRounded,
+    Search as SearchIcon,
+    SortRounded,
 } from '@mui/icons-material';
 import { createBinder, deleteBinder, getBinderShare, getPublicBinder, upsertEntries } from '../services/binder.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -29,6 +34,13 @@ import { formatCurrency } from '../utils/helpers.js';
 import { addCardToTradeDraft } from '../utils/tradeDraft.js';
 import BinderCardGrid from '../components/binder/BinderCardGrid.jsx';
 import { sharedBinderTitle } from '../utils/binderNames.js';
+import BinderFilters, {
+    ActiveFilterBar,
+    BinderFiltersDrawer,
+    BinderFiltersSidebar,
+} from '../components/binder/BinderFilters.jsx';
+import { useBinderFilters } from '../hooks/useBinderFilters.js';
+import { matchesBinderFilters } from '../utils/binderFilters.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -135,6 +147,8 @@ const SharedBinder = () => {
         };
     }, [user, token]);
 
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filtersOpen, setFiltersOpen] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -257,11 +271,47 @@ const SharedBinder = () => {
         if (live?._uniqueId) openDetail(live);
     };
 
+    const {
+        filters,
+        options: filterOptions,
+        activeCount: filterCount,
+        toggle: toggleFilter,
+        clear: clearFilters,
+        logoByGroupId,
+    } = useBinderFilters(entries, resolveCard);
+
     const sorted = useMemo(() => {
-        const list = [...entries];
+        const q = searchQuery.trim().toLowerCase();
+        const list = entries.filter((entry) => {
+            const card = resolveCard(entry);
+            if (!matchesBinderFilters(card, filters)) return false;
+            if (!q) return true;
+            return (
+                card.name.toLowerCase().includes(q) ||
+                card.setName.toLowerCase().includes(q) ||
+                card.finish.toLowerCase().includes(q) ||
+                card.collectorNumber.toLowerCase().includes(q) ||
+                card.typeLine.toLowerCase().includes(q)
+            );
+        });
         list.sort((a, b) => compareEntries(a, b, sort, resolveCard));
         return list;
-    }, [entries, sort, resolveCard]);
+    }, [entries, searchQuery, filters, sort, resolveCard]);
+
+    const totalCopies = entries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+    const shownCopies = sorted.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+    const narrowed = Boolean(searchQuery.trim()) || filterCount > 0;
+    const showFilters = !loading && !error && entries.length > 0;
+    const filterPanel = (
+        <BinderFilters
+            options={filterOptions}
+            filters={filters}
+            onToggle={toggleFilter}
+            onClear={clearFilters}
+            activeCount={filterCount}
+            logoByGroupId={logoByGroupId}
+        />
+    );
 
     const totalValue = useMemo(
         () =>
@@ -306,7 +356,7 @@ const SharedBinder = () => {
                     title={sharedBinderTitle(ownerName)}
                     subtitle={!loading && !error ? (
                         <>
-                            {entries.length} {entries.length === 1 ? 'card' : 'cards'}
+                            {totalCopies} {totalCopies === 1 ? 'card' : 'cards'}
                             {' · '}
                             <Box component="span" sx={{ color: 'text.primary', fontWeight: 650, fontVariantNumeric: 'tabular-nums' }}>
                                 {formatCurrency(totalValue.toFixed(2))}
@@ -360,20 +410,103 @@ const SharedBinder = () => {
                     </Panel>
                 )}
 
-                {!loading && !error && (
-                    sorted.length === 0 ? (
-                        <Panel>
-                            <EmptyState icon={<CollectionsBookmarkOutlined />} title="This binder is empty." />
-                        </Panel>
-                    ) : (
-                        <BinderCardGrid
-                            entries={sorted}
-                            resolveCard={resolveCard}
-                            resetKey={`${token}|${sort}`}
-                            onOpenDetail={openEntryDetail}
-                            onAddToTrade={handleAddToTrade}
-                        />
-                    )
+                {!loading && !error && entries.length === 0 && (
+                    <Panel>
+                        <EmptyState icon={<CollectionsBookmarkOutlined />} title="This binder is empty." />
+                    </Panel>
+                )}
+
+                {showFilters && (
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+                        <BinderFiltersSidebar>{filterPanel}</BinderFiltersSidebar>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                                <TextField
+                                    data-testid="shared-binder-search"
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Search this binder…"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    inputProps={{ 'aria-label': 'Search this binder' }}
+                                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 40 } }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <SearchIcon sx={{ fontSize: '1.1rem', color: 'text.secondary' }} />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: searchQuery ? (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    size="small"
+                                                    aria-label="clear search"
+                                                    onClick={() => setSearchQuery('')}
+                                                    sx={{ p: 0.35, color: 'text.secondary' }}
+                                                >
+                                                    <ClearIcon sx={{ fontSize: '0.95rem' }} />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ) : null,
+                                    }}
+                                />
+                                <Button
+                                    data-testid="binder-filters-open"
+                                    variant="outlined"
+                                    color="inherit"
+                                    startIcon={<FilterListRounded />}
+                                    onClick={() => setFiltersOpen(true)}
+                                    sx={{
+                                        display: { xs: 'inline-flex', md: 'none' },
+                                        flexShrink: 0,
+                                        minHeight: 40,
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {filterCount > 0 ? `Filters (${filterCount})` : 'Filters'}
+                                </Button>
+                            </Box>
+
+                            <ActiveFilterBar
+                                options={filterOptions}
+                                filters={filters}
+                                onToggle={toggleFilter}
+                                onClearAll={() => {
+                                    clearFilters();
+                                    setSearchQuery('');
+                                }}
+                                shownCount={shownCopies}
+                                totalCount={totalCopies}
+                                narrowed={narrowed}
+                            />
+
+                            {sorted.length === 0 ? (
+                                <Panel>
+                                    <EmptyState
+                                        icon={<SearchIcon />}
+                                        title="No matching cards in this binder"
+                                        actions={filterCount > 0 && (
+                                            <Button variant="outlined" color="inherit" onClick={clearFilters}>
+                                                Clear filters
+                                            </Button>
+                                        )}
+                                    >
+                                        {filterCount > 0
+                                            ? 'Clear the filters or search to see more cards.'
+                                            : 'Clear the search or try a different name.'}
+                                    </EmptyState>
+                                </Panel>
+                            ) : (
+                                <BinderCardGrid
+                                    entries={sorted}
+                                    resolveCard={resolveCard}
+                                    resetKey={`${token}|${sort}|${searchQuery}|${JSON.stringify(filters)}`}
+                                    onOpenDetail={openEntryDetail}
+                                    onAddToTrade={handleAddToTrade}
+                                />
+                            )}
+                        </Box>
+                    </Box>
                 )}
             </Page>
 
@@ -383,6 +516,7 @@ const SharedBinder = () => {
                     onClose={() => setExportOpen(false)}
                     title={sharedBinderTitle(ownerName)}
                     entries={entries}
+                    filteredEntries={narrowed ? sorted : null}
                     resolveCard={catalogCard}
                     defaultSort={sort}
                     onCopyBinder={isOwnBinder ? null : handleCopyBinder}
@@ -392,6 +526,16 @@ const SharedBinder = () => {
             )}
 
             <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
+
+            {showFilters && (
+                <BinderFiltersDrawer
+                    open={filtersOpen}
+                    onClose={() => setFiltersOpen(false)}
+                    shownCount={shownCopies}
+                >
+                    {filterPanel}
+                </BinderFiltersDrawer>
+            )}
 
             <Snackbar
                 open={Boolean(toast)}
