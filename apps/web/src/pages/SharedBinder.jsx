@@ -2,25 +2,46 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Box,
-
+    Button,
     CircularProgress,
     FormControl,
+    IconButton,
+    InputAdornment,
     MenuItem,
     Select,
     Snackbar,
-    Typography,
+    TextField,
 } from '@mui/material';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import Header from '../components/elements/Header.jsx';
 import { Page, PageHeader, Panel, EmptyState } from '../components/layout/Page.jsx';
-import { SortRounded, LinkOffRounded, CollectionsBookmarkOutlined } from '@mui/icons-material';
-import { getPublicBinder } from '../services/binder.js';
+import {
+    Clear as ClearIcon,
+    CollectionsBookmarkOutlined,
+    FileDownloadOutlined,
+    FilterListRounded,
+    LinkOffRounded,
+    Search as SearchIcon,
+    SortRounded,
+} from '@mui/icons-material';
+import { createBinder, deleteBinder, getBinderShare, getPublicBinder, upsertEntries } from '../services/binder.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import SignInDialog from '../components/auth/SignInDialog.jsx';
+import BinderExportDialog from '../components/binder/BinderExportDialog.jsx';
 import { formatCurrency } from '../utils/helpers.js';
 import { addCardToTradeDraft } from '../utils/tradeDraft.js';
 import BinderCardGrid from '../components/binder/BinderCardGrid.jsx';
 import { sharedBinderTitle } from '../utils/binderNames.js';
+import BinderFilters, {
+    ActiveFilterBar,
+    BinderFiltersDrawer,
+    BinderFiltersSidebar,
+} from '../components/binder/BinderFilters.jsx';
+import { useBinderFilters } from '../hooks/useBinderFilters.js';
+import { cardMatchesSearch, matchesBinderFilters } from '../utils/binderFilters.js';
+import { cardPitchValue } from '../utils/cardIdentity.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -71,11 +92,33 @@ function compareEntries(a, b, sort, resolveCard) {
     }
 }
 
+const PENDING_COPY_KEY = 'fabtrades.pendingBinderCopy';
+
+function writePendingCopy(token) {
+    try {
+        window.sessionStorage.setItem(PENDING_COPY_KEY, token);
+    } catch {
+        // Without storage the viewer just taps Copy again after signing in.
+    }
+}
+
+function takePendingCopy(token) {
+    try {
+        if (window.sessionStorage.getItem(PENDING_COPY_KEY) !== token) return false;
+        window.sessionStorage.removeItem(PENDING_COPY_KEY);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Read-only public binder view at `/b/:token`.
  */
 const SharedBinder = () => {
     const { token } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const { openDetail } = useCardDetail();
     const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
@@ -85,7 +128,39 @@ const SharedBinder = () => {
     const [error, setError] = useState(null);
     const [sort, setSort] = useState('priceDesc');
     const [toast, setToast] = useState('');
+    const [toastSeverity, setToastSeverity] = useState('success');
+    const [exportOpen, setExportOpen] = useState(false);
+    const [signInOpen, setSignInOpen] = useState(false);
+    const [copiedBinderId, setCopiedBinderId] = useState(null);
+    // Keyed by user and link so a fresh sign-in reads as "still checking" (null), never a stale false.
+    const [ownerCheck, setOwnerCheck] = useState({ key: null, isOwn: false });
+    const ownerKey = user ? `${user.id}|${token}` : null;
+    const isOwnBinder = !user ? false : (ownerCheck.key === ownerKey ? ownerCheck.isOwn : null);
 
+    const showToast = useCallback((message, severity = 'success') => {
+        setToastSeverity(severity);
+        setToast(message);
+    }, []);
+
+    // Hide "Copy" on the viewer's own shared Binder.
+    useEffect(() => {
+        if (!user) return undefined;
+        let cancelled = false;
+        getBinderShare().then(({ data }) => {
+            if (!cancelled) {
+                setOwnerCheck({
+                    key: `${user.id}|${token}`,
+                    isOwn: Boolean(data?.token) && data.token === String(token).trim(),
+                });
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [user, token]);
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filtersOpen, setFiltersOpen] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -135,6 +210,8 @@ const SharedBinder = () => {
                 imageUrlFallback: tcgFallback && tcgFallback !== cdn ? tcgFallback : '',
                 collectorNumber,
                 rarity: live?.extRarity || stub.rarity || '',
+                // Name qualifier ("(Red)") first, like the rest of the app.
+                pitch: cardPitchValue(live || { name: stub.name, pitch: stub.pitch }) || null,
                 finish,
                 setName: live?._setName || stub.setName || '',
                 typeLine: [
@@ -153,16 +230,97 @@ const SharedBinder = () => {
         [catalogById],
     );
 
+    const catalogCard = useCallback((entry) => catalogById.get(entry.cardId), [catalogById]);
+
+    // A personal copy goes into a new standard Binder, so none of it is for trade.
+    const handleCopyBinder = useCallback(async () => {
+        if (!user) {
+            writePendingCopy(token);
+            setSignInOpen(true);
+            return;
+        }
+        const baseName = sharedBinderTitle(ownerName);
+        let binder = null;
+        for (let n = 1; n <= 20 && !binder; n += 1) {
+            const { data, error: createError } = await createBinder({
+                name: n === 1 ? baseName : `${baseName} (${n})`,
+            });
+            if (data) binder = data;
+            else if (createError?.reason !== 'duplicate') {
+                showToast(createError?.message || 'Could not copy this Binder', 'error');
+                return;
+            }
+        }
+        if (!binder) {
+            showToast('Could not copy this Binder', 'error');
+            return;
+        }
+        const { error: copyError } = await upsertEntries(entries.map((entry) => ({
+            cardId: entry.cardId,
+            quantity: entry.quantity,
+            condition: entry.condition,
+            binderId: binder.clientId,
+            card: entry.stub || entry.card,
+        })));
+        if (copyError) {
+            // Don't leave an empty Binder behind to collide with the retry.
+            await deleteBinder({ clientId: binder.clientId });
+            showToast(copyError.message || 'Could not copy the cards', 'error');
+            return;
+        }
+        setExportOpen(false);
+        setCopiedBinderId(binder.clientId);
+        showToast(`Copied to your Binders as "${binder.name}"`);
+    }, [user, token, ownerName, entries, showToast]);
+
+    // Signing in leaves the page; finish a copy the viewer started signed out.
+    useEffect(() => {
+        if (!user || loading || error || entries.length === 0 || isOwnBinder === null) return;
+        if (!takePendingCopy(token) || isOwnBinder) return;
+        handleCopyBinder();
+    }, [user, loading, error, entries, token, isOwnBinder, handleCopyBinder]);
+
     const openEntryDetail = (entry) => {
         const live = catalogById.get(entry.cardId);
         if (live?._uniqueId) openDetail(live);
     };
 
+    const matchesSearch = useCallback(
+        (entry, card) => cardMatchesSearch(card, searchQuery),
+        [searchQuery],
+    );
+    const {
+        filters,
+        options: filterOptions,
+        activeCount: filterCount,
+        toggle: toggleFilter,
+        clear: clearFilters,
+        logoByGroupId,
+    } = useBinderFilters(entries, resolveCard, matchesSearch);
+
     const sorted = useMemo(() => {
-        const list = [...entries];
+        const list = entries.filter((entry) => {
+            const card = resolveCard(entry);
+            return matchesBinderFilters(card, filters) && cardMatchesSearch(card, searchQuery);
+        });
         list.sort((a, b) => compareEntries(a, b, sort, resolveCard));
         return list;
-    }, [entries, sort, resolveCard]);
+    }, [entries, searchQuery, filters, sort, resolveCard]);
+
+    const totalCopies = entries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+    const shownCopies = sorted.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+    const narrowed = Boolean(searchQuery.trim()) || filterCount > 0;
+    const showFilters = !loading && !error && entries.length > 0;
+    const filterPanel = (
+        <BinderFilters
+            options={filterOptions}
+            filters={filters}
+            onToggle={toggleFilter}
+            onClear={clearFilters}
+            activeCount={filterCount}
+            logoByGroupId={logoByGroupId}
+        />
+    );
 
     const totalValue = useMemo(
         () =>
@@ -195,7 +353,7 @@ const SharedBinder = () => {
         });
 
         const shortName = live?.name || stub.name || 'Card';
-        setToast(`Added ${shortName} to trade calculator`);
+        showToast(`Added ${shortName} to trade calculator`);
     };
 
     return (
@@ -207,7 +365,7 @@ const SharedBinder = () => {
                     title={sharedBinderTitle(ownerName)}
                     subtitle={!loading && !error ? (
                         <>
-                            {entries.length} {entries.length === 1 ? 'card' : 'cards'}
+                            {totalCopies} {totalCopies === 1 ? 'card' : 'cards'}
                             {' · '}
                             <Box component="span" sx={{ color: 'text.primary', fontWeight: 650, fontVariantNumeric: 'tabular-nums' }}>
                                 {formatCurrency(totalValue.toFixed(2))}
@@ -216,21 +374,17 @@ const SharedBinder = () => {
                         </>
                     ) : null}
                     actions={!loading && !error ? (
-                        <FormControl size="small" sx={{ minWidth: 190 }}>
-                            <Select
-                                value={sort}
-                                onChange={(e) => setSort(e.target.value)}
-                                aria-label="Sort binder"
-                                startAdornment={<SortRounded sx={{ fontSize: '1.1rem', color: 'text.secondary', mr: 1 }} />}
-                                sx={{ minHeight: 40 }}
-                            >
-                                {SORT_OPTIONS.map((opt) => (
-                                    <MenuItem key={opt.id} value={opt.id}>
-                                        {opt.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            data-testid="shared-binder-export"
+                            startIcon={<FileDownloadOutlined />}
+                            onClick={() => setExportOpen(true)}
+                            disabled={entries.length === 0}
+                            sx={{ minHeight: 40, display: { xs: 'none', sm: 'inline-flex' } }}
+                        >
+                            Export
+                        </Button>
                     ) : null}
                 />
 
@@ -248,34 +402,206 @@ const SharedBinder = () => {
                     </Panel>
                 )}
 
-                {!loading && !error && (
-                    sorted.length === 0 ? (
-                        <Panel>
-                            <EmptyState icon={<CollectionsBookmarkOutlined />} title="This binder is empty." />
-                        </Panel>
-                    ) : (
-                        <BinderCardGrid
-                            entries={sorted}
-                            resolveCard={resolveCard}
-                            resetKey={`${token}|${sort}`}
-                            onOpenDetail={openEntryDetail}
-                            onAddToTrade={handleAddToTrade}
-                        />
-                    )
+                {!loading && !error && entries.length === 0 && (
+                    <Panel>
+                        <EmptyState icon={<CollectionsBookmarkOutlined />} title="This binder is empty." />
+                    </Panel>
+                )}
+
+                {showFilters && (
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+                        <BinderFiltersSidebar>{filterPanel}</BinderFiltersSidebar>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+                                <TextField
+                                    data-testid="shared-binder-search"
+                                    size="small"
+                                    fullWidth
+                                    placeholder="Search this binder…"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    inputProps={{ 'aria-label': 'Search this binder' }}
+                                    sx={{
+                                        flexGrow: 1,
+                                        minWidth: { xs: '100%', sm: 0 },
+                                        '& .MuiOutlinedInput-root': { minHeight: 40 },
+                                    }}
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">
+                                                <SearchIcon sx={{ fontSize: '1.1rem', color: 'text.secondary' }} />
+                                            </InputAdornment>
+                                        ),
+                                        endAdornment: searchQuery ? (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    size="small"
+                                                    aria-label="clear search"
+                                                    onClick={() => setSearchQuery('')}
+                                                    sx={{ p: 0.35, color: 'text.secondary' }}
+                                                >
+                                                    <ClearIcon sx={{ fontSize: '0.95rem' }} />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ) : null,
+                                    }}
+                                />
+                                <FormControl
+                                    size="small"
+                                    sx={{
+                                        minWidth: { xs: 0, sm: 190 },
+                                        flex: { xs: 1, sm: 'none' },
+                                        '& .MuiOutlinedInput-root': { minHeight: 40 },
+                                    }}
+                                >
+                                    <Select
+                                        value={sort}
+                                        onChange={(e) => setSort(e.target.value)}
+                                        aria-label="Sort binder"
+                                        startAdornment={<SortRounded sx={{ fontSize: '1.1rem', color: 'text.secondary', mr: 1 }} />}
+                                    >
+                                        {SORT_OPTIONS.map((opt) => (
+                                            <MenuItem key={opt.id} value={opt.id}>
+                                                {opt.label}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                                <Button
+                                    data-testid="binder-filters-open"
+                                    variant="outlined"
+                                    color="inherit"
+                                    startIcon={<FilterListRounded />}
+                                    onClick={() => setFiltersOpen(true)}
+                                    sx={{
+                                        display: { xs: 'inline-flex', md: 'none' },
+                                        flexShrink: 0,
+                                        minHeight: 40,
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {filterCount > 0 ? `Filters (${filterCount})` : 'Filters'}
+                                </Button>
+                                {/* On phones Export joins this row instead of sitting alone under the title. */}
+                                <IconButton
+                                    data-testid="shared-binder-export-compact"
+                                    aria-label="Export card list"
+                                    onClick={() => setExportOpen(true)}
+                                    sx={{
+                                        display: { xs: 'inline-flex', sm: 'none' },
+                                        border: 1,
+                                        borderColor: 'divider',
+                                        borderRadius: 1,
+                                        width: 40,
+                                        height: 40,
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <FileDownloadOutlined fontSize="small" />
+                                </IconButton>
+                            </Box>
+
+                            <ActiveFilterBar
+                                options={filterOptions}
+                                filters={filters}
+                                onToggle={toggleFilter}
+                                onClearAll={() => {
+                                    clearFilters();
+                                    setSearchQuery('');
+                                }}
+                                shownCount={shownCopies}
+                                totalCount={totalCopies}
+                                narrowed={narrowed}
+                            />
+
+                            {sorted.length === 0 ? (
+                                <Panel>
+                                    <EmptyState
+                                        icon={<SearchIcon />}
+                                        title="No matching cards in this binder"
+                                        actions={filterCount > 0 && (
+                                            <Button variant="outlined" color="inherit" onClick={clearFilters}>
+                                                Clear filters
+                                            </Button>
+                                        )}
+                                    >
+                                        {filterCount > 0
+                                            ? 'Clear the filters or search to see more cards.'
+                                            : 'Clear the search or try a different name.'}
+                                    </EmptyState>
+                                </Panel>
+                            ) : (
+                                <BinderCardGrid
+                                    entries={sorted}
+                                    resolveCard={resolveCard}
+                                    resetKey={`${token}|${sort}|${searchQuery}|${JSON.stringify(filters)}`}
+                                    onOpenDetail={openEntryDetail}
+                                    onAddToTrade={handleAddToTrade}
+                                />
+                            )}
+                        </Box>
+                    </Box>
                 )}
             </Page>
 
+            {exportOpen && (
+                <BinderExportDialog
+                    open
+                    onClose={() => setExportOpen(false)}
+                    title={sharedBinderTitle(ownerName)}
+                    entries={entries}
+                    filteredEntries={narrowed ? sorted : null}
+                    resolveCard={catalogCard}
+                    defaultSort={sort}
+                    onCopyBinder={isOwnBinder === false ? handleCopyBinder : null}
+                    copyNeedsSignIn={!user}
+                    onToast={setToast}
+                />
+            )}
+
+            <SignInDialog
+                open={signInOpen}
+                onClose={() => {
+                    setSignInOpen(false);
+                    // Dismissed without signing in: don't copy on some later sign-in.
+                    if (!user) takePendingCopy(token);
+                }}
+            />
+
+            {showFilters && (
+                <BinderFiltersDrawer
+                    open={filtersOpen}
+                    onClose={() => setFiltersOpen(false)}
+                    shownCount={shownCopies}
+                >
+                    {filterPanel}
+                </BinderFiltersDrawer>
+            )}
+
             <Snackbar
                 open={Boolean(toast)}
-                autoHideDuration={2500}
-                onClose={() => setToast('')}
+                autoHideDuration={copiedBinderId ? 6000 : 2500}
+                onClose={() => {
+                    setToast('');
+                    setCopiedBinderId(null);
+                }}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
                 <Alert
                     onClose={() => setToast('')}
-                    severity="success"
+                    severity={toastSeverity}
                     variant="filled"
                     sx={{ width: '100%' }}
+                    action={copiedBinderId ? (
+                        <Button
+                            color="inherit"
+                            size="small"
+                            data-testid="shared-binder-open-copy"
+                            onClick={() => navigate(`/binder?b=${encodeURIComponent(copiedBinderId)}`)}
+                        >
+                            Open
+                        </Button>
+                    ) : null}
                 >
                     {toast}
                 </Alert>

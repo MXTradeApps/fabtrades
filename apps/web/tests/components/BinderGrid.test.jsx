@@ -650,7 +650,7 @@ describe('BinderGrid', () => {
         expect(screen.getByTestId('binder-open-name')).toHaveTextContent('Trade Binder');
     });
 
-    test('Share modal copies binder contents as text', async () => {
+    test('Share modal opens Export, which copies the card list', async () => {
         const writeText = jest.fn().mockResolvedValue(undefined);
         Object.assign(navigator, { clipboard: { writeText } });
         mockGetBinderEntries.mockResolvedValue({
@@ -674,11 +674,12 @@ describe('BinderGrid', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Share' }));
         expect(await screen.findByText('Share binder')).toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('copy-binder-text'));
+        fireEvent.click(screen.getByTestId('share-open-export'));
+        fireEvent.click(await screen.findByTestId('binder-export-copy'));
         await waitFor(() => expect(writeText).toHaveBeenCalled());
         expect(writeText.mock.calls[0][0]).toContain('Trade Binder');
         expect(writeText.mock.calls[0][0]).toContain('3x Lightning Press');
-        expect(await screen.findByText('Binder copied as text')).toBeInTheDocument();
+        expect(await screen.findByText('Copied 3 cards')).toBeInTheDocument();
     });
     test('Post for sale formats the open Binder for Discord and Facebook', async () => {
         const writeText = jest.fn().mockResolvedValue(undefined);

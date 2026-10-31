@@ -27,6 +27,7 @@ import {
     BookmarkBorderRounded,
     CollectionsBookmarkOutlined,
     FileDownloadOutlined,
+    FilterListRounded,
     InsightsOutlined,
     MoreHoriz as MoreHorizIcon,
     SortRounded,
@@ -71,23 +72,26 @@ import {
 } from '../services/binder.js';
 import { formatCurrency } from '../utils/helpers.js';
 import { addCardToTradeDraft } from '../utils/tradeDraft.js';
-import { formatBinderAsText } from '../utils/binderText.js';
 import {
     buildFabraryExportRows,
     downloadCsv,
     fabraryExportFilename,
     toFabraryCsv,
 } from '../utils/fabraryExport.js';
-import {
-    binderExportFilename,
-    buildBinderExportRows,
-    toBinderCsv,
-} from '../utils/binderCsvExport.js';
 import BinderGrid from '../components/binder/BinderGrid.jsx';
 import BinderEntryList from '../components/binder/BinderEntryList.jsx';
 import SalePostDialog from '../components/binder/SalePostDialog.jsx';
+import BinderExportDialog from '../components/binder/BinderExportDialog.jsx';
 import MoveCardDialog from '../components/binder/MoveCardDialog.jsx';
+import BinderFilters, {
+    ActiveFilterBar,
+    BinderFiltersDrawer,
+    BinderFiltersSidebar,
+} from '../components/binder/BinderFilters.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
+import { cardMatchesSearch, matchesBinderFilters } from '../utils/binderFilters.js';
+import { cardPitchValue } from '../utils/cardIdentity.js';
+import { useBinderFilters } from '../hooks/useBinderFilters.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -172,6 +176,7 @@ const BinderCollection = ({ isWanted = false }) => {
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sort, setSort] = useState('priceDesc');
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
     const [signInOpen, setSignInOpen] = useState(false);
     const [busyCardId, setBusyCardId] = useState(null);
@@ -179,6 +184,7 @@ const BinderCollection = ({ isWanted = false }) => {
     // While this message is the toast, it offers View to open the trade calculator.
     const [tradeToast, setTradeToast] = useState('');
     const [shareOpen, setShareOpen] = useState(false);
+    const [exportOpen, setExportOpen] = useState(false);
     // Entries the sale post lists; null while the dialog is closed.
     const [saleEntries, setSaleEntries] = useState(null);
     const [selectedKeys, setSelectedKeys] = useState(() => new Set());
@@ -252,10 +258,6 @@ const BinderCollection = ({ isWanted = false }) => {
         [viewingWants],
     );
 
-    const selectedEntries = useMemo(
-        () => entries.filter((entry) => selectedKeys.has(rowKey(entry))),
-        [entries, selectedKeys, rowKey],
-    );
 
     const toggleSelected = (entry) => {
         const key = rowKey(entry);
@@ -323,6 +325,8 @@ const BinderCollection = ({ isWanted = false }) => {
                 imageUrlFallback: tcgFallback && tcgFallback !== cdn ? tcgFallback : '',
                 collectorNumber,
                 rarity: live?.extRarity || stub.rarity || '',
+                // Name qualifier ("(Red)") first, like the rest of the app.
+                pitch: cardPitchValue(live || { name: stub.name, pitch: stub.pitch }) || null,
                 finish,
                 setName: live?._setName || stub.setName || '',
                 typeLine: [
@@ -348,23 +352,36 @@ const BinderCollection = ({ isWanted = false }) => {
         if (live?._uniqueId) openDetail(live);
     };
 
+    // Filters live in the URL next to `b`, so opening another Binder (which
+    // rewrites the query) starts it unfiltered.
+    const matchesSearch = useCallback(
+        (entry, card) => cardMatchesSearch(card, searchQuery),
+        [searchQuery],
+    );
+    const {
+        filters,
+        options: filterOptions,
+        activeCount: filterCount,
+        toggle: toggleFilter,
+        clear: clearFilters,
+        logoByGroupId,
+    } = useBinderFilters(entries, resolveCard, matchesSearch);
+
     const filtered = useMemo(() => {
-        const q = searchQuery.trim().toLowerCase();
-        const list = q
-            ? entries.filter((entry) => {
-                const card = resolveCard(entry);
-                return (
-                    card.name.toLowerCase().includes(q) ||
-                    card.setName.toLowerCase().includes(q) ||
-                    card.finish.toLowerCase().includes(q) ||
-                    card.collectorNumber.toLowerCase().includes(q) ||
-                    card.typeLine.toLowerCase().includes(q)
-                );
-            })
-            : [...entries];
+        const list = entries.filter((entry) => {
+            const card = resolveCard(entry);
+            return matchesBinderFilters(card, filters) && cardMatchesSearch(card, searchQuery);
+        });
         list.sort((a, b) => compareBinderEntries(a, b, sort, resolveCard));
         return list;
-    }, [entries, searchQuery, sort, resolveCard]);
+    }, [entries, searchQuery, filters, sort, resolveCard]);
+
+    // Bulk actions only touch selected cards that are still visible, so a
+    // filter or search applied after selecting never acts on hidden cards.
+    const selectedEntries = useMemo(
+        () => filtered.filter((entry) => selectedKeys.has(rowKey(entry))),
+        [filtered, selectedKeys, rowKey],
+    );
 
     const totalValue = useMemo(
         () =>
@@ -575,18 +592,7 @@ const BinderCollection = ({ isWanted = false }) => {
         setToast(`Exported ${rows.length} printings for Fabrary`);
     };
 
-    const handleExportBinder = () => {
-        const rows = buildBinderExportRows({
-            entries,
-            resolveCard: (entry) => catalogById.get(entry.cardId),
-        });
-        if (rows.length === 0) {
-            setToast('Nothing to export');
-            return;
-        }
-        downloadCsv(toBinderCsv(rows), binderExportFilename(openBinder?.name));
-        setToast(`Exported ${rows.length} ${rows.length === 1 ? 'printing' : 'printings'}`);
-    };
+    const catalogCard = useCallback((entry) => catalogById.get(entry.cardId), [catalogById]);
 
     const handleCreateBinder = async () => {
         const name = promptName('New Binder');
@@ -844,29 +850,6 @@ const BinderCollection = ({ isWanted = false }) => {
         return enabled?.isEnabled ? enabled.url : null;
     };
 
-    const copyBinderAsText = async () => {
-        const text = formatBinderAsText({
-            name: viewingWants ? 'Want List' : (openBinder?.name || 'Binder'),
-            entries: entries.map((entry) => {
-                const card = resolveCard(entry);
-                return {
-                    quantity: entry.quantity,
-                    name: card.name,
-                    collectorNumber: card.collectorNumber,
-                    finish: card.finish,
-                    condition: entry.condition || 'NM',
-                    setName: card.setName,
-                };
-            }),
-        });
-        try {
-            await navigator.clipboard.writeText(text);
-            setToast('Binder copied as text');
-        } catch {
-            setToast('Could not copy binder');
-        }
-    };
-
     const toggleShareEnabled = async (enabled) => {
         setShareBusy(true);
         const { data, error: shareError } = await setBinderShareEnabled(enabled);
@@ -926,7 +909,21 @@ const BinderCollection = ({ isWanted = false }) => {
         );
     }
 
+    const showFilters = !showingGrid && entries.length > 0;
+    const narrowed = Boolean(searchQuery.trim()) || filterCount > 0;
+    const filterPanel = (
+        <BinderFilters
+            options={filterOptions}
+            filters={filters}
+            onToggle={toggleFilter}
+            onClear={clearFilters}
+            activeCount={filterCount}
+            logoByGroupId={logoByGroupId}
+        />
+    );
+
     const openCount = entries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+    const shownCopies = filtered.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
     const showBreadcrumb = !isWanted && Boolean(openBinderId);
     const headerTitle = isWanted
         ? pageTitle
@@ -1041,6 +1038,17 @@ const BinderCollection = ({ isWanted = false }) => {
                                 Post for sale
                             </Button>
                         )}
+                        {!showingGrid && (
+                            <Button
+                                data-testid="binder-export"
+                                variant="outlined"
+                                color="inherit"
+                                startIcon={<FileDownloadOutlined />}
+                                onClick={() => setExportOpen(true)}
+                            >
+                                Export
+                            </Button>
+                        )}
                         {!isWanted && openBinderId === TRADE_BINDER_ID && (
                             <Button
                                 variant="outlined"
@@ -1090,15 +1098,6 @@ const BinderCollection = ({ isWanted = false }) => {
                                     >
                                         Import cards
                                     </MenuItem>
-                                    <MenuItem
-                                        data-testid="binder-export"
-                                        onClick={() => {
-                                            setBinderMenuEl(null);
-                                            handleExportBinder();
-                                        }}
-                                    >
-                                        Export cards
-                                    </MenuItem>
                                 </Menu>
                             </>
                         )}
@@ -1146,7 +1145,9 @@ const BinderCollection = ({ isWanted = false }) => {
                     )}
 
                     {!showingGrid && (
-                    <>
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+                    {showFilters && <BinderFiltersSidebar>{filterPanel}</BinderFiltersSidebar>}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Box
                         sx={{
                             mb: 2,
@@ -1217,6 +1218,23 @@ const BinderCollection = ({ isWanted = false }) => {
                                 ))}
                             </Select>
                         </FormControl>
+                        {showFilters && (
+                            <Button
+                                data-testid="binder-filters-open"
+                                variant="outlined"
+                                color="inherit"
+                                startIcon={<FilterListRounded />}
+                                onClick={() => setFiltersOpen(true)}
+                                sx={{
+                                    display: { xs: 'inline-flex', md: 'none' },
+                                    flexShrink: 0,
+                                    minHeight: 40,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {filterCount > 0 ? `Filters (${filterCount})` : 'Filters'}
+                            </Button>
+                        )}
                         <Button
                             data-testid="add-card"
                             variant="contained"
@@ -1240,14 +1258,33 @@ const BinderCollection = ({ isWanted = false }) => {
                         </Alert>
                     )}
 
+                    {!loading && !error && entries.length > 0 && (
+                        <ActiveFilterBar
+                            options={filterOptions}
+                            filters={filters}
+                            onToggle={toggleFilter}
+                            onClearAll={() => {
+                                clearFilters();
+                                setSearchQuery('');
+                            }}
+                            shownCount={shownCopies}
+                            totalCount={openCount}
+                            narrowed={narrowed}
+                        />
+                    )}
+
                     {!loading && !error && filtered.length === 0 && (
                         <Panel>
                             <EmptyState
-                                icon={searchQuery.trim() ? <SearchIcon /> : <StyleOutlined />}
-                                title={searchQuery.trim()
+                                icon={narrowed ? <SearchIcon /> : <StyleOutlined />}
+                                title={narrowed
                                     ? 'No matching cards in this list'
                                     : `${listLabel} is empty`}
-                                actions={!searchQuery.trim() && (
+                                actions={narrowed ? (filterCount > 0 && (
+                                    <Button variant="outlined" color="inherit" onClick={clearFilters}>
+                                        Clear filters
+                                    </Button>
+                                )) : (
                                     <Button
                                         variant="contained"
                                         startIcon={<AddIcon />}
@@ -1257,8 +1294,10 @@ const BinderCollection = ({ isWanted = false }) => {
                                     </Button>
                                 )}
                             >
-                                {searchQuery.trim()
-                                    ? 'Clear the search or try a different name.'
+                                {narrowed
+                                    ? (filterCount > 0
+                                        ? 'Clear the filters or search to see more cards.'
+                                        : 'Clear the search or try a different name.')
                                     : `Use Add Card to add cards to this ${listLabel.toLowerCase()}.`}
                             </EmptyState>
                         </Panel>
@@ -1291,7 +1330,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                 disabled={filtered.every((e) => selectedKeys.has(rowKey(e)))}
                                 onClick={() => setSelectedKeys(new Set(filtered.map(rowKey)))}
                             >
-                                Select all
+                                {narrowed ? 'Select all shown' : 'Select all'}
                             </Button>
                             <Button
                                 size="small"
@@ -1337,7 +1376,7 @@ const BinderCollection = ({ isWanted = false }) => {
                         <BinderEntryList
                             entries={filtered}
                             resolveCard={resolveCard}
-                            resetKey={`${openBinderId || 'wants'}|${sort}|${searchQuery}`}
+                            resetKey={`${openBinderId || 'wants'}|${sort}|${searchQuery}|${JSON.stringify(filters)}`}
                             catalogById={catalogById}
                             editionsByCardId={editionsByCardId}
                             busyCardId={busyCardId}
@@ -1353,9 +1392,20 @@ const BinderCollection = ({ isWanted = false }) => {
                             onToggleSelect={toggleSelected}
                         />
                     )}
-                    </>
+                    </Box>
+                    </Box>
                     )}
             </Page>
+
+            {showFilters && (
+                <BinderFiltersDrawer
+                    open={filtersOpen}
+                    onClose={() => setFiltersOpen(false)}
+                    shownCount={shownCopies}
+                >
+                    {filterPanel}
+                </BinderFiltersDrawer>
+            )}
 
             <CardImportDialog
                 open={Boolean(importBinder)}
@@ -1383,6 +1433,19 @@ const BinderCollection = ({ isWanted = false }) => {
                     onClose={() => setSaleEntries(null)}
                     items={saleItems}
                     getLink={openBinderId === TRADE_BINDER_ID ? getSaleLink : null}
+                />
+            )}
+
+            {exportOpen && (
+                <BinderExportDialog
+                    open
+                    onClose={() => setExportOpen(false)}
+                    title={viewingWants ? 'Want List' : (openBinder?.name || 'Binder')}
+                    entries={entries}
+                    filteredEntries={filtered.length !== entries.length ? filtered : null}
+                    defaultSort={sort}
+                    resolveCard={catalogCard}
+                    onToast={setToast}
                 />
             )}
 
@@ -1446,18 +1509,21 @@ const BinderCollection = ({ isWanted = false }) => {
                     )}
                     <Divider sx={{ my: 2.5 }} />
                     <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.75, color: textColor }}>
-                        Copy binder as text
+                        Export card list
                     </Typography>
                     <Typography sx={{ color: mutedColor, fontSize: '0.875rem', mb: 1.5 }}>
-                        Copy a list of the cards in this binder to paste into Discord, notes, or a spreadsheet.
+                        Copy or download the cards in this binder as text, Discord, or CSV.
                     </Typography>
                     <Button
                         variant="outlined"
-                        startIcon={<ContentCopyIcon />}
-                        onClick={copyBinderAsText}
-                        data-testid="copy-binder-text"
+                        startIcon={<FileDownloadOutlined />}
+                        onClick={() => {
+                            setShareOpen(false);
+                            setExportOpen(true);
+                        }}
+                        data-testid="share-open-export"
                     >
-                        Copy Binder as Text
+                        Export card list
                     </Button>
                 </DialogContent>
                 <DialogActions sx={{ justifyContent: 'space-between' }}>
