@@ -62,7 +62,7 @@ describe('buildBinderFilterOptions', () => {
         expect(foilings.map((f) => f.id)).toEqual(['rainbow', 'cold', 'nonfoil']);
     });
 
-    test('sets carry a code from metadata or the collector number, newest first', () => {
+    test('sets carry a code from metadata or the collector number, newest first, undated last', () => {
         const { sets: options } = buildBinderFilterOptions(entries, resolveCard, { sets });
         expect(options.map((s) => [s.name, s.code, s.groupId])).toEqual([
             ['High Seas', 'SEA', 2],
@@ -169,5 +169,18 @@ describe('pitch', () => {
         expect(matchesBinderFilters(card({ pitch: 3 }), filters)).toBe(true);
         expect(matchesBinderFilters(card({ pitch: 1 }), filters)).toBe(false);
         expect(matchesBinderFilters(card({ pitch: null }), filters)).toBe(false);
+    });
+});
+
+describe('set order', () => {
+    test('sorts by release date across product lines', () => {
+        const entries = ['Armory Deck: Ira', 'Rosetta', 'No Date Set'].map((setName) => ({ card: card({ setName }) }));
+        const { sets } = buildBinderFilterOptions(entries, (e) => e.card, {
+            sets: [
+                { groupId: 1, name: 'Rosetta', publishedOn: '2024-09-01' },
+                { groupId: 2, name: 'Armory Deck: Ira', publishedOn: '2025-02-01' },
+            ],
+        });
+        expect(sets.map((s) => s.name)).toEqual(['Armory Deck: Ira', 'Rosetta', 'No Date Set']);
     });
 });

@@ -37,6 +37,7 @@ import BinderFilters, {
 } from '../components/binder/BinderFilters.jsx';
 import { useBinderFilters } from '../hooks/useBinderFilters.js';
 import { cardMatchesSearch, matchesBinderFilters } from '../utils/binderFilters.js';
+import { cardPitchValue } from '../utils/cardIdentity.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -152,7 +153,8 @@ const SharedBinder = () => {
                 imageUrlFallback: tcgFallback && tcgFallback !== cdn ? tcgFallback : '',
                 collectorNumber,
                 rarity: live?.extRarity || stub.rarity || '',
-                pitch: live?.extPitchValue || stub.pitch || null,
+                // Name qualifier ("(Red)") first, like the rest of the app.
+                pitch: cardPitchValue(live || { name: stub.name, pitch: stub.pitch }) || null,
                 finish,
                 setName: live?._setName || stub.setName || '',
                 typeLine: [
@@ -264,23 +266,6 @@ const SharedBinder = () => {
                             {' · Add cards straight to your trade calculator.'}
                         </>
                     ) : null}
-                    actions={!loading && !error ? (
-                        <FormControl size="small" sx={{ minWidth: 190 }}>
-                            <Select
-                                value={sort}
-                                onChange={(e) => setSort(e.target.value)}
-                                aria-label="Sort binder"
-                                startAdornment={<SortRounded sx={{ fontSize: '1.1rem', color: 'text.secondary', mr: 1 }} />}
-                                sx={{ minHeight: 40 }}
-                            >
-                                {SORT_OPTIONS.map((opt) => (
-                                    <MenuItem key={opt.id} value={opt.id}>
-                                        {opt.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    ) : null}
                 />
 
                 {loading && (
@@ -307,7 +292,7 @@ const SharedBinder = () => {
                     <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
                         <BinderFiltersSidebar>{filterPanel}</BinderFiltersSidebar>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
                                 <TextField
                                     data-testid="shared-binder-search"
                                     size="small"
@@ -316,7 +301,11 @@ const SharedBinder = () => {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     inputProps={{ 'aria-label': 'Search this binder' }}
-                                    sx={{ '& .MuiOutlinedInput-root': { minHeight: 40 } }}
+                                    sx={{
+                                        flexGrow: 1,
+                                        minWidth: { xs: '100%', sm: 0 },
+                                        '& .MuiOutlinedInput-root': { minHeight: 40 },
+                                    }}
                                     InputProps={{
                                         startAdornment: (
                                             <InputAdornment position="start">
@@ -337,6 +326,27 @@ const SharedBinder = () => {
                                         ) : null,
                                     }}
                                 />
+                                <FormControl
+                                    size="small"
+                                    sx={{
+                                        minWidth: { xs: 0, sm: 190 },
+                                        flex: { xs: 1, sm: 'none' },
+                                        '& .MuiOutlinedInput-root': { minHeight: 40 },
+                                    }}
+                                >
+                                    <Select
+                                        value={sort}
+                                        onChange={(e) => setSort(e.target.value)}
+                                        aria-label="Sort binder"
+                                        startAdornment={<SortRounded sx={{ fontSize: '1.1rem', color: 'text.secondary', mr: 1 }} />}
+                                    >
+                                        {SORT_OPTIONS.map((opt) => (
+                                            <MenuItem key={opt.id} value={opt.id}>
+                                                {opt.label}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
                                 <Button
                                     data-testid="binder-filters-open"
                                     variant="outlined"

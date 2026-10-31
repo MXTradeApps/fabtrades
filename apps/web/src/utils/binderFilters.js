@@ -4,7 +4,6 @@
 // match. Counts are faceted: each group counts against search plus the other
 // groups' picks, so a 0 warns before a click leads to an empty list.
 
-import { compareSetsByBrowseOrder } from './setSort.js';
 import { collectorNumberPrefix } from './setAbbreviation.js';
 
 /** Highest rarity first, the order FAB players scan for. Unknown values sort after. */
@@ -80,6 +79,13 @@ const VALUE_OF = {
 function rarityRank(rarity) {
     const i = RARITY_ORDER.findIndex((r) => r.toLowerCase() === rarity.toLowerCase());
     return i === -1 ? RARITY_ORDER.length : i;
+}
+
+/** Newest release first; sets without a date go last, A–Z. */
+function compareSetsNewestFirst(a, b) {
+    const da = a.publishedOn ? new Date(a.publishedOn).getTime() || 0 : 0;
+    const db = b.publishedOn ? new Date(b.publishedOn).getTime() || 0 : 0;
+    return db - da || a.name.localeCompare(b.name);
 }
 
 function matchesGroups(card, filters, skipGroup) {
@@ -169,7 +175,7 @@ export function buildBinderFilterOptions(entries, resolveCard, {
                 count: countOf('sets', name),
             };
         })
-        .sort(compareSetsByBrowseOrder);
+        .sort(compareSetsNewestFirst);
 
     return {
         rarities,

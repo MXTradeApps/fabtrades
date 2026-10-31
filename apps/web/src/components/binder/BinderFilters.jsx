@@ -391,18 +391,27 @@ export function BinderFiltersDrawer({ open, onClose, shownCount, children }) {
             anchor="right"
             open={open}
             onClose={onClose}
-            PaperProps={{ sx: { width: 300, maxWidth: '88vw', p: 2 } }}
+            PaperProps={{ sx: { width: 300, maxWidth: '88vw', display: 'flex', flexDirection: 'column' } }}
         >
-            {children}
-            <Button
-                fullWidth
-                variant="contained"
-                data-testid="binder-filters-done"
-                onClick={onClose}
-                sx={{ mt: 3, position: 'sticky', bottom: 0 }}
+            <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>{children}</Box>
+            <Box
+                sx={{
+                    p: 2,
+                    pb: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+                    borderTop: 1,
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                }}
             >
-                {`Show ${shownCount} ${shownCount === 1 ? 'card' : 'cards'}`}
-            </Button>
+                <Button
+                    fullWidth
+                    variant="contained"
+                    data-testid="binder-filters-done"
+                    onClick={onClose}
+                >
+                    {`Show ${shownCount} ${shownCount === 1 ? 'card' : 'cards'}`}
+                </Button>
+            </Box>
         </Drawer>
     );
 }

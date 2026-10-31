@@ -122,6 +122,19 @@ describe('SharedBinder', () => {
             expect(screen.queryByTestId('binder-card-tile-stub-rainbow')).not.toBeInTheDocument();
         });
 
+        test('pitch comes from the name qualifier when there is no pitch field', async () => {
+            mockGetPublicBinder.mockResolvedValue({
+                data: {
+                    ownerName: 'Max',
+                    entries: [entry, { ...foilEntry, card: { ...foilEntry.card, name: 'Snatch (Blue)' } }],
+                },
+                error: null,
+            });
+            renderShared('?pitch=3');
+            expect(await screen.findByTestId('binder-card-tile-stub-rainbow')).toBeInTheDocument();
+            expect(screen.queryByTestId('binder-card-tile-123-Normal')).not.toBeInTheDocument();
+        });
+
         test('search matches by name', async () => {
             renderShared();
             fireEvent.change(await screen.findByLabelText('Search this binder'), { target: { value: 'snat' } });
