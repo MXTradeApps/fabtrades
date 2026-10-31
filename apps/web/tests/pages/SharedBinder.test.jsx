@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import SharedBinder from '../../src/pages/SharedBinder.jsx';
@@ -44,9 +44,9 @@ jest.mock('../../src/components/auth/SignInDialog.jsx', () => ({
     default: () => null,
 }));
 
-const renderShared = () =>
+const renderShared = (query = '') =>
     render(
-        <MemoryRouter initialEntries={[`/b/${'a'.repeat(32)}`]}>
+        <MemoryRouter initialEntries={[`/b/${'a'.repeat(32)}${query}`]}>
             <ThemeProvider theme={createTheme()}>
                 <ThemeModeProvider>
                     <Routes>
@@ -88,6 +88,53 @@ describe('SharedBinder', () => {
         });
         renderShared();
         expect(await screen.findByText('Shared Binder')).toBeInTheDocument();
+    });
+
+    describe('filters', () => {
+        const foilEntry = {
+            cardId: 'stub-rainbow',
+            quantity: 1,
+            condition: 'NM',
+            card: { name: 'Snatch', subTypeName: 'Rainbow Foil', rarity: 'Rare', setName: 'Welcome to Rathe' },
+        };
+
+        beforeEach(() => {
+            mockGetPublicBinder.mockResolvedValue({
+                data: { ownerName: 'Max', entries: [entry, foilEntry] },
+                error: null,
+            });
+        });
+
+        test('picking a foiling narrows the grid and shows the count', async () => {
+            renderShared();
+            fireEvent.click(await screen.findByTestId('binder-filter-foiling-rainbow'));
+            expect(screen.getByTestId('binder-card-tile-stub-rainbow')).toBeInTheDocument();
+            expect(screen.queryByTestId('binder-card-tile-123-Normal')).not.toBeInTheDocument();
+            expect(screen.getByTestId('binder-filter-result-count')).toHaveTextContent('1 of 4 cards');
+
+            fireEvent.click(screen.getByTestId('binder-filters-clear-all'));
+            expect(screen.getByTestId('binder-card-tile-123-Normal')).toBeInTheDocument();
+        });
+
+        test('reads filters from the link', async () => {
+            renderShared('?foil=nonfoil');
+            expect(await screen.findByTestId('binder-card-tile-123-Normal')).toBeInTheDocument();
+            expect(screen.queryByTestId('binder-card-tile-stub-rainbow')).not.toBeInTheDocument();
+        });
+
+        test('search matches by name', async () => {
+            renderShared();
+            fireEvent.change(await screen.findByLabelText('Search this binder'), { target: { value: 'snat' } });
+            expect(screen.getByTestId('binder-card-tile-stub-rainbow')).toBeInTheDocument();
+            expect(screen.queryByTestId('binder-card-tile-123-Normal')).not.toBeInTheDocument();
+        });
+
+        test('shows a clear-filters empty state when nothing matches', async () => {
+            renderShared('?foil=gold');
+            expect(await screen.findByText('No matching cards in this binder')).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+            expect(screen.getByTestId('binder-card-tile-123-Normal')).toBeInTheDocument();
+        });
     });
 
     test('sharedBinderTitle handles names ending in s', () => {
