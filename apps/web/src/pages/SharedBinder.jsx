@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Box,
-
+    Button,
     CircularProgress,
     FormControl,
     MenuItem,
@@ -10,13 +10,21 @@ import {
     Snackbar,
     Typography,
 } from '@mui/material';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useCardData } from '../hooks/useCardData.jsx';
 import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import Header from '../components/elements/Header.jsx';
 import { Page, PageHeader, Panel, EmptyState } from '../components/layout/Page.jsx';
-import { SortRounded, LinkOffRounded, CollectionsBookmarkOutlined } from '@mui/icons-material';
-import { getPublicBinder } from '../services/binder.js';
+import {
+    SortRounded,
+    LinkOffRounded,
+    CollectionsBookmarkOutlined,
+    FileDownloadOutlined,
+} from '@mui/icons-material';
+import { createBinder, getPublicBinder, upsertEntries } from '../services/binder.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import SignInDialog from '../components/auth/SignInDialog.jsx';
+import BinderExportDialog from '../components/binder/BinderExportDialog.jsx';
 import { formatCurrency } from '../utils/helpers.js';
 import { addCardToTradeDraft } from '../utils/tradeDraft.js';
 import BinderCardGrid from '../components/binder/BinderCardGrid.jsx';
@@ -76,6 +84,8 @@ function compareEntries(a, b, sort, resolveCard) {
  */
 const SharedBinder = () => {
     const { token } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const { openDetail } = useCardDetail();
     const { cards, pricesUpdatedAt: lastUpdatedTimestamp } = useCardData();
 
@@ -85,6 +95,8 @@ const SharedBinder = () => {
     const [error, setError] = useState(null);
     const [sort, setSort] = useState('priceDesc');
     const [toast, setToast] = useState('');
+    const [exportOpen, setExportOpen] = useState(false);
+    const [signInOpen, setSignInOpen] = useState(false);
 
 
     useEffect(() => {
@@ -153,6 +165,44 @@ const SharedBinder = () => {
         [catalogById],
     );
 
+    const catalogCard = useCallback((entry) => catalogById.get(entry.cardId), [catalogById]);
+
+    // A personal copy goes into a new standard Binder, so none of it is for trade.
+    const handleCopyBinder = async () => {
+        if (!user) {
+            setSignInOpen(true);
+            return;
+        }
+        const baseName = sharedBinderTitle(ownerName);
+        let binder = null;
+        for (let n = 1; n <= 20 && !binder; n += 1) {
+            const { data, error: createError } = await createBinder({
+                name: n === 1 ? baseName : `${baseName} (${n})`,
+            });
+            if (data) binder = data;
+            else if (createError?.reason !== 'duplicate') {
+                setToast(createError?.message || 'Could not copy this Binder');
+                return;
+            }
+        }
+        if (!binder) {
+            setToast('Could not copy this Binder');
+            return;
+        }
+        const { error: copyError } = await upsertEntries(entries.map((entry) => ({
+            cardId: entry.cardId,
+            quantity: entry.quantity,
+            condition: entry.condition,
+            binderId: binder.clientId,
+            card: entry.stub || entry.card,
+        })));
+        if (copyError) {
+            setToast(copyError.message || 'Could not copy the cards');
+            return;
+        }
+        navigate(`/binder?b=${encodeURIComponent(binder.clientId)}`);
+    };
+
     const openEntryDetail = (entry) => {
         const live = catalogById.get(entry.cardId);
         if (live?._uniqueId) openDetail(live);
@@ -216,21 +266,34 @@ const SharedBinder = () => {
                         </>
                     ) : null}
                     actions={!loading && !error ? (
-                        <FormControl size="small" sx={{ minWidth: 190 }}>
-                            <Select
-                                value={sort}
-                                onChange={(e) => setSort(e.target.value)}
-                                aria-label="Sort binder"
-                                startAdornment={<SortRounded sx={{ fontSize: '1.1rem', color: 'text.secondary', mr: 1 }} />}
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Button
+                                variant="outlined"
+                                color="inherit"
+                                data-testid="shared-binder-export"
+                                startIcon={<FileDownloadOutlined />}
+                                onClick={() => setExportOpen(true)}
+                                disabled={entries.length === 0}
                                 sx={{ minHeight: 40 }}
                             >
-                                {SORT_OPTIONS.map((opt) => (
-                                    <MenuItem key={opt.id} value={opt.id}>
-                                        {opt.label}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
+                                Export
+                            </Button>
+                            <FormControl size="small" sx={{ minWidth: 190 }}>
+                                <Select
+                                    value={sort}
+                                    onChange={(e) => setSort(e.target.value)}
+                                    aria-label="Sort binder"
+                                    startAdornment={<SortRounded sx={{ fontSize: '1.1rem', color: 'text.secondary', mr: 1 }} />}
+                                    sx={{ minHeight: 40 }}
+                                >
+                                    {SORT_OPTIONS.map((opt) => (
+                                        <MenuItem key={opt.id} value={opt.id}>
+                                            {opt.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
                     ) : null}
                 />
 
@@ -264,6 +327,21 @@ const SharedBinder = () => {
                     )
                 )}
             </Page>
+
+            {exportOpen && (
+                <BinderExportDialog
+                    open
+                    onClose={() => setExportOpen(false)}
+                    title={sharedBinderTitle(ownerName)}
+                    entries={entries}
+                    resolveCard={catalogCard}
+                    defaultSort={sort}
+                    onCopyBinder={handleCopyBinder}
+                    onToast={setToast}
+                />
+            )}
+
+            <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
 
             <Snackbar
                 open={Boolean(toast)}

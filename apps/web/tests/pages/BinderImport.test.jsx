@@ -354,7 +354,7 @@ describe('Binder CSV export', () => {
         jest.restoreAllMocks();
     });
 
-    test('⋯ → Export cards downloads only this Binder as CSV', async () => {
+    test('Export → CSV downloads only this Binder', async () => {
         mockGetBinderEntries.mockResolvedValue({
             data: {
                 binder: [
@@ -367,9 +367,10 @@ describe('Binder CSV export', () => {
         });
         renderImport();
         fireEvent.click(await screen.findByTestId('binder-tile-system:collection'));
-        fireEvent.click(await screen.findByTestId('binder-open-menu'));
-        expect(await screen.findByTestId('binder-export')).toHaveTextContent('Export cards');
+        expect(await screen.findByTestId('binder-export')).toHaveTextContent('Export');
         fireEvent.click(screen.getByTestId('binder-export'));
+        fireEvent.click(within(await screen.findByTestId('binder-export-format-csv')).getByRole('radio'));
+        fireEvent.click(screen.getByTestId('binder-export-download'));
 
         expect(downloads).toEqual([expect.stringMatching(/^collection-\d{4}-\d{2}-\d{2}\.csv$/)]);
         expect(blobs[0].parts.join('')).toBe(
@@ -383,9 +384,9 @@ describe('Binder CSV export', () => {
         mockGetBinderEntries.mockResolvedValue(emptyEntries);
         renderImport();
         fireEvent.click(await screen.findByTestId('binder-tile-system:collection'));
-        fireEvent.click(await screen.findByTestId('binder-open-menu'));
         fireEvent.click(await screen.findByTestId('binder-export'));
-        expect(await screen.findByText('Nothing to export')).toBeInTheDocument();
+        expect(await screen.findByText('This Binder has no cards to export.')).toBeInTheDocument();
+        expect(screen.getByTestId('binder-export-download')).toBeDisabled();
         expect(downloads).toEqual([]);
     });
 });
