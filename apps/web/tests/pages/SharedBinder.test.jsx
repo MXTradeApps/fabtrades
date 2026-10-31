@@ -130,10 +130,18 @@ describe('SharedBinder', () => {
         });
 
         test('shows a clear-filters empty state when nothing matches', async () => {
-            renderShared('?foil=gold');
-            expect(await screen.findByText('No matching cards in this binder')).toBeInTheDocument();
+            renderShared('?foil=rainbow');
+            fireEvent.change(await screen.findByLabelText('Search this binder'), { target: { value: 'press' } });
+            expect(screen.getByText('No matching cards in this binder')).toBeInTheDocument();
             fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
             expect(screen.getByTestId('binder-card-tile-123-Normal')).toBeInTheDocument();
+        });
+
+        test('ignores link filters that match nothing in this binder', async () => {
+            renderShared('?foil=gold');
+            expect(await screen.findByTestId('binder-card-tile-123-Normal')).toBeInTheDocument();
+            expect(screen.getByTestId('binder-card-tile-stub-rainbow')).toBeInTheDocument();
+            expect(screen.queryByTestId('binder-active-filters')).not.toBeInTheDocument();
         });
     });
 

@@ -9,14 +9,16 @@ import {
     paramsWithFilters,
     toggleBinderFilter,
     EMPTY_BINDER_FILTERS,
+    FILTER_GROUPS,
 } from '../utils/binderFilters.js';
 
 /**
  * Rarity / foiling / set filters for a list of Binder entries, kept in the
  * URL query so a filtered link opens filtered. Options only list values
- * present in `entries`.
+ * present in `entries`; URL values that match nothing in this Binder are
+ * ignored. `matchesSearch(entry, card)` narrows the option counts.
  */
-export function useBinderFilters(entries, resolveCard) {
+export function useBinderFilters(entries, resolveCard, matchesSearch) {
     const { sets } = useCardData();
     const [searchParams, setSearchParams] = useSearchParams();
     const [logoByGroupId, setLogoByGroupId] = useState({});
@@ -39,12 +41,24 @@ export function useBinderFilters(entries, resolveCard) {
 
     const paramsKey = searchParams.toString();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    const filters = useMemo(() => filtersFromParams(searchParams), [paramsKey]);
+    const urlFilters = useMemo(() => filtersFromParams(searchParams), [paramsKey]);
 
-    const options = useMemo(
-        () => buildBinderFilterOptions(entries, resolveCard, sets, logosByName),
-        [entries, resolveCard, sets, logosByName],
-    );
+    const { filters, options } = useMemo(() => {
+        const context = { sets, logosByName, matchesSearch };
+        const first = buildBinderFilterOptions(entries, resolveCard, { ...context, filters: urlFilters });
+        // Until entries load there is nothing to check URL values against.
+        if (!entries?.length) return { filters: urlFilters, options: first };
+        const effective = Object.fromEntries(FILTER_GROUPS.map((group) => {
+            const ids = new Set(first[group].map((o) => o.id));
+            return [group, urlFilters[group].filter((v) => ids.has(v))];
+        }));
+        const unchanged = FILTER_GROUPS.every((g) => effective[g].length === urlFilters[g].length);
+        if (unchanged) return { filters: urlFilters, options: first };
+        return {
+            filters: effective,
+            options: buildBinderFilterOptions(entries, resolveCard, { ...context, filters: effective }),
+        };
+    }, [entries, resolveCard, sets, logosByName, matchesSearch, urlFilters]);
 
     const setFilters = useCallback((next) => {
         setSearchParams((prev) => paramsWithFilters(prev, next), { replace: true });

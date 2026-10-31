@@ -36,7 +36,7 @@ import BinderFilters, {
     BinderFiltersSidebar,
 } from '../components/binder/BinderFilters.jsx';
 import { useBinderFilters } from '../hooks/useBinderFilters.js';
-import { matchesBinderFilters } from '../utils/binderFilters.js';
+import { cardMatchesSearch, matchesBinderFilters } from '../utils/binderFilters.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
 
@@ -152,6 +152,7 @@ const SharedBinder = () => {
                 imageUrlFallback: tcgFallback && tcgFallback !== cdn ? tcgFallback : '',
                 collectorNumber,
                 rarity: live?.extRarity || stub.rarity || '',
+                pitch: live?.extPitchValue || stub.pitch || null,
                 finish,
                 setName: live?._setName || stub.setName || '',
                 typeLine: [
@@ -175,6 +176,10 @@ const SharedBinder = () => {
         if (live?._uniqueId) openDetail(live);
     };
 
+    const matchesSearch = useCallback(
+        (entry, card) => cardMatchesSearch(card, searchQuery),
+        [searchQuery],
+    );
     const {
         filters,
         options: filterOptions,
@@ -182,21 +187,12 @@ const SharedBinder = () => {
         toggle: toggleFilter,
         clear: clearFilters,
         logoByGroupId,
-    } = useBinderFilters(entries, resolveCard);
+    } = useBinderFilters(entries, resolveCard, matchesSearch);
 
     const sorted = useMemo(() => {
-        const q = searchQuery.trim().toLowerCase();
         const list = entries.filter((entry) => {
             const card = resolveCard(entry);
-            if (!matchesBinderFilters(card, filters)) return false;
-            if (!q) return true;
-            return (
-                card.name.toLowerCase().includes(q) ||
-                card.setName.toLowerCase().includes(q) ||
-                card.finish.toLowerCase().includes(q) ||
-                card.collectorNumber.toLowerCase().includes(q) ||
-                card.typeLine.toLowerCase().includes(q)
-            );
+            return matchesBinderFilters(card, filters) && cardMatchesSearch(card, searchQuery);
         });
         list.sort((a, b) => compareEntries(a, b, sort, resolveCard));
         return list;

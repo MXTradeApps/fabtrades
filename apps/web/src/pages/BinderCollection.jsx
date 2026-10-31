@@ -94,7 +94,7 @@ import BinderFilters, {
     BinderFiltersSidebar,
 } from '../components/binder/BinderFilters.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
-import { matchesBinderFilters } from '../utils/binderFilters.js';
+import { cardMatchesSearch, matchesBinderFilters } from '../utils/binderFilters.js';
 import { useBinderFilters } from '../hooks/useBinderFilters.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
@@ -261,10 +261,6 @@ const BinderCollection = ({ isWanted = false }) => {
         [viewingWants],
     );
 
-    const selectedEntries = useMemo(
-        () => entries.filter((entry) => selectedKeys.has(rowKey(entry))),
-        [entries, selectedKeys, rowKey],
-    );
 
     const toggleSelected = (entry) => {
         const key = rowKey(entry);
@@ -332,6 +328,7 @@ const BinderCollection = ({ isWanted = false }) => {
                 imageUrlFallback: tcgFallback && tcgFallback !== cdn ? tcgFallback : '',
                 collectorNumber,
                 rarity: live?.extRarity || stub.rarity || '',
+                pitch: live?.extPitchValue || stub.pitch || null,
                 finish,
                 setName: live?._setName || stub.setName || '',
                 typeLine: [
@@ -359,6 +356,10 @@ const BinderCollection = ({ isWanted = false }) => {
 
     // Filters live in the URL next to `b`, so opening another Binder (which
     // rewrites the query) starts it unfiltered.
+    const matchesSearch = useCallback(
+        (entry, card) => cardMatchesSearch(card, searchQuery),
+        [searchQuery],
+    );
     const {
         filters,
         options: filterOptions,
@@ -366,25 +367,23 @@ const BinderCollection = ({ isWanted = false }) => {
         toggle: toggleFilter,
         clear: clearFilters,
         logoByGroupId,
-    } = useBinderFilters(entries, resolveCard);
+    } = useBinderFilters(entries, resolveCard, matchesSearch);
 
     const filtered = useMemo(() => {
-        const q = searchQuery.trim().toLowerCase();
         const list = entries.filter((entry) => {
             const card = resolveCard(entry);
-            if (!matchesBinderFilters(card, filters)) return false;
-            if (!q) return true;
-            return (
-                card.name.toLowerCase().includes(q) ||
-                card.setName.toLowerCase().includes(q) ||
-                card.finish.toLowerCase().includes(q) ||
-                card.collectorNumber.toLowerCase().includes(q) ||
-                card.typeLine.toLowerCase().includes(q)
-            );
+            return matchesBinderFilters(card, filters) && cardMatchesSearch(card, searchQuery);
         });
         list.sort((a, b) => compareBinderEntries(a, b, sort, resolveCard));
         return list;
     }, [entries, searchQuery, filters, sort, resolveCard]);
+
+    // Bulk actions only touch selected cards that are still visible, so a
+    // filter or search applied after selecting never acts on hidden cards.
+    const selectedEntries = useMemo(
+        () => filtered.filter((entry) => selectedKeys.has(rowKey(entry))),
+        [filtered, selectedKeys, rowKey],
+    );
 
     const totalValue = useMemo(
         () =>
@@ -1365,7 +1364,7 @@ const BinderCollection = ({ isWanted = false }) => {
                                 disabled={filtered.every((e) => selectedKeys.has(rowKey(e)))}
                                 onClick={() => setSelectedKeys(new Set(filtered.map(rowKey)))}
                             >
-                                {narrowed ? `Select all ${filtered.length} shown` : 'Select all'}
+                                {narrowed ? 'Select all shown' : 'Select all'}
                             </Button>
                             <Button
                                 size="small"

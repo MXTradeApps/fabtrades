@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, Button, ButtonBase, Chip, Divider, Drawer, Typography, useTheme } from '@mui/material';
 import { CheckRounded, ExpandMoreRounded, ExpandLessRounded } from '@mui/icons-material';
 import { tk } from '../../theme/tokens.js';
+import { FILTER_GROUPS } from '../../utils/binderFilters.js';
 
 const RARITY_PREVIEW = 5;
 const SET_PREVIEW = 12;
@@ -19,6 +20,9 @@ const RARITY_COLORS = {
     basic: '#A89C90',
     token: '#6F6259',
 };
+
+/** Standard FAB pitch colours. */
+const PITCH_COLORS = { 1: '#D64545', 2: '#E8C547', 3: '#3D7DD8' };
 
 const FOIL_SWATCHES = {
     rainbow: 'linear-gradient(135deg, #ff8a8a, #ffd27a, #8be3a5, #8ac4ff, #c99bff)',
@@ -66,6 +70,8 @@ function OptionRow({ selected, onClick, icon, label, count, testId }) {
                 bgcolor: selected ? palette.accentSoft : 'transparent',
                 color: selected ? palette.accentText : 'text.primary',
                 fontWeight: selected ? 650 : 500,
+                // No matches with the other picks: still clickable, but muted.
+                opacity: !selected && count === 0 ? 0.45 : 1,
                 '&:hover': { bgcolor: selected ? palette.accentSoft : palette.hover },
             }}
         >
@@ -112,6 +118,7 @@ function SetTile({ option, logoUrl, selected, onClick }) {
             sx={{
                 flexDirection: 'column',
                 gap: 0.5,
+                opacity: !selected && option.count === 0 ? 0.45 : 1,
                 p: 0.75,
                 minHeight: 64,
                 borderRadius: '10px',
@@ -271,6 +278,37 @@ export default function BinderFilters({ options, filters, onToggle, onClear, act
                 </>
             )}
 
+            {options.pitches.length > 0 && (
+                <>
+                    <SectionTitle>Pitch</SectionTitle>
+                    {options.pitches.map((o) => (
+                        <OptionRow
+                            key={o.id}
+                            testId={`binder-filter-pitch-${o.id}`}
+                            selected={filters.pitches.includes(o.id)}
+                            onClick={() => onToggle('pitches', o.id)}
+                            label={o.label}
+                            count={o.count}
+                            icon={(
+                                <Box
+                                    component="span"
+                                    aria-hidden
+                                    sx={{
+                                        width: 14,
+                                        height: 14,
+                                        mx: '2px',
+                                        flexShrink: 0,
+                                        borderRadius: '50%',
+                                        bgcolor: PITCH_COLORS[o.id],
+                                    }}
+                                />
+                            )}
+                        />
+                    ))}
+                    <Divider sx={{ my: 2 }} />
+                </>
+            )}
+
             {options.sets.length > 0 && (
                 <>
                     <SectionTitle>Set</SectionTitle>
@@ -300,6 +338,10 @@ export default function BinderFilters({ options, filters, onToggle, onClear, act
 
 function chipLabel(options, group, value) {
     if (group === 'foilings') return options.foilings.find((o) => o.id === value)?.label || value;
+    if (group === 'pitches') {
+        const label = options.pitches.find((o) => o.id === value)?.label;
+        return label ? `${label} pitch` : value;
+    }
     if (group === 'sets') {
         const set = options.sets.find((o) => o.id === value);
         return set?.code ? `${set.code} · ${set.name}` : value;
@@ -313,7 +355,7 @@ function chipLabel(options, group, value) {
  */
 export function ActiveFilterBar({ options, filters, onToggle, onClearAll, shownCount, totalCount, narrowed }) {
     if (!narrowed) return null;
-    const picked = ['rarities', 'foilings', 'sets'].flatMap((group) =>
+    const picked = FILTER_GROUPS.flatMap((group) =>
         (filters[group] || []).map((value) => ({ group, value })),
     );
     return (
