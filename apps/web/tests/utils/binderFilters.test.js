@@ -1,6 +1,8 @@
 import {
     EMPTY_BINDER_FILTERS,
     activeFilterCount,
+    cardMatchesSearch,
+    pitchOf,
     buildBinderFilterOptions,
     foilingOf,
     matchesBinderFilters,
@@ -46,7 +48,7 @@ describe('buildBinderFilterOptions', () => {
     ];
 
     test('orders rarities highest first and counts copies', () => {
-        const { rarities } = buildBinderFilterOptions(entries, resolveCard, sets);
+        const { rarities } = buildBinderFilterOptions(entries, resolveCard, { sets });
         expect(rarities.map((r) => [r.id, r.count])).toEqual([
             ['Fabled', 1],
             ['Majestic', 1],
@@ -56,12 +58,12 @@ describe('buildBinderFilterOptions', () => {
     });
 
     test('lists only foilings present, in fixed order', () => {
-        const { foilings } = buildBinderFilterOptions(entries, resolveCard, sets);
+        const { foilings } = buildBinderFilterOptions(entries, resolveCard, { sets });
         expect(foilings.map((f) => f.id)).toEqual(['rainbow', 'cold', 'nonfoil']);
     });
 
     test('sets carry a code from metadata or the collector number, newest first', () => {
-        const { sets: options } = buildBinderFilterOptions(entries, resolveCard, sets);
+        const { sets: options } = buildBinderFilterOptions(entries, resolveCard, { sets });
         expect(options.map((s) => [s.name, s.code, s.groupId])).toEqual([
             ['High Seas', 'SEA', 2],
             ['Super Slam', 'SUP', 1],
@@ -77,9 +79,9 @@ describe('matchesBinderFilters', () => {
 
     test('values within a group are OR, groups are AND', () => {
         const filters = {
+            ...EMPTY_BINDER_FILTERS,
             rarities: ['Fabled', 'Marvel'],
             foilings: ['cold'],
-            sets: [],
         };
         expect(matchesBinderFilters(card({ rarity: 'Marvel', finish: 'Cold Foil' }), filters)).toBe(true);
         expect(matchesBinderFilters(card({ rarity: 'Marvel', finish: 'Normal' }), filters)).toBe(false);
@@ -106,7 +108,7 @@ describe('toggleBinderFilter / activeFilterCount', () => {
 
 describe('URL params', () => {
     test('round-trips filters and keeps other keys', () => {
-        const filters = { rarities: ['Fabled', 'Marvel'], foilings: ['cold'], sets: ['High Seas, Vol 1'] };
+        const filters = { rarities: ['Fabled', 'Marvel'], foilings: ['cold'], pitches: ['1', '3'], sets: ['High Seas, Vol 1'] };
         const params = paramsWithFilters(new URLSearchParams('b=binder-1&rarity=Common'), filters);
         expect(params.get('b')).toBe('binder-1');
         expect(filtersFromParams(params)).toEqual(filters);
@@ -114,7 +116,7 @@ describe('URL params', () => {
 
     test('drops unknown foilings and duplicates', () => {
         const params = new URLSearchParams('foil=cold&foil=sparkly&foil=cold');
-        expect(filtersFromParams(params)).toEqual({ rarities: [], foilings: ['cold'], sets: [] });
+        expect(filtersFromParams(params)).toEqual({ rarities: [], foilings: ['cold'], pitches: [], sets: [] });
     });
 });
 
@@ -123,9 +125,49 @@ describe('set logos by name', () => {
         const { sets } = buildBinderFilterOptions(
             [{ card: card({ setName: 'Monarch', collectorNumber: '' }) }],
             (entry) => entry.card,
-            [],
-            { Monarch: { logoUrl: 'https://example.com/mon.png', abbreviation: 'MON' } },
+            { logosByName: { Monarch: { logoUrl: 'https://example.com/mon.png', abbreviation: 'MON' } } },
         );
         expect(sets[0]).toMatchObject({ code: 'MON', logoUrl: 'https://example.com/mon.png', groupId: null });
+    });
+});
+
+describe('faceted counts', () => {
+    const entries = [
+        { quantity: 2, card: card({ rarity: 'Majestic', setName: 'Outsiders', pitch: '1' }) },
+        { quantity: 1, card: card({ rarity: 'Majestic', setName: 'Dynasty', pitch: '3' }) },
+        { quantity: 1, card: card({ rarity: 'Common', setName: 'Dynasty', name: 'Snatch', pitch: '1' }) },
+    ];
+    const resolveCard = (entry) => entry.card;
+
+    test('a group counts against the other groups, not itself', () => {
+        const filters = { ...EMPTY_BINDER_FILTERS, sets: ['Outsiders'] };
+        const options = buildBinderFilterOptions(entries, resolveCard, { filters });
+        expect(options.rarities.map((o) => [o.id, o.count])).toEqual([['Majestic', 2], ['Common', 0]]);
+        // Sets ignore their own pick so other sets still show what they'd add.
+        expect(options.sets.map((o) => [o.id, o.count])).toEqual([['Dynasty', 2], ['Outsiders', 2]]);
+        expect(options.pitches.map((o) => [o.id, o.count])).toEqual([['1', 2], ['3', 0]]);
+    });
+
+    test('search narrows the counts but keeps every option listed', () => {
+        const options = buildBinderFilterOptions(entries, resolveCard, {
+            matchesSearch: (entry, c) => cardMatchesSearch(c, 'snatch'),
+        });
+        expect(options.rarities.map((o) => [o.id, o.count])).toEqual([['Majestic', 0], ['Common', 1]]);
+    });
+});
+
+describe('pitch', () => {
+    test('pitchOf accepts numbers and strings, ignores the rest', () => {
+        expect(pitchOf(2)).toBe('2');
+        expect(pitchOf('3')).toBe('3');
+        expect(pitchOf(0)).toBe('');
+        expect(pitchOf(null)).toBe('');
+    });
+
+    test('filters by pitch', () => {
+        const filters = { ...EMPTY_BINDER_FILTERS, pitches: ['3'] };
+        expect(matchesBinderFilters(card({ pitch: 3 }), filters)).toBe(true);
+        expect(matchesBinderFilters(card({ pitch: 1 }), filters)).toBe(false);
+        expect(matchesBinderFilters(card({ pitch: null }), filters)).toBe(false);
     });
 });

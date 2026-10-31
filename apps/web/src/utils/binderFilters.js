@@ -1,7 +1,8 @@
-// Sidebar filters for an open Binder: rarity, foiling and set. Options are
-// built from the cards actually in the Binder so every choice matches
-// something. Within a group, picking several values matches any of them;
-// across groups every active group must match.
+// Sidebar filters for an open Binder: rarity, foiling, pitch and set. Options
+// are built from the cards actually in the Binder. Within a group, picking
+// several values matches any of them; across groups every active group must
+// match. Counts are faceted: each group counts against search plus the other
+// groups' picks, so a 0 warns before a click leads to an empty list.
 
 import { compareSetsByBrowseOrder } from './setSort.js';
 import { collectorNumberPrefix } from './setAbbreviation.js';
@@ -28,9 +29,18 @@ export const FOILING_OPTIONS = [
     { id: 'nonfoil', label: 'Non-foil' },
 ];
 
+export const PITCH_OPTIONS = [
+    { id: '1', label: 'Red' },
+    { id: '2', label: 'Yellow' },
+    { id: '3', label: 'Blue' },
+];
+
+export const FILTER_GROUPS = ['rarities', 'foilings', 'pitches', 'sets'];
+
 export const EMPTY_BINDER_FILTERS = Object.freeze({
     rarities: [],
     foilings: [],
+    pitches: [],
     sets: [],
 });
 
@@ -50,54 +60,99 @@ export function foilingOf(finish) {
     return 'nonfoil';
 }
 
+/** '1' | '2' | '3' for red / yellow / blue; '' for cards without pitch. */
+export function pitchOf(pitch) {
+    const value = String(pitch ?? '').trim();
+    return PITCH_OPTIONS.some((o) => o.id === value) ? value : '';
+}
+
+/** The value a resolved card has for each filter group ('' when it has none). */
+const VALUE_OF = {
+    rarities: (card) => {
+        const rarity = (card.rarity || '').trim();
+        return rarity === 'None' ? '' : rarity;
+    },
+    foilings: (card) => foilingOf(card.finish),
+    pitches: (card) => pitchOf(card.pitch),
+    sets: (card) => (card.setName || '').trim(),
+};
+
 function rarityRank(rarity) {
     const i = RARITY_ORDER.findIndex((r) => r.toLowerCase() === rarity.toLowerCase());
     return i === -1 ? RARITY_ORDER.length : i;
 }
 
+function matchesGroups(card, filters, skipGroup) {
+    for (const group of FILTER_GROUPS) {
+        if (group === skipGroup) continue;
+        const picked = filters?.[group] || [];
+        if (picked.length && !picked.includes(VALUE_OF[group](card))) return false;
+    }
+    return true;
+}
+
 /**
- * Filter choices present in a Binder, each with a card count.
+ * Whether a resolved card passes the active filters.
+ *
+ * @param {{rarity: string, finish: string, pitch: *, setName: string}} card
+ * @param {{rarities: string[], foilings: string[], pitches: string[], sets: string[]}} filters
+ */
+export function matchesBinderFilters(card, filters) {
+    return matchesGroups(card, filters, null);
+}
+
+/**
+ * Filter choices present in a Binder. `count` is copies that would show with
+ * this value picked, given search and the other groups' picks.
  *
  * @param {object[]} entries Binder entries
- * @param {(entry: object) => {rarity: string, finish: string, setName: string, collectorNumber: string}} resolveCard
- * @param {object[]} [sets] catalog set metadata ({ groupId, name, abbreviation, publishedOn })
- * @param {Record<string, {logoUrl: string|null, abbreviation: string}>} [logosByName] set logo file keyed by set name
- * @returns {{ rarities: {id, label, count}[], foilings: {id, label, count}[], sets: {id, label, code, groupId, logoUrl, count}[] }}
+ * @param {(entry: object) => {rarity: string, finish: string, pitch: *, setName: string, collectorNumber: string}} resolveCard
+ * @param {object} [context]
+ * @param {object[]} [context.sets] catalog set metadata ({ groupId, name, abbreviation, publishedOn })
+ * @param {Record<string, {logoUrl: string|null, abbreviation: string}>} [context.logosByName] set logo file keyed by set name
+ * @param {object} [context.filters] active filters, for faceted counts
+ * @param {(entry: object, card: object) => boolean} [context.matchesSearch] search predicate, for faceted counts
  */
-export function buildBinderFilterOptions(entries, resolveCard, sets = [], logosByName = {}) {
-    const rarityCounts = new Map();
-    const foilingCounts = new Map();
-    const setCounts = new Map();
+export function buildBinderFilterOptions(entries, resolveCard, {
+    sets = [],
+    logosByName = {},
+    filters = EMPTY_BINDER_FILTERS,
+    matchesSearch = () => true,
+} = {}) {
+    const present = Object.fromEntries(FILTER_GROUPS.map((g) => [g, new Set()]));
+    const counts = Object.fromEntries(FILTER_GROUPS.map((g) => [g, new Map()]));
     const setPrefixes = new Map();
 
     for (const entry of entries || []) {
         const card = resolveCard(entry);
         const qty = entry.quantity || 1;
-        const rarity = (card.rarity || '').trim();
-        if (rarity && rarity !== 'None') {
-            rarityCounts.set(rarity, (rarityCounts.get(rarity) || 0) + qty);
+        const searched = matchesSearch(entry, card);
+        for (const group of FILTER_GROUPS) {
+            const value = VALUE_OF[group](card);
+            if (!value) continue;
+            present[group].add(value);
+            if (searched && matchesGroups(card, filters, group)) {
+                counts[group].set(value, (counts[group].get(value) || 0) + qty);
+            }
         }
-        const foiling = foilingOf(card.finish);
-        foilingCounts.set(foiling, (foilingCounts.get(foiling) || 0) + qty);
-        const setName = (card.setName || '').trim();
-        if (setName) {
-            setCounts.set(setName, (setCounts.get(setName) || 0) + qty);
-            const prefix = collectorNumberPrefix(card.collectorNumber);
-            if (prefix && !setPrefixes.has(setName)) setPrefixes.set(setName, prefix);
-        }
+        const setName = VALUE_OF.sets(card);
+        const prefix = collectorNumberPrefix(card.collectorNumber);
+        if (setName && prefix && !setPrefixes.has(setName)) setPrefixes.set(setName, prefix);
     }
 
-    const rarities = [...rarityCounts.entries()]
-        .map(([id, count]) => ({ id, label: id, count }))
+    const countOf = (group, id) => counts[group].get(id) || 0;
+
+    const rarities = [...present.rarities]
+        .map((id) => ({ id, label: id, count: countOf('rarities', id) }))
         .sort((a, b) => rarityRank(a.id) - rarityRank(b.id) || a.id.localeCompare(b.id));
 
-    const foilings = FOILING_OPTIONS
-        .filter((o) => foilingCounts.has(o.id))
-        .map((o) => ({ ...o, count: foilingCounts.get(o.id) }));
+    const fixed = (group, list) => list
+        .filter((o) => present[group].has(o.id))
+        .map((o) => ({ ...o, count: countOf(group, o.id) }));
 
     const setByName = new Map((sets || []).map((s) => [s.name, s]));
-    const setOptions = [...setCounts.entries()]
-        .map(([name, count]) => {
+    const setOptions = [...present.sets]
+        .map((name) => {
             const meta = setByName.get(name);
             const logo = logosByName[name];
             return {
@@ -111,35 +166,23 @@ export function buildBinderFilterOptions(entries, resolveCard, sets = [], logosB
                 groupId: meta?.groupId ?? null,
                 logoUrl: logo?.logoUrl || null,
                 publishedOn: meta?.publishedOn || null,
-                count,
+                count: countOf('sets', name),
             };
         })
         .sort(compareSetsByBrowseOrder);
 
-    return { rarities, foilings, sets: setOptions };
+    return {
+        rarities,
+        foilings: fixed('foilings', FOILING_OPTIONS),
+        pitches: fixed('pitches', PITCH_OPTIONS),
+        sets: setOptions,
+    };
 }
 
 /** Number of values picked across all filter groups. */
 export function activeFilterCount(filters) {
     if (!filters) return 0;
-    return (filters.rarities?.length || 0)
-        + (filters.foilings?.length || 0)
-        + (filters.sets?.length || 0);
-}
-
-/**
- * Whether a resolved card passes the active filters.
- *
- * @param {{rarity: string, finish: string, setName: string}} card
- * @param {{rarities: string[], foilings: string[], sets: string[]}} filters
- */
-export function matchesBinderFilters(card, filters) {
-    if (!filters) return true;
-    const { rarities = [], foilings = [], sets = [] } = filters;
-    if (rarities.length && !rarities.includes((card.rarity || '').trim())) return false;
-    if (foilings.length && !foilings.includes(foilingOf(card.finish))) return false;
-    if (sets.length && !sets.includes((card.setName || '').trim())) return false;
-    return true;
+    return FILTER_GROUPS.reduce((sum, group) => sum + (filters[group]?.length || 0), 0);
 }
 
 /** Add or remove one value from a filter group. */
@@ -152,7 +195,7 @@ export function toggleBinderFilter(filters, group, value) {
 }
 
 /** Query-string keys, repeated once per picked value (?rarity=Fabled&rarity=Marvel). */
-const PARAM_KEYS = { rarities: 'rarity', foilings: 'foil', sets: 'set' };
+const PARAM_KEYS = { rarities: 'rarity', foilings: 'foil', pitches: 'pitch', sets: 'set' };
 
 /**
  * Filters stored in the URL so a filtered link (including a shared Binder
@@ -165,6 +208,7 @@ export function filtersFromParams(params) {
     return {
         rarities: read(PARAM_KEYS.rarities),
         foilings: read(PARAM_KEYS.foilings).filter((id) => FOILING_OPTIONS.some((o) => o.id === id)),
+        pitches: read(PARAM_KEYS.pitches).filter((id) => PITCH_OPTIONS.some((o) => o.id === id)),
         sets: read(PARAM_KEYS.sets),
     };
 }
@@ -174,7 +218,7 @@ export function filtersFromParams(params) {
  * (such as the open Binder) are kept.
  *
  * @param {URLSearchParams} params
- * @param {{rarities: string[], foilings: string[], sets: string[]}} filters
+ * @param {{rarities: string[], foilings: string[], pitches: string[], sets: string[]}} filters
  */
 export function paramsWithFilters(params, filters) {
     const next = new URLSearchParams(params);
@@ -183,4 +227,12 @@ export function paramsWithFilters(params, filters) {
         for (const value of filters[group] || []) next.append(key, value);
     }
     return next;
+}
+
+/** Free-text Binder search over name, set, finish, collector number and type line. */
+export function cardMatchesSearch(card, query) {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return true;
+    return [card.name, card.setName, card.finish, card.collectorNumber, card.typeLine]
+        .some((field) => String(field || '').toLowerCase().includes(q));
 }
