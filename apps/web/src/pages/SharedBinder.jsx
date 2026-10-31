@@ -381,7 +381,7 @@ const SharedBinder = () => {
                             startIcon={<FileDownloadOutlined />}
                             onClick={() => setExportOpen(true)}
                             disabled={entries.length === 0}
-                            sx={{ minHeight: 40 }}
+                            sx={{ minHeight: 40, display: { xs: 'none', sm: 'inline-flex' } }}
                         >
                             Export
                         </Button>
@@ -482,6 +482,23 @@ const SharedBinder = () => {
                                 >
                                     {filterCount > 0 ? `Filters (${filterCount})` : 'Filters'}
                                 </Button>
+                                {/* On phones Export joins this row instead of sitting alone under the title. */}
+                                <IconButton
+                                    data-testid="shared-binder-export-compact"
+                                    aria-label="Export card list"
+                                    onClick={() => setExportOpen(true)}
+                                    sx={{
+                                        display: { xs: 'inline-flex', sm: 'none' },
+                                        border: 1,
+                                        borderColor: 'divider',
+                                        borderRadius: 1,
+                                        width: 40,
+                                        height: 40,
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <FileDownloadOutlined fontSize="small" />
+                                </IconButton>
                             </Box>
 
                             <ActiveFilterBar
