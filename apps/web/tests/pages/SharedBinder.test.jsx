@@ -53,18 +53,19 @@ jest.mock('../../src/components/auth/SignInDialog.jsx', () => ({
     default: () => null,
 }));
 
-const renderShared = (query = '') =>
-    render(
-        <MemoryRouter initialEntries={[`/b/${'a'.repeat(32)}${query}`]}>
-            <ThemeProvider theme={createTheme()}>
-                <ThemeModeProvider>
-                    <Routes>
-                        <Route path="/b/:token" element={<SharedBinder />} />
-                    </Routes>
-                </ThemeModeProvider>
-            </ThemeProvider>
-        </MemoryRouter>,
-    );
+const theme = createTheme();
+const sharedTree = (query = '') => (
+    <MemoryRouter initialEntries={[`/b/${'a'.repeat(32)}${query}`]}>
+        <ThemeProvider theme={theme}>
+            <ThemeModeProvider>
+                <Routes>
+                    <Route path="/b/:token" element={<SharedBinder />} />
+                </Routes>
+            </ThemeModeProvider>
+        </ThemeProvider>
+    </MemoryRouter>
+);
+const renderShared = (query = '') => render(sharedTree(query));
 
 const entry = {
     cardId: '123-Normal',
@@ -129,6 +130,19 @@ describe('SharedBinder', () => {
             renderShared('?foil=nonfoil');
             expect(await screen.findByTestId('binder-card-tile-123-Normal')).toBeInTheDocument();
             expect(screen.queryByTestId('binder-card-tile-stub-rainbow')).not.toBeInTheDocument();
+        });
+
+        test('pitch comes from the name qualifier when there is no pitch field', async () => {
+            mockGetPublicBinder.mockResolvedValue({
+                data: {
+                    ownerName: 'Max',
+                    entries: [entry, { ...foilEntry, card: { ...foilEntry.card, name: 'Snatch (Blue)' } }],
+                },
+                error: null,
+            });
+            renderShared('?pitch=3');
+            expect(await screen.findByTestId('binder-card-tile-stub-rainbow')).toBeInTheDocument();
+            expect(screen.queryByTestId('binder-card-tile-123-Normal')).not.toBeInTheDocument();
         });
 
         test('search matches by name', async () => {
@@ -227,6 +241,21 @@ describe('SharedBinder', () => {
             mockGetBinderShare.mockResolvedValue({ data: { token }, error: null });
             window.sessionStorage.setItem('fabtrades.pendingBinderCopy', token);
             renderShared();
+            await waitFor(() => expect(window.sessionStorage.getItem('fabtrades.pendingBinderCopy')).toBeNull());
+            expect(mockCreateBinder).not.toHaveBeenCalled();
+        });
+
+        test('signing in as the owner with a pending copy does not copy', async () => {
+            window.sessionStorage.setItem('fabtrades.pendingBinderCopy', token);
+            let resolveShare;
+            mockGetBinderShare.mockReturnValue(new Promise((resolve) => { resolveShare = resolve; }));
+            const view = renderShared();
+            expect(await screen.findByText('Max’s Binder')).toBeInTheDocument();
+            mockUser = { id: 'owner' };
+            view.rerender(sharedTree());
+            await waitFor(() => expect(mockGetBinderShare).toHaveBeenCalled());
+            expect(mockCreateBinder).not.toHaveBeenCalled();
+            resolveShare({ data: { token }, error: null });
             await waitFor(() => expect(window.sessionStorage.getItem('fabtrades.pendingBinderCopy')).toBeNull());
             expect(mockCreateBinder).not.toHaveBeenCalled();
         });

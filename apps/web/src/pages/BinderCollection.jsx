@@ -90,6 +90,7 @@ import BinderFilters, {
 } from '../components/binder/BinderFilters.jsx';
 import { setOpenBinderId } from '../utils/openBinder.js';
 import { cardMatchesSearch, matchesBinderFilters } from '../utils/binderFilters.js';
+import { cardPitchValue } from '../utils/cardIdentity.js';
 import { useBinderFilters } from '../hooks/useBinderFilters.js';
 
 const FAB_CDN_BASE = 'https://d2wlb52bya4y8z.cloudfront.net/media/cards/large';
@@ -324,7 +325,8 @@ const BinderCollection = ({ isWanted = false }) => {
                 imageUrlFallback: tcgFallback && tcgFallback !== cdn ? tcgFallback : '',
                 collectorNumber,
                 rarity: live?.extRarity || stub.rarity || '',
-                pitch: live?.extPitchValue || stub.pitch || null,
+                // Name qualifier ("(Red)") first, like the rest of the app.
+                pitch: cardPitchValue(live || { name: stub.name, pitch: stub.pitch }) || null,
                 finish,
                 setName: live?._setName || stub.setName || '',
                 typeLine: [
