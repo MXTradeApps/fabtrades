@@ -232,6 +232,17 @@ const AppLinks = ({ onClick }) => (
     </Box>
 );
 
+// Store buttons under a short invitation. Sits in the sidebar nav, right after
+// the main sections, and in the phone More sheet.
+const GetTheApp = ({ onClick, sx }) => (
+    <Box sx={sx}>
+        <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary', mb: 0.75 }}>
+            Get the FABTrades Mobile App
+        </Typography>
+        <AppLinks onClick={onClick} />
+    </Box>
+);
+
 const Sidebar = ({ lastUpdatedTimestamp, pathname }) => (
     <Box
         component="aside"
@@ -264,6 +275,7 @@ const Sidebar = ({ lastUpdatedTimestamp, pathname }) => (
                     </List>
                 </Box>
             ))}
+            <GetTheApp sx={{ px: 1.25, pt: 2.5, pb: 0.5 }} />
             <SectionLabel>Help</SectionLabel>
             <List disablePadding>
                 {LEGAL_ITEMS.map((item) => (
@@ -274,7 +286,6 @@ const Sidebar = ({ lastUpdatedTimestamp, pathname }) => (
 
         <Box sx={{ px: 2, pt: 1.5, pb: 2, display: 'flex', flexDirection: 'column', gap: 1.5, borderTop: 1, borderColor: 'divider' }}>
             <CommunityLinks />
-            <AppLinks />
             <PriceStamp lastUpdatedTimestamp={lastUpdatedTimestamp} />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
                 <LoginButton variant="sidebar" />
@@ -405,7 +416,7 @@ const MoreSheet = ({ open, onClose, pathname, lastUpdatedTimestamp }) => {
                 </List>
                 <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     <CommunityLinks onClick={onClose} sx={{ px: 0.5 }} />
-                    <AppLinks onClick={onClose} />
+                    <GetTheApp onClick={onClose} sx={{ px: 0.5 }} />
                     <PriceStamp lastUpdatedTimestamp={lastUpdatedTimestamp} sx={{ px: 0.5 }} />
                 </Box>
             </Box>
