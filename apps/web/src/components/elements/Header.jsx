@@ -24,6 +24,7 @@ import { formatTimestamp } from "../../utils/helpers.js";
 import { useThemeMode } from "../../contexts/ThemeContext.jsx";
 import { shell } from "../../theme/tokens.js";
 import LoginButton from '../auth/LoginButton.jsx';
+import CommunityLinks from './CommunityLinks.jsx';
 import { APP_STORE_URL, PLAY_STORE_URL } from '../../utils/appLinks.js';
 
 // Grouped the way people think about the app: the trade at the table, the
@@ -272,6 +273,7 @@ const Sidebar = ({ lastUpdatedTimestamp, pathname }) => (
         </Box>
 
         <Box sx={{ px: 2, pt: 1.5, pb: 2, display: 'flex', flexDirection: 'column', gap: 1.5, borderTop: 1, borderColor: 'divider' }}>
+            <CommunityLinks />
             <AppLinks />
             <PriceStamp lastUpdatedTimestamp={lastUpdatedTimestamp} />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between' }}>
@@ -402,6 +404,7 @@ const MoreSheet = ({ open, onClose, pathname, lastUpdatedTimestamp }) => {
                     ))}
                 </List>
                 <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <CommunityLinks onClick={onClose} sx={{ px: 0.5 }} />
                     <AppLinks onClick={onClose} />
                     <PriceStamp lastUpdatedTimestamp={lastUpdatedTimestamp} sx={{ px: 0.5 }} />
                 </Box>
