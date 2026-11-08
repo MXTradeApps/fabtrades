@@ -33,9 +33,9 @@ const Trends = () => {
     const overlayGen = useRef(0);
 
     useDocumentHead({
-        title: 'Recent movers',
+        title: 'Trending Flesh and Blood cards',
         description:
-            'See recent Flesh and Blood card gainers and losers from observed catalog Lows.',
+            'Flesh and Blood cards rising and falling in price this week and this month, from TCGplayer and CardMarket Lows.',
         canonicalPath: '/trends',
     });
 
@@ -109,8 +109,8 @@ const Trends = () => {
             <Header lastUpdatedTimestamp={lastUpdatedTimestamp} />
             <Page>
                 <PageHeader
-                    title="Trends"
-                    subtitle="Recent movers across the catalog, from observed Lows."
+                    title="Trending"
+                    subtitle="Flesh and Blood cards with the biggest price moves."
                 />
 
                 <TextField

@@ -180,6 +180,34 @@ export const recentMovers = async (source, cardIds) => {
 };
 
 /**
+ * Trending page movers (`fab_trending_movers`) over [days]: risers by catalog
+ * Low, fallers by Market (CardMarket: Trend), ranked by percent or amount, with
+ * a price floor and per-row daily price history for sparklines. Pass [cardIds] to restrict to those Printings
+ * and [limit] null for every eligible row.
+ *
+ * @param {'tcgplayer'|'cardmarket'} source
+ * @param {{ days?: number, sort?: 'percent'|'amount', minPrice?: number, cardIds?: string[], limit?: number|null }} [opts]
+ */
+export const trendingMovers = async (source, {
+    days = 7,
+    sort = 'percent',
+    minPrice = 0,
+    cardIds,
+    limit = 10,
+} = {}) => {
+    const body = {
+        p_source: source,
+        p_days: days,
+        p_sort: sort,
+        p_min_price: minPrice,
+        p_limit: limit,
+    };
+    if (cardIds !== undefined) body.p_card_ids = cardIds;
+    const response = await restFetch('rpc/fab_trending_movers', {}, { method: 'POST', body });
+    return response.json();
+};
+
+/**
  * Daily catalog snapshots for one Printing (`fab_price_history`). Empty list
  * is success (no snapshots yet), not an error. Window clipping is client-side.
  *
