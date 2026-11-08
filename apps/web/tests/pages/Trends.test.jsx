@@ -6,7 +6,7 @@ import { PriceProvider } from '../../src/contexts/PriceContext.jsx';
 import Trends from '../../src/pages/Trends.jsx';
 import SetList from '../../src/pages/SetList.jsx';
 import Header from '../../src/components/elements/Header.jsx';
-import { recentMovers, printingRecentChanges } from '../../src/services/fabDb.js';
+import { recentMovers, trendingMovers, printingRecentChanges } from '../../src/services/fabDb.js';
 import { getBinderEntries } from '../../src/services/binder.js';
 import { pricedPrinting, otherCard, unpricedPrinting } from '../fixtures/printings.js';
 
@@ -63,6 +63,7 @@ jest.mock('../../src/hooks/useSets.js', () => ({
 
 jest.mock('../../src/services/fabDb.js', () => ({
     recentMovers: jest.fn(),
+    trendingMovers: jest.fn(),
     printingRecentChanges: jest.fn(),
 }));
 
@@ -83,6 +84,11 @@ const gainer = {
     latest_low: 6,
     percent_change: 0.5,
     amount_change: 2,
+    direction_total: 37,
+    price_kind: 'low',
+    start_price: 4,
+    latest_price: 6,
+    history: [4, 4.5, 5.2],
 };
 
 const wrap = (ui, route = '/trends') => render(
@@ -102,16 +108,17 @@ describe('Trends', () => {
         mockUser = null;
         mockOpenDetail.mockClear();
         recentMovers.mockReset();
+        trendingMovers.mockReset();
         printingRecentChanges.mockReset();
         getBinderEntries.mockReset();
-        recentMovers.mockResolvedValue([gainer]);
+        trendingMovers.mockResolvedValue([gainer]);
         printingRecentChanges.mockResolvedValue([]);
         getBinderEntries.mockResolvedValue({ data: { binder: [] }, error: null });
     });
 
-    test('navigation has Trends and Browse Sets, not Home', () => {
+    test('navigation has Trending and Browse Sets, not Home', () => {
         wrap(<Header />, '/');
-        expect(screen.getAllByText('Trends').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Trending').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Browse Sets').length).toBeGreaterThan(0);
         expect(screen.queryByText('Home')).not.toBeInTheDocument();
         expect(screen.getAllByText('Trade Calculator').length).toBeGreaterThan(0);
@@ -131,13 +138,13 @@ describe('Trends', () => {
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        expect(screen.getByRole('heading', { name: 'Trends' })).toBeInTheDocument();
-        await screen.findByText('Catalog-wide recent movers');
+        expect(screen.getByRole('heading', { name: 'Trending' })).toBeInTheDocument();
+        await screen.findByTestId('movers-list-gainer');
         expect(await screen.findByText('Awakening')).toBeInTheDocument();
         expect(screen.getByText(/The Hunted/)).toBeInTheDocument();
         expect(screen.queryByText('Welcome to Rathe')).not.toBeInTheDocument();
         expect(screen.queryByText('Your recent movers')).not.toBeInTheDocument();
-        expect(screen.getByText(/Observed catalog Lows/)).toBeInTheDocument();
+        expect(screen.getByText(/Rising uses the TCGplayer Low/)).toBeInTheDocument();
         expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
     });
 
@@ -147,21 +154,21 @@ describe('Trends', () => {
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        await screen.findByText('Catalog-wide recent movers');
+        await screen.findByTestId('movers-list-gainer');
         expect(await screen.findByRole('img', { name: 'Awakening' })).toBeInTheDocument();
-        expect(recentMovers).toHaveBeenCalledTimes(1);
+        expect(trendingMovers).toHaveBeenCalledTimes(1);
         fireEvent.change(screen.getByPlaceholderText('Search all cards…'), {
             target: { value: 'Awakening' },
         });
-        expect(screen.getByText('Catalog-wide recent movers').closest('[data-movers-hidden]')).toBeTruthy();
+        expect(screen.getByTestId('trend-controls').closest('[data-movers-hidden]')).toBeTruthy();
         expect(screen.getAllByText('Awakening').length).toBeGreaterThan(0);
         fireEvent.change(screen.getByPlaceholderText('Search all cards…'), {
             target: { value: '' },
         });
-        expect(screen.getByText('Catalog-wide recent movers').closest('[data-movers-hidden]')).toBeNull();
+        expect(screen.getByTestId('trend-controls').closest('[data-movers-hidden]')).toBeNull();
         expect(screen.queryByText('Welcome to Rathe')).not.toBeInTheDocument();
         expect(screen.getByRole('img', { name: 'Awakening' })).toBeInTheDocument();
-        expect(recentMovers).toHaveBeenCalledTimes(1);
+        expect(trendingMovers).toHaveBeenCalledTimes(1);
     });
 
     test('signed-out has catalog-wide and no owned section', async () => {
@@ -170,21 +177,24 @@ describe('Trends', () => {
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        await screen.findByText('Catalog-wide recent movers');
+        await screen.findByTestId('movers-list-gainer');
         expect(getBinderEntries).not.toHaveBeenCalled();
         expect(screen.queryByText('Your recent movers')).not.toBeInTheDocument();
     });
 
-    test('signed-in Binder entries stay catalog-wide only', async () => {
+    test('signed-in shows how your cards moved, with net change across copies', async () => {
         mockUser = { id: 'user-1' };
         getBinderEntries.mockResolvedValue({
             data: {
-                binder: [{ cardId: pricedPrinting._uniqueId, isWanted: false, quantity: 1 }],
+                binder: [
+                    { cardId: pricedPrinting._uniqueId, isWanted: false, quantity: 3 },
+                    { cardId: otherCard._uniqueId, isWanted: true, quantity: 1 },
+                ],
             },
             error: null,
         });
-        recentMovers.mockImplementation(async (source, ids) => {
-            if (ids) return [gainer];
+        trendingMovers.mockImplementation(async (_source, opts) => {
+            if (opts.cardIds) return [gainer];
             return [{ ...gainer, card_id: otherCard._uniqueId, name: 'Sink Below' }];
         });
         wrap(
@@ -192,27 +202,121 @@ describe('Trends', () => {
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        await screen.findByText('Catalog-wide recent movers');
-        expect(screen.queryByText('Your recent movers')).not.toBeInTheDocument();
         expect(await screen.findByText('Sink Below')).toBeInTheDocument();
-        expect(getBinderEntries).not.toHaveBeenCalled();
-        expect(recentMovers).toHaveBeenCalledWith('tcgplayer');
+        const strip = await screen.findByTestId('your-movers');
+        await waitFor(() => expect(within(strip).getByText(/1 of your cards moved this week/)).toBeInTheDocument());
+        expect(within(strip).getByText('+$6.00')).toBeInTheDocument();
+        expect(trendingMovers).toHaveBeenCalledWith('tcgplayer', expect.objectContaining({
+            cardIds: [pricedPrinting._uniqueId],
+            limit: null,
+        }));
+        fireEvent.click(within(strip).getByText('See them'));
+        expect(within(strip).getByText(/3 copies/)).toBeInTheDocument();
     });
 
-    test('movers sit in a desktop grid with card art from the catalog', async () => {
+    test('signed-out has no your-binders strip', async () => {
+        wrap(
+            <Routes>
+                <Route path="/trends" element={<Trends />} />
+            </Routes>,
+        );
+        await screen.findByTestId('movers-list-gainer');
+        expect(screen.queryByTestId('your-movers')).not.toBeInTheDocument();
+    });
+
+    test('rows show was → now with cents, percent and amount', async () => {
+        trendingMovers.mockResolvedValue([{
+            ...gainer, start_price: 1, latest_price: 4.2, percent_change: 3.2, amount_change: 3.2,
+        }]);
+        wrap(
+            <Routes>
+                <Route path="/trends" element={<Trends />} />
+            </Routes>,
+        );
+        const list = await screen.findByTestId('movers-list-gainer');
+        await within(list).findByText('$4.20');
+        expect(within(list).getByText(/was \$1\.00/)).toBeInTheDocument();
+        expect(within(list).getByText('+320%')).toBeInTheDocument();
+        expect(within(list).getByText('+$3.20')).toBeInTheDocument();
+        expect(within(list).getByTestId('mover-sparkline')).toBeInTheDocument();
+        expect(within(list).getAllByText('37 cards · by Low').length).toBeGreaterThan(0);
+    });
+
+    test('window, sort, and price floor controls refetch with those options', async () => {
+        wrap(
+            <Routes>
+                <Route path="/trends" element={<Trends />} />
+            </Routes>,
+        );
+        await screen.findByTestId('movers-list-gainer');
+        expect(trendingMovers).toHaveBeenLastCalledWith('tcgplayer', {
+            days: 7, sort: 'percent', minPrice: 0, limit: 10,
+        });
+        fireEvent.click(screen.getByRole('button', { name: '30 days' }));
+        await waitFor(() => expect(trendingMovers).toHaveBeenLastCalledWith('tcgplayer', {
+            days: 30, sort: 'percent', minPrice: 0, limit: 10,
+        }));
+        fireEvent.click(screen.getByRole('button', { name: 'By $' }));
+        fireEvent.click(screen.getByRole('button', { name: '$10+' }));
+        await waitFor(() => expect(trendingMovers).toHaveBeenLastCalledWith('tcgplayer', {
+            days: 30, sort: 'amount', minPrice: 10, limit: 10,
+        }));
+    });
+
+    test('filters come from the URL', async () => {
+        wrap(
+            <Routes>
+                <Route path="/trends" element={<Trends />} />
+            </Routes>,
+            '/trends?days=30&sort=amount&min=50',
+        );
+        await screen.findByTestId('movers-list-gainer');
+        expect(trendingMovers).toHaveBeenCalledWith('tcgplayer', {
+            days: 30, sort: 'amount', minPrice: 50, limit: 10,
+        });
+        expect(screen.getByRole('button', { name: '$50+' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    test('phone toggle switches between Rising and Falling', async () => {
+        trendingMovers.mockResolvedValue([
+            gainer,
+            {
+                ...gainer,
+                direction: 'loser',
+                price_kind: 'market',
+                card_id: otherCard._uniqueId,
+                name: 'Sink Below',
+                percent_change: -0.5,
+                amount_change: -2,
+            },
+        ]);
+        wrap(
+            <Routes>
+                <Route path="/trends" element={<Trends />} />
+            </Routes>,
+        );
+        await screen.findByText('Sink Below');
+        expect(screen.getByRole('button', { name: 'Rising' })).toHaveAttribute('aria-pressed', 'true');
+        fireEvent.click(screen.getByRole('button', { name: 'Falling' }));
+        expect(screen.getByRole('button', { name: 'Falling' })).toHaveAttribute('aria-pressed', 'true');
+        expect(within(screen.getByTestId('movers-list-loser')).getAllByText(/by Market/).length).toBeGreaterThan(0);
+        expect(screen.getByText(/Falling uses the TCGplayer Market price/)).toBeInTheDocument();
+    });
+
+    test('movers sit in Rising and Falling lists with card art from the catalog', async () => {
         wrap(
             <Routes>
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
         await screen.findByText('Awakening');
-        expect(screen.getByTestId('movers-grid-gainer')).toBeInTheDocument();
+        expect(screen.getByTestId('movers-list-gainer')).toBeInTheDocument();
         expect(screen.getByRole('img', { name: 'Awakening' })).toHaveAttribute(
             'src',
             'https://example.test/lightning.webp',
         );
-        expect(screen.getByText('Gainers')).toBeInTheDocument();
-        expect(screen.getByText(/Biggest recent Low increases/)).toBeInTheDocument();
+        expect(screen.getAllByText('Rising').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Falling').length).toBeGreaterThan(0);
     });
 
     test('row opens details from the catalog snapshot and stays on /trends', async () => {
@@ -226,20 +330,20 @@ describe('Trends', () => {
         expect(mockOpenDetail).toHaveBeenCalledWith(expect.objectContaining({
             _uniqueId: pricedPrinting._uniqueId,
         }));
-        expect(screen.getByText('Catalog-wide recent movers')).toBeInTheDocument();
+        expect(screen.getByTestId('trend-controls')).toBeInTheDocument();
     });
 
     test('empty and error states do not invent zeros and do not block search', async () => {
-        recentMovers.mockResolvedValueOnce([]);
+        trendingMovers.mockResolvedValueOnce([]);
         wrap(
             <Routes>
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        await screen.findByText(/No recent gainers on TCGplayer/);
+        await screen.findByText(/No cards rose this week on TCGplayer/);
         expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
 
-        recentMovers.mockRejectedValueOnce(new Error('offline'));
+        trendingMovers.mockRejectedValueOnce(new Error('offline'));
         wrap(
             <Routes>
                 <Route path="/trends" element={<Trends />} />
@@ -258,7 +362,7 @@ describe('Trends', () => {
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        await screen.findByText('Catalog-wide recent movers');
+        await screen.findByTestId('movers-list-gainer');
         const main = screen.getByRole('main');
         expect(within(main).queryByText('Want List')).not.toBeInTheDocument();
         expect(within(main).queryByText('Browse Sets')).not.toBeInTheDocument();
@@ -270,21 +374,20 @@ describe('Trends', () => {
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        await screen.findByText('Catalog-wide recent movers');
+        await screen.findByTestId('movers-list-gainer');
         fireEvent.change(screen.getByPlaceholderText('Search all cards…'), {
             target: { value: 'Sink' },
         });
         expect(screen.getByTestId('search-trend-boxes')).toBeInTheDocument();
         expect(screen.getAllByTestId('mover-box').length).toBeGreaterThan(0);
         expect(screen.getByText('Sink Below')).toBeInTheDocument();
-        expect(screen.getByText('Catalog-wide recent movers').closest('[data-movers-hidden]')).toBeTruthy();
-        expect(screen.queryByText('Gainers')).toBeTruthy();
-        expect(screen.getByText('Gainers').closest('[data-movers-hidden]')).toBeTruthy();
+        expect(screen.getByTestId('trend-controls').closest('[data-movers-hidden]')).toBeTruthy();
+        expect(screen.getByTestId('movers-list-gainer').closest('[data-movers-hidden]')).toBeTruthy();
         fireEvent.change(screen.getByPlaceholderText('Search all cards…'), {
             target: { value: '' },
         });
         expect(screen.queryByTestId('search-trend-boxes')).not.toBeInTheDocument();
-        expect(screen.getByText('Catalog-wide recent movers').closest('[data-movers-hidden]')).toBeNull();
+        expect(screen.getByTestId('trend-controls').closest('[data-movers-hidden]')).toBeNull();
     });
 
     test('search overlay percent and under-floor change show on boxes', async () => {
@@ -317,7 +420,7 @@ describe('Trends', () => {
                 <Route path="/trends" element={<Trends />} />
             </Routes>,
         );
-        await screen.findByText('Catalog-wide recent movers');
+        await screen.findByTestId('movers-list-gainer');
         fireEvent.change(screen.getByPlaceholderText('Search all cards…'), {
             target: { value: 'Awakening' },
         });
@@ -409,7 +512,9 @@ describe('SetList Browse Sets', () => {
         mockUser = null;
         mockOpenDetail.mockClear();
         recentMovers.mockReset();
+        trendingMovers.mockReset();
         printingRecentChanges.mockReset();
+        trendingMovers.mockRejectedValue(new Error('Trends is down'));
         recentMovers.mockRejectedValue(new Error('Trends is down'));
         printingRecentChanges.mockRejectedValue(new Error('overlay down'));
     });
@@ -426,6 +531,7 @@ describe('SetList Browse Sets', () => {
         expect(screen.queryByText('Catalog-wide recent movers')).not.toBeInTheDocument();
         expect(screen.queryByText('Your recent movers')).not.toBeInTheDocument();
         expect(recentMovers).not.toHaveBeenCalled();
+        expect(trendingMovers).not.toHaveBeenCalled();
     });
 
     test('catalog Printing search covers the set list; clear returns sets', () => {
@@ -478,6 +584,7 @@ describe('SetList Browse Sets', () => {
         });
         expect(screen.getByText('Sink Below')).toBeInTheDocument();
         expect(recentMovers).not.toHaveBeenCalled();
+        expect(trendingMovers).not.toHaveBeenCalled();
         expect(printingRecentChanges).not.toHaveBeenCalled();
         expect(screen.queryByTestId('search-trend-boxes')).not.toBeInTheDocument();
         expect(screen.queryByTestId('mover-box')).not.toBeInTheDocument();

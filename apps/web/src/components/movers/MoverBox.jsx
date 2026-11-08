@@ -1,24 +1,6 @@
 import { Box, ButtonBase, Typography } from '@mui/material';
 import { CardThumbnail } from '../ui/CardImagePreview.jsx';
-import { formatCurrency } from '../../utils/helpers.js';
-
-const formatMoverMoney = (amount, priceSource) => {
-    if (priceSource === 'cardmarket') {
-        return new Intl.NumberFormat('de-DE', {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-        }).format(amount);
-    }
-    return formatCurrency(amount);
-};
-
-const formatMoverPercent = (ratio) => {
-    const pct = ratio * 100;
-    const digits = Math.abs(pct) >= 10 ? 0 : 1;
-    return `${pct >= 0 ? '+' : ''}${pct.toFixed(digits)}%`;
-};
+import { formatMoverAmount, formatMoverMoney, formatMoverPercent } from '../../utils/moverFormat.js';
 
 const unpricedLabel = '—';
 
@@ -44,9 +26,7 @@ const MoverBox = ({
         && amountChange != null
         && percentChange !== 0;
     const changeColor = percentChange > 0 ? 'success.main' : 'error.main';
-    const amountLabel = showChange
-        ? `${amountChange >= 0 ? '+' : '−'}${formatMoverMoney(Math.abs(amountChange), priceSource)}`
-        : null;
+    const amountLabel = showChange ? formatMoverAmount(amountChange, priceSource) : null;
     const priced = currentLow != null && currentLow !== 0;
     const meta = [setName, finish, copies != null ? `${copies} copies` : null]
         .filter(Boolean)

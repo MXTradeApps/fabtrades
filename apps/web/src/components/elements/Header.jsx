@@ -47,7 +47,7 @@ const NAV_SECTIONS = [
     {
         label: 'Market',
         items: [
-            { label: 'Trends', short: 'Trends', to: '/trends', icon: TrendingUpRounded, match: (path) => path === '/trends' },
+            { label: 'Trending', short: 'Trending', to: '/trends', icon: TrendingUpRounded, match: (path) => path === '/trends' },
             { label: 'Browse Sets', short: 'Sets', to: '/sets', icon: StyleOutlined, match: (path) => path.startsWith('/sets') },
         ],
     },
