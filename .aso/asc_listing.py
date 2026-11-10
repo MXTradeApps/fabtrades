@@ -160,8 +160,38 @@ def set_text(app_id, version_id):
     info_locs = by_locale(call("GET", f"/appInfos/{info['id']}/appInfoLocalizations")["data"])
 
     for locale, text in CONFIG["localizations"].items():
-        if locale not in version_locs or locale not in info_locs:
-            sys.exit(f"Locale {locale} missing on the version or app info")
+        if locale not in info_locs:
+            info_locs[locale] = call(
+                "POST",
+                "/appInfoLocalizations",
+                {
+                    "data": {
+                        "type": "appInfoLocalizations",
+                        "attributes": {"locale": locale, "name": text["name"]},
+                        "relationships": {
+                            "appInfo": {"data": {"type": "appInfos", "id": info["id"]}}
+                        },
+                    }
+                },
+            )["data"]
+            print(f"Added app info language {locale}")
+        if locale not in version_locs:
+            version_locs[locale] = call(
+                "POST",
+                "/appStoreVersionLocalizations",
+                {
+                    "data": {
+                        "type": "appStoreVersionLocalizations",
+                        "attributes": {"locale": locale},
+                        "relationships": {
+                            "appStoreVersion": {
+                                "data": {"type": "appStoreVersions", "id": version_id}
+                            }
+                        },
+                    }
+                },
+            )["data"]
+            print(f"Added version language {locale}")
         call(
             "PATCH",
             f"/appInfoLocalizations/{info_locs[locale]['id']}",
@@ -254,7 +284,9 @@ def upload_screenshot(set_id, path):
 
 
 def set_screenshots(version_locs):
-    for locale in CONFIG["localizations"]:
+    # Languages without their own screenshots show the primary language's set,
+    # so only the primary locale (or any listed in screenshotLocales) is uploaded.
+    for locale in CONFIG.get("screenshotLocales", [CONFIG.get("primaryLocale", "en-US")]):
         loc_id = version_locs[locale]["id"]
         sets = {
             s["attributes"]["screenshotDisplayType"]: s
