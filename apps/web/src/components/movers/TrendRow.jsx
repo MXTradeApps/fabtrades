@@ -1,6 +1,7 @@
 import { Box, ButtonBase, Typography } from '@mui/material';
 import { CardThumbnail } from '../ui/CardImagePreview.jsx';
 import Sparkline from './Sparkline.jsx';
+import TcgplayerBuyLink from '../ui/TcgplayerBuyLink.jsx';
 import {
     formatMoverAmount,
     formatMoverMoney,
@@ -10,7 +11,11 @@ import {
 
 /**
  * One ranked Trending row: rank, art, full name (wraps, never truncates),
- * set · finish, "was → now", 7/30-day sparkline, and the change.
+ * set · finish, "was → now", a TCGplayer affiliate buy link when the
+ * printing has a product id, 7/30-day sparkline, and the change.
+ *
+ * The row renders as a div with role="button" (not a <button>) so the buy
+ * link can sit inside it; the link stops propagation so it never opens details.
  */
 const TrendRow = ({
     rank,
@@ -25,6 +30,8 @@ const TrendRow = ({
     amountChange,
     history,
     copies,
+    productId,
+    subTypeName,
     priceSource,
     onSelect,
 }) => {
@@ -36,6 +43,7 @@ const TrendRow = ({
 
     return (
         <ButtonBase
+            component="div"
             data-testid="trend-row"
             onClick={onSelect}
             sx={{
@@ -86,6 +94,9 @@ const TrendRow = ({
                         {formatMoverMoney(latestLow, priceSource)}
                     </Box>
                 </Typography>
+                <Box sx={{ display: 'flex', mt: 0.5 }}>
+                    <TcgplayerBuyLink productId={productId} subTypeName={subTypeName} />
+                </Box>
             </Box>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
                 <Sparkline values={sparklineValues(history, latestLow)} color={color} />
