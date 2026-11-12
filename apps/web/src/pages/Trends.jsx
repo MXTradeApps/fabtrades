@@ -172,6 +172,8 @@ const Trends = () => {
                                             currentLow={catalogLow(printing, priceSource)}
                                             percentChange={overlay?.percent_change}
                                             amountChange={overlay?.amount_change}
+                                            productId={printing.productId}
+                                            subTypeName={printing.subTypeName}
                                             onSelect={() => openPrinting(printing)}
                                             priceSource={priceSource}
                                         />

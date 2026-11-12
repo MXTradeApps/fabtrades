@@ -333,6 +333,41 @@ describe('Trends', () => {
         expect(screen.getByTestId('trend-controls')).toBeInTheDocument();
     });
 
+    test('mover rows link to TCGplayer through the affiliate link without opening details', async () => {
+        wrap(
+            <Routes>
+                <Route path="/trends" element={<Trends />} />
+            </Routes>,
+        );
+        const list = await screen.findByTestId('movers-list-gainer');
+        await within(list).findByText('Awakening');
+        const link = within(list).getByRole('link', { name: 'Buy from TCGplayer' });
+        const href = new URL(link.getAttribute('href'));
+        expect(href.origin + href.pathname).toBe('https://partner.tcgplayer.com/c/7492612/1780961/21018');
+        expect(href.searchParams.get('u')).toBe('https://www.tcgplayer.com/product/123');
+        expect(link).toHaveAttribute('target', '_blank');
+        expect(link.getAttribute('rel')).toContain('sponsored');
+        fireEvent.click(link);
+        expect(mockOpenDetail).not.toHaveBeenCalled();
+    });
+
+    test('search boxes link to TCGplayer for the matched printing', async () => {
+        wrap(
+            <Routes>
+                <Route path="/trends" element={<Trends />} />
+            </Routes>,
+        );
+        fireEvent.change(screen.getByPlaceholderText('Search all cards…'), {
+            target: { value: 'Awakening' },
+        });
+        const boxes = screen.getByTestId('search-trend-boxes');
+        const link = within(boxes).getAllByRole('link', { name: 'Buy from TCGplayer' })[0];
+        expect(new URL(link.getAttribute('href')).searchParams.get('u'))
+            .toBe('https://www.tcgplayer.com/product/123');
+        fireEvent.click(link);
+        expect(mockOpenDetail).not.toHaveBeenCalled();
+    });
+
     test('empty and error states do not invent zeros and do not block search', async () => {
         trendingMovers.mockResolvedValueOnce([]);
         wrap(

@@ -54,6 +54,16 @@ const artForRow = (row, cardIdLookup) => {
     };
 };
 
+/** TCGplayer product + finish for the affiliate buy link (catalog first, then the row). */
+const buyForRow = (row, cardIdLookup) => {
+    const printing = cardIdLookup?.[row.card_id];
+    const fromId = /^(\d+)-/.exec(String(row.card_id || ''))?.[1];
+    return {
+        productId: printing?.productId || fromId || null,
+        subTypeName: printing?.subTypeName || row.finish || null,
+    };
+};
+
 /** Trending filters live in the URL so a filtered view can be shared. */
 const useTrendFilters = () => {
     const [params, setParams] = useSearchParams();
@@ -336,6 +346,7 @@ const DirectionList = ({
                             percentChange={Number(row.percent_change)}
                             amountChange={Number(row.amount_change)}
                             history={row.history}
+                            {...buyForRow(row, cardIdLookup)}
                             priceSource={priceSource}
                             onSelect={() => onSelect(row)}
                         />
@@ -461,6 +472,7 @@ const YourMovers = ({ days, sort, priceSource, cardIdLookup, onSelect }) => {
                                 amountChange={Number(row.amount_change)}
                                 history={row.history}
                                 copies={copies[row.card_id]}
+                                {...buyForRow(row, cardIdLookup)}
                                 priceSource={priceSource}
                                 onSelect={() => onSelect(row)}
                             />

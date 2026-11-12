@@ -1,5 +1,6 @@
 import { Box, ButtonBase, Typography } from '@mui/material';
 import { CardThumbnail } from '../ui/CardImagePreview.jsx';
+import TcgplayerBuyLink from '../ui/TcgplayerBuyLink.jsx';
 import { formatMoverAmount, formatMoverMoney, formatMoverPercent } from '../../utils/moverFormat.js';
 
 const unpricedLabel = '—';
@@ -8,6 +9,8 @@ const unpricedLabel = '—';
  * Shared trend box for ranked movers and Trends search results.
  * Omit [percentChange] / [amountChange] to leave the change line off.
  * Unpriced current Low is an em dash, never $0.00 / €0.00.
+ * Pass [productId] to show the TCGplayer affiliate buy link; the box is a
+ * div with role="button" so the link can sit inside it.
  */
 const MoverBox = ({
     name,
@@ -19,6 +22,8 @@ const MoverBox = ({
     percentChange,
     amountChange,
     copies,
+    productId,
+    subTypeName,
     onSelect,
     priceSource,
 }) => {
@@ -34,6 +39,7 @@ const MoverBox = ({
 
     return (
         <ButtonBase
+            component="div"
             data-testid="mover-box"
             onClick={onSelect}
             sx={{
@@ -85,6 +91,9 @@ const MoverBox = ({
                 >
                     {meta}
                 </Typography>
+                <Box sx={{ display: 'flex', mt: 0.25 }}>
+                    <TcgplayerBuyLink productId={productId} subTypeName={subTypeName} />
+                </Box>
             </Box>
             <Box sx={{ textAlign: 'right', flexShrink: 0, ml: 0.5 }}>
                 <Typography sx={{ color: 'text.primary', fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.3, fontVariantNumeric: 'tabular-nums' }}>
