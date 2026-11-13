@@ -244,11 +244,16 @@ export function reconstructCardsFromURLData(cardData, cardGroups, cardIdLookup =
         return validCards;
       }
 
-      // Find the specific edition that matches the price, or use default
+      // The id in the link names the exact printing, so it wins. Price is only
+      // a fallback for legacy name-based links: prices move daily, and matching
+      // on price alone turned a shared foil into the Normal printing as soon
+      // as its price changed.
       let selectedEdition = cardGroup.editions[0]; // default
-      const matchingEdition = cardGroup.editions.find(edition => 
-        Math.abs(edition.cardPrice - cardPrice) < 0.01
-      );
+      const matchingEdition =
+        cardGroup.editions.find(edition => edition.uniqueId === cardIdentifier) ||
+        cardGroup.editions.find(edition =>
+          Math.abs(edition.cardPrice - cardPrice) < 0.01
+        );
       if (matchingEdition) {
         selectedEdition = matchingEdition;
       }
