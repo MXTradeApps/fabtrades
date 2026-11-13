@@ -8,6 +8,7 @@ import {
 } from "../utils/urlEncoding.js";
 import { normalizeTradeList } from "../utils/tradeItems.js";
 import { loadTradeDraft, saveTradeDraft } from "../utils/tradeDraft.js";
+import { trackEvent } from '../utils/analytics.js';
 
 export function useTradeState(cardGroups, cardIdLookup = {}) {
     const [haveList, setHaveList] = useState([]);
@@ -64,7 +65,7 @@ export function useTradeState(cardGroups, cardIdLookup = {}) {
         }).filter(Boolean);
     };
 
-    const addCard = (list, setList, cardNameOrObject, inputSetter) => {
+    const addCard = (side, list, setList, cardNameOrObject, inputSetter) => {
         // Handle both string (for backwards compatibility/manual input) and object (from autocomplete)
         let cardName, selectedCard;
         
@@ -95,6 +96,7 @@ export function useTradeState(cardGroups, cardIdLookup = {}) {
             };
             setList(updated);
             inputSetter("");
+            trackEvent('add_to_trade', { side });
             return;
         }
 
@@ -128,6 +130,7 @@ export function useTradeState(cardGroups, cardIdLookup = {}) {
                 }
             ]);
             inputSetter("");
+            trackEvent('add_to_trade', { side });
         }
     };
 
@@ -319,8 +322,8 @@ export function useTradeState(cardGroups, cardIdLookup = {}) {
         wantInput,
         setHaveInput,
         setWantInput,
-        addHaveCard: (name) => addCard(haveList, setHaveList, name || haveInput, setHaveInput),
-        addWantCard: (name) => addCard(wantList, setWantList, name || wantInput, setWantInput),
+        addHaveCard: (name) => addCard('have', haveList, setHaveList, name || haveInput, setHaveInput),
+        addWantCard: (name) => addCard('want', wantList, setWantList, name || wantInput, setWantInput),
         removeHaveCard: (index) => removeCard(haveList, setHaveList, index),
         removeWantCard: (index) => removeCard(wantList, setWantList, index),
         updateHaveCardQuantity: (i, q) => updateQuantity(haveList, setHaveList, i, q),
