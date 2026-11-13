@@ -221,6 +221,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
   bool _scanTourStarted = false;
 
+  /// Set when the camera was released because the app left the foreground, so
+  /// it is started again when the app comes back.
+  bool _resumeCameraOnForeground = false;
+
   /// Analytics label for where a locked/added scan result goes: `detail`,
   /// `trade_mine`/`trade_theirs` (see [TradeSideAnalytics]), or `binder`.
   String get _destinationLabel => switch (widget.destination) {
@@ -272,12 +276,20 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) return;
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
+      final controller = _controller;
+      if (controller == null || !controller.value.isInitialized) return;
+      // Releasing the camera clears [_controller], so resuming cannot tell from
+      // it that there is a camera to bring back; remember that here. Show the
+      // spinner meanwhile so the preview is not drawn from a disposed
+      // controller.
+      _resumeCameraOnForeground = true;
+      setState(() => _initializing = true);
       _disposeCamera();
-    } else if (state == AppLifecycleState.resumed) {
+    } else if (state == AppLifecycleState.resumed &&
+        _resumeCameraOnForeground) {
+      _resumeCameraOnForeground = false;
       _initCamera();
     }
   }
@@ -1192,7 +1204,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     }
     if (!_cameraAvailable || _controller == null) {
       return Container(
-        height: 220,
+        // A minimum, not a fixed height: a camera error adds up to three
+        // lines, which overflowed a fixed box.
+        constraints: const BoxConstraints(minHeight: 220),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
