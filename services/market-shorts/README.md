@@ -56,7 +56,7 @@ The video then opens on a card with the Flesh and Blood logo, the FAB Trades log
 
 `npm run thumbnail -- data/week-YYYY-MM-DD.json` saves the same card as `out/week-YYYY-MM-DD-thumbnail.png`.
 
-The Flesh and Blood logo is not in the repo. Put the official logo file in `public/` as `fab-logo.png` (or `.svg` / `.webp`) and it is used automatically. Without it the card shows "FLESH AND BLOOD" in plain text.
+The Flesh and Blood logo on the card is `public/fab-logo.png`. Replace that file to change it (a larger or `.svg` version will look sharper).
 
 Without a `thumbnail` block the video opens on the percent hook instead.
 

@@ -32,9 +32,9 @@ const Thumbnail: React.FC<{w: Week; dur: number}> = ({w, dur}) => {
   return (
     <Scene dur={dur} fadeIn={false}>
       <div style={{position: 'absolute', inset: 0, transform: `translate(${shake}px, ${shake * 0.6}px)`}}>
-        <div style={{position: 'absolute', top: 70, left: 70, width: 760, height: 250, display: 'flex', alignItems: 'center', opacity: logoIn, transform: `translateY(${(1 - logoIn) * -40}px)`}}>
+        <div style={{position: 'absolute', top: 45, left: 215, width: 650, height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: logoIn, transform: `translateY(${(1 - logoIn) * -40}px)`}}>
           {w.fabLogo ? (
-            <Img src={staticFile(w.fabLogo)} style={{maxWidth: '100%', maxHeight: '100%', objectFit: 'contain'}} />
+            <Img src={staticFile(w.fabLogo)} style={{width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 14px 30px rgba(0,0,0,.6))'}} />
           ) : (
             <div>
               <div style={{fontSize: 74, fontWeight: 900, letterSpacing: 3, lineHeight: 1, whiteSpace: 'nowrap'}}>FLESH AND BLOOD</div>
@@ -42,7 +42,7 @@ const Thumbnail: React.FC<{w: Week; dur: number}> = ({w, dur}) => {
             </div>
           )}
         </div>
-        <Img src={staticFile('icon.png')} style={{position: 'absolute', top: 70, right: 70, width: 130, height: 130, borderRadius: 28, boxShadow: '0 16px 40px rgba(0,0,0,.6)', transform: `scale(${logoIn})`}} />
+        <Img src={staticFile('icon.png')} style={{position: 'absolute', top: 60, right: 50, width: 130, height: 130, borderRadius: 28, boxShadow: '0 16px 40px rgba(0,0,0,.6)', transform: `scale(${logoIn})`}} />
         <div style={{position: 'absolute', top: 380, left: 0, right: 0, display: 'flex', justifyContent: 'center'}}>
           <CardArt m={m} width={880} from={2.2} />
         </div>

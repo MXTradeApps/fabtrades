@@ -70,8 +70,8 @@ for (const [i, card] of week.cards.entries()) {
   card.img = saved;
 }
 
-// Flesh and Blood logo for the opening card: drop the official file in public/ as fab-logo.png
-// (or .svg / .webp). Without it the card shows plain text instead.
+// Flesh and Blood logo for the opening card: public/fab-logo.png (or .svg / .webp).
+// Without it the card shows plain text instead.
 week.fabLogo = ['fab-logo.png', 'fab-logo.svg', 'fab-logo.webp'].find((f) => fs.existsSync(path.join(here, 'public', f))) ?? null;
 
 const browserExecutable = process.env.CHROME_PATH || undefined;
