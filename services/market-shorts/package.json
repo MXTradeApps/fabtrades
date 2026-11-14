@@ -1,0 +1,26 @@
+{
+  "name": "fabtrades-market-shorts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Animated FAB Market Movers Shorts, rendered with Remotion from weekly price data",
+  "scripts": {
+    "movers": "node fetch-movers.mjs",
+    "script": "node script.mjs",
+    "short": "node render.mjs",
+    "studio": "remotion studio src/index.ts",
+    "test": "node --test",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.543",
+    "@remotion/cli": "4.0.543",
+    "@remotion/renderer": "4.0.543",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.543"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "7.0.2"
+  }
+}
