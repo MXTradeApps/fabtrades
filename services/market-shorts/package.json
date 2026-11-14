@@ -9,7 +9,8 @@
     "short": "node render.mjs",
     "studio": "remotion studio src/index.ts",
     "test": "node --test",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "thumbnail": "node render.mjs --thumbnail"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.543",

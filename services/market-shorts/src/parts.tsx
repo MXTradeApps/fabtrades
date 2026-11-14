@@ -70,19 +70,32 @@ export const Chart: React.FC<{series: number[]; color: string; delay: number; w?
   );
 };
 
-export const Header: React.FC<{week: string; index?: number; count?: number}> = ({week, index, count}) => (
-  <div style={{position: 'absolute', top: 70, left: 70, right: 70, display: 'flex', alignItems: 'center', gap: 22, fontSize: 34, fontWeight: 600, color: C.dim, fontFamily: FONT}}>
-    <Img src={staticFile('icon.png')} style={{width: 64, height: 64, borderRadius: 14}} />
-    <div style={{flex: 1, whiteSpace: 'nowrap', fontSize: count ? 30 : 34}}><b style={{color: C.text}}>FAB Market Movers</b> · {week}</div>
-    {count ? (
-      <div style={{display: 'flex', gap: 10}}>
-        {Array.from({length: count}).map((_, i) => (
-          <div key={i} style={{width: i === index ? 34 : 14, height: 14, borderRadius: 7, background: i === index ? C.accent : C.line}} />
-        ))}
-      </div>
-    ) : null}
-  </div>
-);
+/**
+ * Title bar that stays put for the whole video. `pos` is the active slide as a fraction
+ * (1.5 is halfway between the second and third slide), so the marker glides between dots.
+ */
+export const Header: React.FC<{week: string; count?: number; pos?: number; dots?: number}> = ({week, count = 0, pos = 0, dots = 1}) => {
+  const STEP = 26, DOT = 14, PILL = 36;
+  const frac = pos - Math.floor(pos);
+  const stretch = Math.sin(Math.PI * frac); // 0 at rest, 1 mid-move
+  return (
+    <div style={{position: 'absolute', top: 70, left: 70, right: 70, display: 'flex', alignItems: 'center', gap: 22, fontSize: 30, fontWeight: 600, color: C.dim, fontFamily: FONT}}>
+      <Img src={staticFile('icon.png')} style={{width: 64, height: 64, borderRadius: 14}} />
+      <div style={{flex: 1, whiteSpace: 'nowrap'}}><b style={{color: C.text}}>FAB Market Movers</b> · {week}</div>
+      {count ? (
+        <div style={{position: 'relative', width: (count - 1) * STEP + PILL, height: DOT, opacity: dots}}>
+          {Array.from({length: count}).map((_, i) => (
+            <div key={i} style={{position: 'absolute', left: i * STEP + (PILL - DOT) / 2, width: DOT, height: DOT, borderRadius: DOT / 2, background: C.line}} />
+          ))}
+          <div style={{
+            position: 'absolute', left: pos * STEP - stretch * 6, top: -stretch * 3, width: PILL + stretch * 12, height: DOT + stretch * 6,
+            borderRadius: DOT, background: C.accent, boxShadow: `0 0 ${10 + stretch * 26}px ${C.accent}`,
+          }} />
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 /** Soft moving glow behind everything so the frame is never static. */
 export const Backdrop: React.FC<{color: string}> = ({color}) => {
@@ -90,8 +103,8 @@ export const Backdrop: React.FC<{color: string}> = ({color}) => {
   const a = frame / 60;
   return (
     <div style={{position: 'absolute', inset: 0, background: C.bg, overflow: 'hidden'}}>
-      <div style={{position: 'absolute', width: 1100, height: 1100, borderRadius: '50%', left: 200 + Math.cos(a) * 160, top: 60 + Math.sin(a) * 120, background: `radial-gradient(circle, ${color}33, transparent 62%)`}} />
-      <div style={{position: 'absolute', width: 900, height: 900, borderRadius: '50%', left: -300 - Math.cos(a) * 100, top: 1000 + Math.sin(a * 0.7) * 140, background: `radial-gradient(circle, ${C.accent}22, transparent 62%)`}} />
+      <div style={{position: 'absolute', width: 1100, height: 1100, borderRadius: '50%', left: 200 + Math.cos(a) * 160, top: 60 + Math.sin(a) * 120, opacity: 0.2, background: `radial-gradient(circle, ${color}, transparent 62%)`}} />
+      <div style={{position: 'absolute', width: 900, height: 900, borderRadius: '50%', left: -300 - Math.cos(a) * 100, top: 1000 + Math.sin(a * 0.7) * 140, opacity: 0.13, background: `radial-gradient(circle, ${C.accent}, transparent 62%)`}} />
     </div>
   );
 };

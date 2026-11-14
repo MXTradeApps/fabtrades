@@ -12,6 +12,10 @@ export type Mover = {
 export type Week = {
   week: string; // "Nov 7 to Nov 14, 2026"
   hook?: {line: string; sub?: string}; // optional override for the opening line
+  // Opening card that doubles as the thumbnail: your words in big type over a card's art.
+  // `card` is which card's art to use (0 = first), `highlight` which line gets the accent colour (default: last).
+  thumbnail?: {lines: string[]; highlight?: number; card?: number};
+  fabLogo?: string | null; // Flesh and Blood logo under public/, set by render.mjs when the file exists
   cta?: {question: string; url: string; foot: string};
   cards: Mover[];
   audio?: string | null; // voiceover file under public/, set by render.mjs
@@ -44,7 +48,7 @@ export const totalFrames = (w: Week) => layout(w).total;
 
 export const C = {
   bg: '#131110', panel: '#221E1B', line: '#3A342F', text: '#F4EFE9',
-  dim: '#B9AEA2', faint: '#8A8077', up: '#3FB984', down: '#E5604D', accent: '#D8834A',
+  dim: '#B9AEA2', faint: '#8A8077', up: '#3FB984', down: '#E5604D', accent: '#D8834A', accentText: '#F2B27E',
 };
 export const FONT = "Inter, -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
 export const pct = (m: Mover) => Math.round(((m.new - m.old) / m.old) * 100);

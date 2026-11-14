@@ -2,6 +2,7 @@
 //   node render.mjs data/sample-week.json                -> out/sample-week.mp4
 //   node render.mjs data/sample-week.json voice.m4a      -> same, with your voiceover, and each
 //                                                           scene starting when you start that part
+//   node render.mjs data/week.json --thumbnail           -> the opening card as a PNG, for the thumbnail
 //   node render.mjs data/week.json --still 60            -> one PNG frame, for a quick look
 // Card art is downloaded into public/cards first. A card whose image can't be fetched
 // renders with an empty art slot instead of failing the whole video.
@@ -20,7 +21,8 @@ if (!dataPath) {
   console.error('Usage: node render.mjs <week.json> [voiceover.m4a|.mp3|.wav] [--still <frame>]');
   process.exit(1);
 }
-const stillAt = args.includes('--still') ? Number(args[args.indexOf('--still') + 1] ?? 0) : null;
+const thumbnail = args.includes('--thumbnail');
+let stillAt = args.includes('--still') ? Number(args[args.indexOf('--still') + 1] ?? 0) : null;
 const week = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
 // Voiceover: copy it next to the template and read scene start times from its pauses.
@@ -68,14 +70,19 @@ for (const [i, card] of week.cards.entries()) {
   card.img = saved;
 }
 
+// Flesh and Blood logo for the opening card: drop the official file in public/ as fab-logo.png
+// (or .svg / .webp). Without it the card shows plain text instead.
+week.fabLogo = ['fab-logo.png', 'fab-logo.svg', 'fab-logo.webp'].find((f) => fs.existsSync(path.join(here, 'public', f))) ?? null;
+
 const browserExecutable = process.env.CHROME_PATH || undefined;
 const serveUrl = await bundle({entryPoint: path.join(here, 'src', 'index.ts')});
 const composition = await selectComposition({serveUrl, id: 'MarketMovers', inputProps: week, browserExecutable});
 const base = path.join(here, 'out', path.basename(dataPath, '.json'));
 fs.mkdirSync(path.dirname(base), {recursive: true});
 
+if (thumbnail) stillAt = Math.max(0, Math.min(45, Math.round((week.timing?.cards?.[0] ?? 3.5) * 30) - 10));
 if (stillAt !== null) {
-  const output = `${base}-f${stillAt}.png`;
+  const output = thumbnail ? `${base}-thumbnail.png` : `${base}-f${stillAt}.png`;
   await renderStill({composition, serveUrl, inputProps: week, frame: stillAt, output, browserExecutable});
   console.log(output);
 } else {
