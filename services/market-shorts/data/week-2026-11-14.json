@@ -1,0 +1,55 @@
+{
+  "week": "Nov 7 to Nov 14, 2026",
+  "source": "TCGplayer market price (actual sales), tracked daily by FAB Trades",
+  "cards": [
+    {
+      "tag": "BIGGEST RISER",
+      "name": "Perforate (Yellow)",
+      "printing": "The Hunted · Majestic · Non-foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/612677_in_1000x1000.jpg",
+      "old": 5.76,
+      "new": 9.72,
+      "series": [2.24, 2.39, 2.47, 2.52, 2.59, 3.36, 3.34, 3.34, 3.34, 3.55, 3.55, 3.55, 3.92, 4.06, 4.11, 4.11, 4.25, 5.14, 5.26, 5.68, 5.68, 5.76, 5.76, 5.76, 6.53, 6.94, 7.09, 8.14, 9.72, 9.72, 9.72]
+    },
+    {
+      "tag": "RISER",
+      "name": "Kabuto of Imperial Authority",
+      "printing": "The Hunted · Legendary · Rainbow Foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/611174_in_1000x1000.jpg",
+      "old": 72.41,
+      "new": 92.05,
+      "series": [64.31, 65.07, 65.25, 65.25, 65.25, 65.96, 65.27, 65.31, 65.31, 65.95, 65.95, 69.56, 72.41, 72.41, 72.41, 72.41, 72.41, 72.41, 72.41, 72.41, 72.41, 72.41, 72.41, 72.41, 75.06, 81.72, 83.02, 86.65, 86.65, 88.25, 92.05]
+    },
+    {
+      "tag": "RISER",
+      "name": "Stonewall Gauntlet",
+      "printing": "Part the Mistveil · Legendary · Rainbow Foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/551718_in_1000x1000.jpg",
+      "old": 27.95,
+      "new": 34.66,
+      "series": [17.48, 17.48, 17.48, 17.48, 17.81, 18.07, 18.07, 18.28, 18.76, 18.76, 18.76, 19.77, 21.36, 22.95, 23.72, 25.71, 25.71, 25.71, 25.71, 27.2, 27.2, 27.2, 27.2, 27.95, 29.41, 29.91, 30.72, 32.46, 34.66, 34.66, 34.66]
+    },
+    {
+      "tag": "FALLER",
+      "name": "Ripple Away (Blue)",
+      "printing": "Heavy Hitters · Majestic · Non-foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/533602_in_1000x1000.jpg",
+      "old": 45.88,
+      "new": 33.22,
+      "series": [50.02, 49.79, 49.79, 50.26, 51.06, 52.26, 52.26, 52.26, 52.26, 52.26, 52.26, 52.26, 50.84, 49.05, 46.77, 46.77, 46.77, 46.77, 46.77, 46.77, 45.88, 45.88, 45.88, 45.88, 44.84, 43, 42.2, 40.44, 36.11, 35.22, 33.22]
+    },
+    {
+      "tag": "BIGGEST FALLER",
+      "name": "Mastery Pack Assassin Booster Box",
+      "printing": "Sealed product",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/711356_in_1000x1000.jpg",
+      "old": 126.52,
+      "new": 79.92,
+      "series": [199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 199.69, 144.84, 144.84, 144.84, 144.84, 144.84, 144.84, 144.84, 126.52, 126.52, 126.52, 126.52, 126.52, 126.52, 93.98, 79.92]
+    }
+  ],
+  "hook": {
+    "line": "This $6 card just jumped",
+    "sub": "and a brand new box lost 37%"
+  }
+}
