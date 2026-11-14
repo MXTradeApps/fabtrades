@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:fabtrades/app/widgets.dart';
 import 'package:fabtrades/core/data/set_logo_cache.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// ImageProvider that never produces a frame (simulates a disk/memory miss).

@@ -5,7 +5,7 @@ import 'package:fabtrades/core/models/account.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/auth/sign_in_sheet.dart';
 import 'package:fabtrades/features/settings/account_section.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

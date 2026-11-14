@@ -3,7 +3,7 @@ import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/search/home_dashboard.dart';
 import 'package:fabtrades/features/search/search_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fixtures.dart';

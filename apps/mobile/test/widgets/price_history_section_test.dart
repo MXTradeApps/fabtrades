@@ -6,7 +6,7 @@ import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/card_detail/card_detail_screen.dart';
 import 'package:fabtrades/features/card_detail/price_history_section.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fixtures.dart';

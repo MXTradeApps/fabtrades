@@ -75,6 +75,10 @@ dependencies:
   # docs/PRICE_ALERTS.md.
   firebase_core: ^5.0.0
   firebase_messaging: ^17.0.1
+  # Material and Cupertino widgets. Flutter moved them out of the SDK into
+  # these packages; package:flutter/material.dart is deprecated since 3.47.
+  material_ui: ^1.11.0
+  cupertino_ui: ^1.1.6
 
 dev_dependencies:
   flutter_test:

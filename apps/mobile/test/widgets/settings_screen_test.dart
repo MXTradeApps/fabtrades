@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fabtrades/core/models/app_settings.dart';
 import 'package:fabtrades/core/providers.dart';

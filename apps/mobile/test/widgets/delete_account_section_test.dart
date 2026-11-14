@@ -3,7 +3,7 @@ import 'package:fabtrades/core/models/account.dart';
 import 'package:fabtrades/core/models/subscription_status.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/settings/account_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

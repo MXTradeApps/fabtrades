@@ -3,7 +3,7 @@
 // The binder math is covered by confirm_trade_test.dart. These drive the screen
 // itself: the confirm sheet and its checkboxes, what is saved to history, what
 // happens to the binder and the draft, and what the user is told.
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
