@@ -31,3 +31,9 @@ test('only one printing per card name', () => {
   const picked = pickMovers([row('Same', steady(10, 30)), row('Same', steady(12, 30))]);
   assert.equal(picked.length, 1);
 });
+
+test('two sales in a week is still too thin', () => {
+  const twoSales = [...Array(24).fill(51.46), ...Array(6).fill(42.94), 33.66];
+  const picked = pickMovers([row('Thin cold foil', twoSales), row('Real faller', steady(50, 30))]);
+  assert.deepEqual(picked.map((c) => c.name), ['Real faller']);
+});

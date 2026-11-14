@@ -1,5 +1,5 @@
 // Writes the voiceover script for a weekly data file.
-//   node script.mjs data/week-2026-11-14.json   -> out/week-2026-11-14-script.md
+//   node script.mjs data/sample-week.json   -> out/sample-week-script.md
 // One paragraph per scene. Pause for a breath between paragraphs: the render uses those
 // pauses to start each card's animation when you start talking about it.
 import fs from 'node:fs';

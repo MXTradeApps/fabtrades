@@ -40,9 +40,25 @@ If it can't find enough clear pauses it stops with a message instead of renderin
 
 ## What gets picked
 
-`pick-movers.mjs` takes the biggest weekly moves in TCGplayer market price (real sales, not listings) and keeps only real ones: $5 or more a week ago, and at least two separate price changes inside the week. A single sale on a thinly traded promo moves the price once and is dropped. Sealed product (boxes, packs, decks) and art cards are left out, so every pick is a single card. Default is 3 risers and 2 fallers.
+`pick-movers.mjs` takes the biggest weekly moves in TCGplayer market price (real sales, not listings) and keeps only real ones: $5 or more a week ago, and at least three separate price changes inside the week. A single sale on a thinly traded promo moves the price once and is dropped. Sealed product (boxes, packs, decks) and art cards are left out, so every pick is a single card. Default is 3 risers and 2 fallers.
 
 Edit the data file freely before rendering: reorder or swap cards, or change the opening with `"hook": {"line": "This $6 card just jumped", "sub": "and one staple lost a quarter of its value"}`. An optional `"why"` on a card shows as a one-line caption under the chart.
+
+## Opening card and thumbnail
+
+Add your own words for the opening card to the data file:
+
+```json
+"thumbnail": { "lines": ["Perforate", "up 69%", "in one week!"], "card": 0, "highlight": 2 }
+```
+
+The video then opens on a card with the Flesh and Blood logo, the FAB Trades logo top right, that card's art, and your words in big outlined type over it. `card` is which card's art to use (0 is the first) and `highlight` is the line that gets the accent colour (the last one by default). Each line is sized to fit, so shorter lines come out bigger.
+
+`npm run thumbnail -- data/week-YYYY-MM-DD.json` saves the same card as `out/week-YYYY-MM-DD-thumbnail.png`.
+
+The Flesh and Blood logo on the card is `public/fab-logo.png`. Replace that file to change it (a larger or `.svg` version will look sharper).
+
+Without a `thumbnail` block the video opens on the percent hook instead.
 
 ## Card art
 

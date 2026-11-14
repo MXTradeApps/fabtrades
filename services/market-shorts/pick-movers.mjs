@@ -10,10 +10,10 @@ export const changes = (series, days) => {
 
 /**
  * rows: [{id, name, printing, img, series}] where series is daily market price, oldest first.
- * Keeps only real moves: at least `minPrice` a week ago and at least `minChanges` separate
+ * Keeps only real moves: at least `minPrice` a week ago and at least `minChanges` (default 3) separate
  * price changes inside the week. A single sale on a thinly traded card moves once and is dropped.
  */
-export function pickMovers(rows, {risers = 3, fallers = 2, minPrice = 5, minChanges = 2} = {}) {
+export function pickMovers(rows, {risers = 3, fallers = 2, minPrice = 5, minChanges = 3} = {}) {
   const scored = rows
     .map((r) => {
       const series = r.series.filter((v) => Number.isFinite(v));
