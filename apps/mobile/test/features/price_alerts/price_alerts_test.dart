@@ -5,7 +5,7 @@ import 'package:fabtrades/core/models/price_alert.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/card_detail/card_detail_screen.dart';
 import 'package:fabtrades/features/price_alerts/price_alerts_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fixtures.dart';

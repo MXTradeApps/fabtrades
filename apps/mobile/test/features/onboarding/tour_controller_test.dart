@@ -3,7 +3,7 @@ import 'package:fabtrades/core/models/trade.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/onboarding/onboarding_keys.dart';
 import 'package:fabtrades/features/onboarding/tour_controller.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

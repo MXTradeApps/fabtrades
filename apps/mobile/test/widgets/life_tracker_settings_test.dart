@@ -1,7 +1,7 @@
 import 'package:fabtrades/features/life_tracker/life_tracker_models.dart';
 import 'package:fabtrades/features/life_tracker/life_tracker_provider.dart';
 import 'package:fabtrades/features/life_tracker/tracker_settings_sheet.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/harness.dart';

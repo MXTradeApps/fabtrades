@@ -10,7 +10,7 @@ import 'package:fabtrades/features/card_detail/card_detail_screen.dart';
 import 'package:fabtrades/features/onboarding/onboarding_repository.dart';
 import 'package:fabtrades/features/search/mover_box.dart';
 import 'package:fabtrades/features/search/search_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

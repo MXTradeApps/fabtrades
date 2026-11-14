@@ -33,9 +33,9 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^2.0.0
   supabase_flutter: ^2.15.4
-  cached_network_image: ^3.4.1
+  cached_network_image: ^4.0.7
   flutter_cache_manager: ^3.4.1
   intl: ^0.20.3
   fl_chart: ^1.2.0
@@ -43,15 +43,15 @@ dependencies:
   shared_preferences: ^2.5.5
   camera: ^0.12.1
   google_mlkit_text_recognition: ^0.17.1
-  google_fonts: ^8.1.0
+  google_fonts: ^9.0.0
   package_info_plus: ^10.2.1
   url_launcher: ^6.3.2
   camera_android: ^0.10.11
   # RevenueCat: FABTrades Pro subscriptions. purchases_ui_flutter provides the
   # remotely-configured Paywall and Customer Center; keep both on the same
   # version, they ship in lockstep.
-  purchases_flutter: ^10.18.1
-  purchases_ui_flutter: ^10.18.1
+  purchases_flutter: ^11.0.2
+  purchases_ui_flutter: ^11.0.2
   # Native Sign in with Apple. The browser OAuth flow also works, but App Review
   # expects the system sheet, and it is the only provider Apple requires us to
   # offer once any third-party sign-in exists (guideline 4.8).
@@ -75,6 +75,10 @@ dependencies:
   # docs/PRICE_ALERTS.md.
   firebase_core: ^5.0.0
   firebase_messaging: ^17.0.1
+  # Material and Cupertino widgets. Flutter moved them out of the SDK into
+  # these packages; package:flutter/material.dart is deprecated since 3.47.
+  material_ui: ^1.11.0
+  cupertino_ui: ^1.1.6
 
 dev_dependencies:
   flutter_test:

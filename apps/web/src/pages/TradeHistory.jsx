@@ -346,7 +346,7 @@ const TradeHistory = () => {
                 <DialogTitle>Delete Trade?</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        "{confirmDeleteTrade?.name}" will be permanently removed from your history.
+                        "{confirmDeleteTrade ? tradeDisplayName(confirmDeleteTrade) : ''}" will be permanently removed from your history.
                     </Typography>
                 </DialogContent>
                 <DialogActions>

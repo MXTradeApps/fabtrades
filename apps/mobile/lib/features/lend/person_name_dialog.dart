@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Prompts for an optional person name. Returns the entered string (possibly
 /// empty for "no name"), or null if the dialog was cancelled/dismissed.
