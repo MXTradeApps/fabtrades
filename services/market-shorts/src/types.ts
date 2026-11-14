@@ -50,7 +50,7 @@ export const C = {
   bg: '#131110', panel: '#221E1B', line: '#3A342F', text: '#F4EFE9',
   dim: '#B9AEA2', faint: '#8A8077', up: '#3FB984', down: '#E5604D', accent: '#D8834A', accentText: '#F2B27E',
 };
-export const FONT = "Inter, -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
+export const FONT = "'Inter Shorts', Inter, -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
 export const pct = (m: Mover) => Math.round(((m.new - m.old) / m.old) * 100);
 export const usd = (n: number) => '$' + (n >= 100 ? Math.round(n).toLocaleString('en-US') : n.toFixed(2));
 export const round$ = (n: number) => '$' + Math.round(n);

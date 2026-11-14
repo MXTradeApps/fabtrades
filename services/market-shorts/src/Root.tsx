@@ -1,4 +1,5 @@
 import React from 'react';
+import './fonts';
 import {Composition} from 'remotion';
 import {MarketMovers} from './MarketMovers';
 import {FPS, totalFrames, Week} from './types';

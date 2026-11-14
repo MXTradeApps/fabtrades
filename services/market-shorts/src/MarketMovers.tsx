@@ -49,7 +49,7 @@ const Thumbnail: React.FC<{w: Week; dur: number}> = ({w, dur}) => {
         <div style={{position: 'absolute', top: 380, left: 30, right: 30, height: 1228, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6}}>
           {t.lines.map((line, i) => {
             const pop = spring({frame: frame - 5 - i * 5, fps, config: {damping: 10, mass: 0.6}});
-            const size = Math.min(200, 1000 / (0.66 * Math.max(line.length, 4)));
+            const size = Math.min(200, 940 / (0.7 * Math.max(line.length, 4))); // keeps the widest line inside the frame
             return (
               <div key={i} style={{
                 fontSize: size, fontWeight: 900, fontStyle: 'italic', lineHeight: 1.02, letterSpacing: -2, textTransform: 'uppercase', whiteSpace: 'nowrap',
