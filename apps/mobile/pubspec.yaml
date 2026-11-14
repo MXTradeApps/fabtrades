@@ -50,8 +50,8 @@ dependencies:
   # RevenueCat: FABTrades Pro subscriptions. purchases_ui_flutter provides the
   # remotely-configured Paywall and Customer Center; keep both on the same
   # version, they ship in lockstep.
-  purchases_flutter: ^10.18.1
-  purchases_ui_flutter: ^10.18.1
+  purchases_flutter: ^11.0.2
+  purchases_ui_flutter: ^11.0.2
   # Native Sign in with Apple. The browser OAuth flow also works, but App Review
   # expects the system sheet, and it is the only provider Apple requires us to
   # offer once any third-party sign-in exists (guideline 4.8).
