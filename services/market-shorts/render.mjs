@@ -1,6 +1,6 @@
 // Renders a Market Movers Short from a weekly data file.
-//   node render.mjs data/week-2026-11-14.json            -> out/week-2026-11-14.mp4
-//   node render.mjs data/week-2026-11-14.json voice.m4a  -> same, with your voiceover, and each
+//   node render.mjs data/sample-week.json                -> out/sample-week.mp4
+//   node render.mjs data/sample-week.json voice.m4a      -> same, with your voiceover, and each
 //                                                           scene starting when you start that part
 //   node render.mjs data/week.json --still 60            -> one PNG frame, for a quick look
 // Card art is downloaded into public/cards first. A card whose image can't be fetched

@@ -2,7 +2,7 @@ import React from 'react';
 import {Composition} from 'remotion';
 import {MarketMovers} from './MarketMovers';
 import {FPS, totalFrames, Week} from './types';
-import sample from '../data/week-2026-11-14.json';
+import sample from '../data/sample-week.json';
 
 export const Root: React.FC = () => (
   <Composition
