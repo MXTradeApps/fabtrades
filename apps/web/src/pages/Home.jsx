@@ -9,6 +9,8 @@ import CardPanel from "../components/ui/CardPanel.jsx";
 import TradeSummary from "../components/elements/TradeSummary.jsx";
 import { EmptyState } from "../components/layout/Page.jsx";
 import { useCardDetail } from "../contexts/CardDetailContext.jsx";
+import SetGuideLinks from "../components/elements/SetGuideLinks.jsx";
+import { HOME_HEADING } from "../utils/seoContent.js";
 
 const Home = () => {
     const location = useLocation();
@@ -89,7 +91,7 @@ const Home = () => {
                 }}
             >
                 <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-                    Trade Calculator
+                    {HOME_HEADING}
                 </h1>
                 <CardPanel
                     title="Cards I Have"
@@ -137,6 +139,7 @@ const Home = () => {
                     viewMode={panelView}
                 />
             </Box>
+            <SetGuideLinks />
         </>
     );
 };

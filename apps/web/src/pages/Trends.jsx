@@ -16,6 +16,7 @@ import { useCardData } from '../hooks/useCardData.jsx';
 import { usePriceType } from '../contexts/PriceContext.jsx';
 import { useCardDetail } from '../contexts/CardDetailContext.jsx';
 import { useDocumentHead } from '../utils/seo.js';
+import { TRENDS_TITLE, TRENDS_DESCRIPTION } from '../utils/seoContent.js';
 import { matchPrintings } from '../utils/searchUtils.js';
 import { printingRecentChanges } from '../services/fabDb.js';
 
@@ -33,9 +34,8 @@ const Trends = () => {
     const overlayGen = useRef(0);
 
     useDocumentHead({
-        title: 'Trending Flesh and Blood cards',
-        description:
-            'Flesh and Blood cards rising and falling in price this week and this month, from TCGplayer and CardMarket Lows.',
+        title: TRENDS_TITLE,
+        description: TRENDS_DESCRIPTION,
         canonicalPath: '/trends',
     });
 

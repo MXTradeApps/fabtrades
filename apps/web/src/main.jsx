@@ -7,6 +7,10 @@ import App from './App.jsx'
 import { CardDataProvider } from "./hooks/useCardData.jsx";
 import { PriceProvider } from "./contexts/PriceContext.jsx";
 import { ThemeModeProvider, useThemeMode } from "./contexts/ThemeContext.jsx";
+import { landingPath } from "./utils/analytics.js";
+
+// Remember the page this visit started on before any navigation happens.
+landingPath();
 
 // Wrapper component that applies the dynamic theme
 const ThemedApp = () => {

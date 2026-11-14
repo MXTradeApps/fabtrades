@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { Apple, Android } from '@mui/icons-material';
 import { APP_STORE_URL, PLAY_STORE_URL } from '../../utils/appLinks.js';
+import { trackAppStoreClick } from '../../utils/analytics.js';
 
 /**
  * Price alerts are set in the mobile app, which can send the push when a
@@ -29,6 +30,7 @@ export default function PriceAlertAppDialog({ open, onClose, cardName }) {
                         variant="contained"
                         startIcon={<Apple />}
                         href={APP_STORE_URL}
+                        onClick={() => trackAppStoreClick('ios', 'price_alert')}
                         target="_blank"
                         rel="noopener noreferrer"
                         fullWidth
@@ -40,6 +42,7 @@ export default function PriceAlertAppDialog({ open, onClose, cardName }) {
                         color="inherit"
                         startIcon={<Android />}
                         href={PLAY_STORE_URL}
+                        onClick={() => trackAppStoreClick('android', 'price_alert')}
                         target="_blank"
                         rel="noopener noreferrer"
                         fullWidth

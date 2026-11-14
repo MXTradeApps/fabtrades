@@ -26,6 +26,7 @@ import { shell } from "../../theme/tokens.js";
 import LoginButton from '../auth/LoginButton.jsx';
 import CommunityLinks from './CommunityLinks.jsx';
 import { APP_STORE_URL, PLAY_STORE_URL } from '../../utils/appLinks.js';
+import { trackAppStoreClick } from '../../utils/analytics.js';
 
 // Grouped the way people think about the app: the trade at the table, the
 // cards they own or want, and the market.
@@ -70,11 +71,13 @@ const APP_LINKS = [
         label: 'iOS App',
         href: APP_STORE_URL,
         icon: Apple,
+        store: 'ios',
     },
     {
         label: 'Android App',
         href: PLAY_STORE_URL,
         icon: Android,
+        store: 'android',
     },
 ];
 
@@ -203,7 +206,7 @@ const SectionLabel = ({ children }) => (
 
 const AppLinks = ({ onClick }) => (
     <Box sx={{ display: 'flex', gap: 1 }}>
-        {APP_LINKS.map(({ label, href, icon: Icon }) => (
+        {APP_LINKS.map(({ label, href, icon: Icon, store }) => (
             <ButtonBase
                 key={href}
                 component="a"
@@ -211,7 +214,10 @@ const AppLinks = ({ onClick }) => (
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={label}
-                onClick={onClick}
+                onClick={(event) => {
+                    trackAppStoreClick(store, 'navigation');
+                    onClick?.(event);
+                }}
                 sx={{
                     flex: 1,
                     gap: 0.75,

@@ -9,6 +9,8 @@
  *
  *   - each set price guide      -> dist/sets/<slug>/index.html
  *   - the "browse sets" page    -> dist/sets/index.html
+ *   - the Trending page         -> dist/trends/index.html
+ *   - the home page             -> dist/index.html (intro + links to guides)
  *
  * Each generated page includes a unique <title>, meta description, canonical
  * URL, Open Graph/Twitter tags, JSON-LD structured data, and the full price
@@ -30,8 +32,18 @@ import { compareSetsByBrowseOrder } from '../src/utils/setSort.js';
 import {
     fetchCatalogRows,
     fetchSetGroups,
-    fetchPricesUpdatedAt
+    fetchPricesUpdatedAt,
+    trendingMovers
 } from '../src/services/fabDb.js';
+import {
+    escapeHtml,
+    escapeAttr,
+    buildSetJsonLd,
+    buildHomeBodyHtml,
+    buildHomeJsonLd,
+    buildTrendsContent,
+    buildSitemapXml
+} from '../src/utils/seoContent.js';
 import {
     privacySections,
     PRIVACY_EFFECTIVE_DATE
@@ -73,16 +85,6 @@ const SITE_URL = (
 // ---------------------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------------------
-
-const escapeHtml = (str = '') =>
-    String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-
-const escapeAttr = (str = '') => escapeHtml(str).replace(/\n/g, ' ');
 
 const num = (v) => {
     const n = parseFloat(v);
@@ -219,26 +221,26 @@ const renderPage = (template, { title, description, canonicalPath, image, jsonLd
     const canonical = `${SITE_URL}${canonicalPath}`;
     let html = template;
 
-    html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(title)}</title>`);
+    html = html.replace(/<title>[\s\S]*?<\/title>/, () => `<title>${escapeHtml(title)}</title>`);
     html = html.replace(
         /(<meta name="description" content=")[^"]*(")/,
-        `$1${escapeAttr(description)}$2`
+        (_, open, close) => `${open}${escapeAttr(description)}${close}`
     );
     html = html.replace(
         /(<meta property="og:title" content=")[^"]*(")/,
-        `$1${escapeAttr(title)}$2`
+        (_, open, close) => `${open}${escapeAttr(title)}${close}`
     );
     html = html.replace(
         /(<meta property="og:description" content=")[^"]*(")/,
-        `$1${escapeAttr(description)}$2`
+        (_, open, close) => `${open}${escapeAttr(description)}${close}`
     );
     html = html.replace(
         /(<meta name="twitter:title" content=")[^"]*(")/,
-        `$1${escapeAttr(title)}$2`
+        (_, open, close) => `${open}${escapeAttr(title)}${close}`
     );
     html = html.replace(
         /(<meta name="twitter:description" content=")[^"]*(")/,
-        `$1${escapeAttr(description)}$2`
+        (_, open, close) => `${open}${escapeAttr(description)}${close}`
     );
 
     // Extra head tags (canonical, og:url, image, structured data) injected
@@ -259,16 +261,19 @@ const renderPage = (template, { title, description, canonicalPath, image, jsonLd
     if (image) {
         html = html.replace(
             /(<meta name="twitter:card" content=")[^"]*(")/,
-            `$1summary_large_image$2`
+            (_, open, close) => `${open}summary_large_image${close}`
         );
     }
 
-    html = html.replace('</head>', `    ${headExtras}\n  </head>`);
+    html = html.replace('</head>', () => `    ${headExtras}\n  </head>`);
 
-    // Inject the crawlable content immediately after the SPA mount node.
+    // Inject the crawlable content immediately after the SPA mount node. The
+    // replacement is a function on purpose: in a replacement *string*, the "$1"
+    // of a price like "$12.50" is read as "capture group 1", which swallowed
+    // the "$1" and pasted a second #root in its place.
     html = html.replace(
-        /(<div id="root">\s*<\/div>)/,
-        `$1\n    <div id="seo-prerender">${bodyHtml}</div>`
+        /<div id="root">\s*<\/div>/,
+        (root) => `${root}\n    <div id="seo-prerender">${bodyHtml}</div>`
     );
 
     return html;
@@ -290,7 +295,7 @@ const SEO_BLOCK_STYLE = `
 // Page builders
 // ---------------------------------------------------------------------------
 
-const buildSetPage = (template, set) => {
+const buildSetPage = (template, set, pricesUpdatedAt) => {
     const sorted = [...set.cards].sort((a, b) => num(b.marketPrice) - num(a.marketPrice));
     const top = sorted[0];
     const topImage = top ? buildImageUrl(top) : '';
@@ -325,7 +330,7 @@ const buildSetPage = (template, set) => {
     const bodyHtml = `${SEO_BLOCK_STYLE}
     <nav><a href="/sets">Flesh and Blood Sets</a> / ${escapeHtml(set.name)}</nav>
     <h1>${escapeHtml(set.name)}${escapeHtml(abbr)} Card Price Guide</h1>
-    <p class="meta">${set.cardCount} printings · Released ${formatDate(set.publishedOn)} · Prices from TCGplayer</p>
+    <p class="meta">${set.cardCount} printings · Released ${formatDate(set.publishedOn)} · Prices from TCGplayer${pricesUpdatedAt ? `, updated ${formatDate(pricesUpdatedAt)}` : ''}</p>
     <table>
       <thead><tr><th>#</th><th></th><th>Card</th><th>No.</th><th>Rarity</th><th>Low</th><th>Market</th><th>High</th></tr></thead>
       <tbody>
@@ -333,43 +338,7 @@ ${rows}
       </tbody>
     </table>`;
 
-    const jsonLd = {
-        '@context': 'https://schema.org',
-        '@graph': [
-            {
-                '@type': 'BreadcrumbList',
-                itemListElement: [
-                    { '@type': 'ListItem', position: 1, name: 'Sets', item: `${SITE_URL}/sets` },
-                    { '@type': 'ListItem', position: 2, name: set.name, item: `${SITE_URL}${canonicalPath}` }
-                ]
-            },
-            {
-                '@type': 'ItemList',
-                name: `${set.name} Card Price Guide`,
-                numberOfItems: sorted.length,
-                itemListElement: sorted.slice(0, 100).map((c, i) => ({
-                    '@type': 'ListItem',
-                    position: i + 1,
-                    item: {
-                        '@type': 'Product',
-                        name: c.subTypeName && c.subTypeName.toLowerCase() !== 'normal'
-                            ? `${c.name} (${c.subTypeName})`
-                            : c.name,
-                        image: buildImageUrl(c) || undefined,
-                        category: 'Flesh and Blood TCG',
-                        offers: num(c.marketPrice) > 0
-                            ? {
-                                '@type': 'Offer',
-                                priceCurrency: 'USD',
-                                price: num(c.marketPrice).toFixed(2),
-                                availability: 'https://schema.org/InStock'
-                            }
-                            : undefined
-                    }
-                }))
-            }
-        ]
-    };
+    const jsonLd = buildSetJsonLd({ set, cards: sorted, siteUrl: SITE_URL, pricesUpdatedAt });
 
     return renderPage(template, {
         title,
@@ -530,40 +499,89 @@ const buildSupportPage = (template) => {
 // Sitemap + robots
 // ---------------------------------------------------------------------------
 
-const buildSitemap = (sets, metadata) => {
-    const lastmod = (metadata?.generatedAt || new Date().toISOString()).slice(0, 10);
-    const urls = [
-        { loc: `${SITE_URL}/`, priority: '1.0' },
-        { loc: `${SITE_URL}/sets`, priority: '0.9' },
-        { loc: `${SITE_URL}/support`, priority: '0.4' },
-        { loc: `${SITE_URL}/privacy`, priority: '0.3' },
-        { loc: `${SITE_URL}/terms`, priority: '0.3' },
-        ...sets.map((s) => ({ loc: `${SITE_URL}/sets/${s.slug}`, priority: '0.8' }))
-    ];
-    const body = urls
-        .map(
-            (u) =>
-                `  <url>\n    <loc>${u.loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`
-        )
-        .join('\n');
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
-};
+const buildSitemap = (sets, metadata, { includeTrends }) =>
+    buildSitemapXml({
+        siteUrl: SITE_URL,
+        sets,
+        lastmod: (metadata?.generatedAt || new Date().toISOString()).slice(0, 10),
+        includeTrends
+    });
 
 const buildRobots = () =>
     `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`;
 
-// Inject absolute canonical + og:url into the home page shell (kept out of the
-// source index.html so Vite doesn't try to resolve the href as an asset).
-const fixHomePage = async () => {
-    const file = path.join(DIST, 'index.html');
-    let html = await readFile(file, 'utf8');
+// Unlike the price tables, this block shows on the first paint of the app's
+// busiest page, so it uses the app's own palette (index.css, dark by default)
+// rather than the light table style above.
+const HOME_BLOCK_STYLE = `
+<style>
+  #seo-prerender{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:720px;margin:0 auto;padding:24px 16px;color:var(--c-text,#F3EDE7)}
+  #seo-prerender a{color:var(--c-accent,#D8834A)}
+  #seo-prerender h1{font-size:1.6rem;margin:0 0 8px}
+  #seo-prerender h2{font-size:1.1rem;margin:20px 0 4px}
+  #seo-prerender p{color:var(--c-textMuted,#B5A99E);margin:0}
+</style>`;
+
+// dist/index.html is also what Netlify serves for every route without a page
+// of its own (/binder, /b/<token>, ...). Those must not flash the home page's
+// intro while the app loads.
+const HOME_ONLY_SCRIPT =
+    `<script>if(location.pathname!=='/'){var n=document.getElementById('seo-prerender');if(n)n.remove();}</script>`;
+
+// The home page is the trade calculator, which is an empty shell until the app
+// runs. Give crawlers what it is and where the price guides are, plus the
+// absolute canonical + og:url (kept out of the source index.html so Vite doesn't
+// try to resolve the href as an asset).
+//
+// The trade-meta edge function rewrites this same file's <head> for shared
+// trade links; it replaces the title and og tags and leaves the rest alone.
+const buildHomePage = (template, sets) => {
+    let html = template;
     if (!/<link rel="canonical"/.test(html)) {
         html = html.replace(
             '</head>',
             `    <link rel="canonical" href="${SITE_URL}/" />\n    <meta property="og:url" content="${SITE_URL}/" />\n  </head>`
         );
     }
-    await writeFile(file, html, 'utf8');
+    html = html.replace(
+        '</head>',
+        () => `    <script type="application/ld+json">${JSON.stringify(buildHomeJsonLd(SITE_URL))}</script>\n  </head>`
+    );
+    return html.replace(
+        /<div id="root">\s*<\/div>/,
+        (root) =>
+            `${root}\n    <div id="seo-prerender">${HOME_BLOCK_STYLE}${buildHomeBodyHtml(sets)}</div>${HOME_ONLY_SCRIPT}`
+    );
+};
+
+// The Trending page's default view, frozen at build time. The site rebuilds
+// after every price update, so this is the same list a visitor gets.
+const buildTrendsPage = (template, movers, pricesUpdatedAt) => {
+    const { title, description, bodyHtml, jsonLd } = buildTrendsContent({
+        movers,
+        siteUrl: SITE_URL,
+        pricesUpdatedAt
+    });
+    return renderPage(template, {
+        title,
+        description,
+        canonicalPath: '/trends',
+        jsonLd,
+        bodyHtml: `${SEO_BLOCK_STYLE}${bodyHtml}`
+    });
+};
+
+// Same arguments as the Trending page's first load (RecentMoversSection).
+// Trending is extra: if the movers can't be read, the page is skipped and the
+// route falls back to the app shell, as it did before.
+const loadMovers = async () => {
+    try {
+        const rows = await trendingMovers('tcgplayer', { days: 7, sort: 'percent', minPrice: 0, limit: 10 });
+        return Array.isArray(rows) ? rows : [];
+    } catch (err) {
+        console.warn(`[seo] Could not load trending movers (${err.message}); skipping /trends.`);
+        return [];
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -587,7 +605,11 @@ const main = async () => {
     for (const set of sets) {
         const dir = path.join(DIST, 'sets', set.slug);
         await mkdir(dir, { recursive: true });
-        await writeFile(path.join(dir, 'index.html'), buildSetPage(template, set), 'utf8');
+        await writeFile(
+            path.join(dir, 'index.html'),
+            buildSetPage(template, set, data.metadata?.generatedAt),
+            'utf8'
+        );
     }
 
     // Browse-sets landing page.
@@ -619,14 +641,31 @@ const main = async () => {
         'utf8'
     );
 
+    // Trending.
+    const movers = await loadMovers();
+    const hasTrends = movers.length > 0;
+    if (hasTrends) {
+        await mkdir(path.join(DIST, 'trends'), { recursive: true });
+        await writeFile(
+            path.join(DIST, 'trends', 'index.html'),
+            buildTrendsPage(template, movers, data.metadata?.generatedAt),
+            'utf8'
+        );
+    }
+
     // Sitemap + robots.
-    await writeFile(path.join(DIST, 'sitemap.xml'), buildSitemap(sets, data.metadata), 'utf8');
+    await writeFile(
+        path.join(DIST, 'sitemap.xml'),
+        buildSitemap(sets, data.metadata, { includeTrends: hasTrends }),
+        'utf8'
+    );
     await writeFile(path.join(DIST, 'robots.txt'), buildRobots(), 'utf8');
 
-    await fixHomePage();
+    // Last, because every page above is built from the untouched shell.
+    await writeFile(path.join(DIST, 'index.html'), buildHomePage(template, sets), 'utf8');
 
     console.log(
-        `[seo] Done. ${sets.length} set pages + sets index, sitemap.xml, robots.txt written to dist/.`
+        `[seo] Done. ${sets.length} set pages + sets index, home${hasTrends ? ', trends' : ''}, sitemap.xml, robots.txt written to dist/.`
     );
 };
 
