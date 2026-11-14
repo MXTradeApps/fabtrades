@@ -42,21 +42,23 @@ const moved = now
   .map((r) => ({id: r.card_id, pct: (Number(r.tcg_market) - was.get(r.card_id)) / was.get(r.card_id)}))
   .filter((r) => Number.isFinite(r.pct) && was.get(r.id) >= MIN_PRICE)
   .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
-const shortlist = [...moved.filter((r) => r.pct > 0).slice(0, 40), ...moved.filter((r) => r.pct < 0).slice(0, 40)].map((r) => r.id);
+const shortlist = [...moved.filter((r) => r.pct > 0).slice(0, 60), ...moved.filter((r) => r.pct < 0).slice(0, 60)].map((r) => r.id);
 const inList = `in.(${shortlist.map((id) => `"${id}"`).join(',')})`;
 const [history, cards, sets] = await Promise.all([
   get(`fab_price_history?select=card_id,captured_on,tcg_market&card_id=${inList}&captured_on=gte.${back(latest, 30)}&order=captured_on.asc`),
-  get(`fab_cards?select=id,name,sub_type_name,rarity,is_sealed,set_id,product_id&id=${inList}`),
+  get(`fab_cards?select=id,name,sub_type_name,rarity,is_sealed,set_id,image_url&id=${inList}`),
   get('fab_sets?select=group_id,name'),
 ]);
 const setName = new Map(sets.map((s) => [s.group_id, s.name]));
 const finish = (s) => (s === 'Normal' ? 'Non-foil' : s);
 
-const rows = cards.map((c) => ({
+// Single cards only: no boxes, packs or decks, and no art cards or other non-game inserts.
+const isCard = (c) => !c.is_sealed && c.rarity && c.rarity !== 'None';
+const rows = cards.filter(isCard).map((c) => ({
   id: c.id,
   name: c.name,
-  printing: c.is_sealed ? 'Sealed product' : [setName.get(c.set_id), c.rarity, finish(c.sub_type_name)].filter(Boolean).join(' · '),
-  img: `https://tcgplayer-cdn.tcgplayer.com/product/${c.product_id}_in_1000x1000.jpg`,
+  printing: [setName.get(c.set_id), c.rarity, finish(c.sub_type_name)].filter(Boolean).join(' · '),
+  img: c.image_url, // the same image fabtrades.net shows; render.mjs asks for the large version
   series: history.filter((h) => h.card_id === c.id).map((h) => Number(h.tcg_market)),
 }));
 

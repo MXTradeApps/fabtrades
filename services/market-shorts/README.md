@@ -40,13 +40,13 @@ If it can't find enough clear pauses it stops with a message instead of renderin
 
 ## What gets picked
 
-`pick-movers.mjs` takes the biggest weekly moves in TCGplayer market price (real sales, not listings) and keeps only real ones: $5 or more a week ago, and at least two separate price changes inside the week. A single sale on a thinly traded promo moves the price once and is dropped. Default is 3 risers and 2 fallers.
+`pick-movers.mjs` takes the biggest weekly moves in TCGplayer market price (real sales, not listings) and keeps only real ones: $5 or more a week ago, and at least two separate price changes inside the week. A single sale on a thinly traded promo moves the price once and is dropped. Sealed product (boxes, packs, decks) and art cards are left out, so every pick is a single card. Default is 3 risers and 2 fallers.
 
-Edit the data file freely before rendering: reorder or swap cards, or change the opening with `"hook": {"line": "This $6 card just jumped", "sub": "and a brand new box lost 37%"}`. An optional `"why"` on a card shows as a one-line caption under the chart.
+Edit the data file freely before rendering: reorder or swap cards, or change the opening with `"hook": {"line": "This $6 card just jumped", "sub": "and one staple lost a quarter of its value"}`. An optional `"why"` on a card shows as a one-line caption under the chart.
 
 ## Card art
 
-`render.mjs` downloads each card's image into `public/cards/` before rendering. If an image can't be downloaded, that card renders with an empty art slot and the render still finishes.
+Art comes from the same place as fabtrades.net: the `image_url` on each card (TCGplayer's product image). The site shows the 200px version, so `render.mjs` asks for the 1000px version of the same image first, falls back to the 200px one, and saves it into `public/cards/` before rendering. If an image can't be downloaded, that card renders with an empty art slot and the render still finishes.
 
 ## Tests
 

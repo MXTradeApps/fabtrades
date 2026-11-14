@@ -46,18 +46,26 @@ if (audioPath) {
 
 const cardsDir = path.join(here, 'public', 'cards');
 fs.mkdirSync(cardsDir, {recursive: true});
+// Same image source as fabtrades.net (the TCGplayer image for the product). The site shows the
+// 200px version; a full-screen video needs the large one, so try that first and fall back.
+const large = (u) => u.replace(/_200w\.jpg$/, '_in_1000x1000.jpg');
 for (const [i, card] of week.cards.entries()) {
   if (!card.img || !/^https?:/.test(card.img)) continue;
-  const file = `cards/${i}-${path.basename(new URL(card.img).pathname)}`;
-  try {
-    const res = await fetch(card.img, {signal: AbortSignal.timeout(15000)});
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    fs.writeFileSync(path.join(here, 'public', file), Buffer.from(await res.arrayBuffer()));
-    card.img = file;
-  } catch (err) {
-    console.warn(`No art for "${card.name}" (${err.message}); rendering an empty slot.`);
-    card.img = null;
+  const tries = [...new Set([large(card.img), card.img])];
+  let saved = null, reason = '';
+  for (const u of tries) {
+    try {
+      const res = await fetch(u, {signal: AbortSignal.timeout(15000)});
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      saved = `cards/${i}-${path.basename(new URL(u).pathname)}`;
+      fs.writeFileSync(path.join(here, 'public', saved), Buffer.from(await res.arrayBuffer()));
+      break;
+    } catch (err) {
+      reason = err.message;
+    }
   }
+  if (!saved) console.warn(`No art for "${card.name}" (${reason}); rendering an empty slot.`);
+  card.img = saved;
 }
 
 const browserExecutable = process.env.CHROME_PATH || undefined;
