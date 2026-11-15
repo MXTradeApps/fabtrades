@@ -7,7 +7,7 @@ import { ThemeModeProvider } from '../../src/contexts/ThemeContext.jsx';
 import { PriceProvider } from '../../src/contexts/PriceContext.jsx';
 import { pricedPrinting, unpricedPrinting, otherCard } from '../fixtures/printings.js';
 import { setOpenBinderId } from '../../src/utils/openBinder.js';
-import { recentMovers } from '../../src/services/fabDb.js';
+import { trendingMovers } from '../../src/services/fabDb.js';
 
 const mockGetBinderEntries = jest.fn();
 const mockGetBinders = jest.fn();
@@ -83,7 +83,7 @@ jest.mock('../../src/services/binder.js', () => ({
 }));
 
 jest.mock('../../src/services/fabDb.js', () => ({
-    recentMovers: jest.fn(),
+    trendingMovers: jest.fn(),
 }));
 
 jest.mock('../../src/components/elements/Header.jsx', () => () => (
@@ -118,11 +118,23 @@ const gainer = {
     set_name: 'Super Slam',
     finish: 'Normal',
     image_url: null,
-    start_low: 8,
-    start_on: '2026-08-22',
-    latest_low: 12.5,
+    start_price: 8,
+    latest_price: 12.5,
     percent_change: 0.5625,
     amount_change: 4.5,
+    history: [8, 9, 12.5],
+};
+
+const loser = {
+    ...gainer,
+    direction: 'loser',
+    card_id: unpricedPrinting._uniqueId,
+    name: 'Falling Card',
+    start_price: 10,
+    latest_price: 9,
+    percent_change: -0.1,
+    amount_change: -1,
+    history: [10, 9],
 };
 
 const catalogGainer = {
@@ -156,8 +168,8 @@ describe('Collection Stats entry and page', () => {
     beforeEach(() => {
         mockUser = { id: 'user-1' };
         mockOpenDetail.mockClear();
-        recentMovers.mockReset();
-        recentMovers.mockResolvedValue([gainer]);
+        trendingMovers.mockReset();
+        trendingMovers.mockResolvedValue([gainer]);
         setOpenBinderId(null);
         mockGetBinders.mockResolvedValue(defaultBinders);
         mockGetBinderEntries.mockResolvedValue({
@@ -284,7 +296,8 @@ describe('Collection Stats entry and page', () => {
             },
             error: null,
         });
-        recentMovers.mockImplementation(async (source, ids) => {
+        trendingMovers.mockImplementation(async (source, opts) => {
+            const ids = opts?.cardIds;
             if (ids && ids.length === 1 && ids[0] === pricedPrinting._uniqueId) {
                 return [gainer];
             }
@@ -295,9 +308,18 @@ describe('Collection Stats entry and page', () => {
         expect((await screen.findAllByText('Lightning Press')).length).toBeGreaterThan(0);
         expect(await screen.findByText(/Super Slam/)).toBeInTheDocument();
         expect(screen.getAllByText(/2 copies/).length).toBeGreaterThan(0);
-        expect(screen.getByText('Gainers')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Rising' })).toBeInTheDocument();
+        expect(screen.getByTestId('trend-row')).toHaveTextContent('was $8.00 → $12.50');
+        // Net counts both copies: 2 × $4.50.
+        expect(screen.getByTestId('collection-stats-net')).toHaveTextContent('1 card in this Binder moved this week · net +$9.00');
         expect(screen.queryByText('Sink Below')).not.toBeInTheDocument();
-        expect(recentMovers).toHaveBeenCalledWith('tcgplayer', [pricedPrinting._uniqueId]);
+        expect(trendingMovers).toHaveBeenCalledWith('tcgplayer', {
+            days: 7,
+            sort: 'percent',
+            minPrice: 0,
+            cardIds: [pricedPrinting._uniqueId],
+            limit: null,
+        });
 
         fireEvent.click(screen.getAllByText('Lightning Press')[0]);
         expect(mockOpenDetail).toHaveBeenCalledWith(expect.objectContaining({
@@ -327,17 +349,78 @@ describe('Collection Stats entry and page', () => {
         expect(await screen.findByTestId('binder-grid')).toBeInTheDocument();
     });
 
-    test('RPC empty with ids is honest empty; headline stays', async () => {
-        recentMovers.mockResolvedValue([]);
+    test('30 days reloads the window; By $ ranks by change across held copies', async () => {
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    { cardId: pricedPrinting._uniqueId, quantity: 1, isWanted: false, binderId: 'system:trade', card: pricedPrinting },
+                    { cardId: unpricedPrinting._uniqueId, quantity: 6, isWanted: false, binderId: 'system:trade', card: unpricedPrinting },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        trendingMovers.mockResolvedValue([gainer, loser]);
         setOpenBinderId('system:trade');
         wrap(routes, '/binder/stats');
-        expect(await screen.findByText(/None of these Printings gained or lost enough to rank/)).toBeInTheDocument();
+        // +$4.50 × 1 and −$1.00 × 6.
+        expect(await screen.findByTestId('collection-stats-net')).toHaveTextContent('2 cards in this Binder moved this week · net −$1.50');
+        expect(screen.getByTestId('movers-list-gainer')).toHaveTextContent('Lightning Press');
+        expect(screen.getByTestId('movers-list-loser')).toHaveTextContent('Falling Card');
+        expect(screen.getByTestId('movers-list-loser')).toHaveTextContent('6 copies');
+
+        fireEvent.click(screen.getByRole('button', { name: '30 days' }));
+        await waitFor(() => expect(trendingMovers).toHaveBeenLastCalledWith('tcgplayer', expect.objectContaining({
+            days: 30,
+            limit: null,
+        })));
+        expect(await screen.findByTestId('collection-stats-net')).toHaveTextContent('in the last 30 days');
+
+        const calls = trendingMovers.mock.calls.length;
+        fireEvent.click(screen.getByRole('button', { name: 'By $' }));
+        expect(trendingMovers.mock.calls.length).toBe(calls);
+    });
+
+    test('long lists show the top 10 with a Show all button', async () => {
+        const many = Array.from({ length: 12 }, (_, i) => ({
+            ...gainer,
+            card_id: `many-${i}`,
+            name: `Riser ${i + 1}`,
+            percent_change: 1 - i * 0.05,
+        }));
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: many.map((row) => ({
+                    cardId: row.card_id,
+                    quantity: 1,
+                    isWanted: false,
+                    binderId: 'system:trade',
+                    card: { ...pricedPrinting, _uniqueId: row.card_id },
+                })),
+                wants: [],
+            },
+            error: null,
+        });
+        trendingMovers.mockResolvedValue(many);
+        setOpenBinderId('system:trade');
+        wrap(routes, '/binder/stats');
+        await screen.findByText('Riser 1');
+        expect(screen.getAllByTestId('trend-row')).toHaveLength(10);
+        fireEvent.click(screen.getByRole('button', { name: 'Show all 12' }));
+        expect(screen.getAllByTestId('trend-row')).toHaveLength(12);
+    });
+
+    test('RPC empty with ids is honest empty; headline stays', async () => {
+        trendingMovers.mockResolvedValue([]);
+        setOpenBinderId('system:trade');
+        wrap(routes, '/binder/stats');
+        expect(await screen.findByText(/None of the cards in this Binder moved this week/)).toBeInTheDocument();
         expect(screen.getByTestId('collection-stats-headline')).toBeInTheDocument();
         expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
     });
 
     test('movers error shows retry and leaves headline and snapshot visible', async () => {
-        recentMovers.mockRejectedValue(new Error('offline'));
+        trendingMovers.mockRejectedValue(new Error('offline'));
         setOpenBinderId('system:trade');
         wrap(routes, '/binder/stats');
         expect(await screen.findByText('Retry')).toBeInTheDocument();
@@ -371,8 +454,8 @@ describe('Collection Stats entry and page', () => {
         setOpenBinderId('system:trade');
         wrap(routes, '/binder/stats');
         await screen.findByTestId('collection-stats-headline');
-        await waitFor(() => expect(recentMovers).toHaveBeenCalled());
-        const idLists = recentMovers.mock.calls.map((call) => call[1]);
+        await waitFor(() => expect(trendingMovers).toHaveBeenCalled());
+        const idLists = trendingMovers.mock.calls.map((call) => call[1]?.cardIds);
         expect(idLists.every((ids) => !ids || !ids.includes(unpricedPrinting._uniqueId))).toBe(true);
     });
 });
