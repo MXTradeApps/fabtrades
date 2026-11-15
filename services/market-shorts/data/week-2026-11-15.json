@@ -42,7 +42,7 @@
         9.6,
         10.04
       ],
-      "why": "The Fang deck that won Worlds ran three copies."
+      "why": "A three-of in most top Fang lists."
     },
     {
       "tag": "RISER",
@@ -84,7 +84,7 @@
         92.05,
         92.05
       ],
-      "why": "The helmet in the champion's Fang list."
+      "why": "A hate piece against the Warriors filling the Worlds top 8."
     },
     {
       "tag": "RISER",
@@ -126,7 +126,7 @@
         16.37,
         16.27
       ],
-      "why": "Three copies in the winning Fang deck."
+      "why": "More of the world champion's influence."
     },
     {
       "tag": "RISER",
@@ -145,7 +145,7 @@
         37.94,
         41.05
       ],
-      "why": "Mastery Pack Assassin is out, and Arakni made top 8 at Calling Sydney."
+      "why": "Mastery Pack Assassin only reprinted it at Marvel rarity."
     },
     {
       "tag": "BIGGEST FALLER",
@@ -187,7 +187,49 @@
         33.22,
         33.22
       ],
-      "why": "It was $52 three weeks ago. Know why? Comment below."
+      "why": "The last B&R hinted at a possible ban."
+    },
+    {
+      "tag": "FALLER",
+      "name": "Danse Macabre",
+      "printing": "Usurp the Shadow Throne · Legendary · Rainbow Foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/714343_200w.jpg",
+      "old": 36.32,
+      "new": 28.74,
+      "series": [
+        51.3,
+        51.3,
+        49.8,
+        49.8,
+        49.31,
+        48.22,
+        47.73,
+        47.73,
+        47.43,
+        47.19,
+        46.31,
+        45.15,
+        44.75,
+        44.75,
+        44.23,
+        44.23,
+        43.77,
+        42.36,
+        41.56,
+        40.51,
+        40.51,
+        39.37,
+        38.5,
+        36.32,
+        35.66,
+        34.21,
+        33.43,
+        31.87,
+        30.26,
+        28.74,
+        28.74
+      ],
+      "why": "Malice isn't putting up results."
     }
   ],
   "thumbnail": {
@@ -199,8 +241,19 @@
     "card": 0
   },
   "hook": {
-    "line": "This $5 card nearly doubled",
-    "sub": "the week Fang won Worlds",
-    "spoken": "This five dollar card nearly doubled the week Fang won Worlds. Here are your Flesh and Blood market movers."
+    "line": "Post-Worlds meta",
+    "sub": "this week's biggest gainers and losers"
+  },
+  "timing": {
+    "cards": [
+      9.92,
+      17.27,
+      27.13,
+      34.72,
+      45.22,
+      57.39
+    ],
+    "end": 76.43,
+    "total": 88.1
   }
 }
