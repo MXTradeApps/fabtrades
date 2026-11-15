@@ -15,6 +15,22 @@ const catalogUrl = () => {
   }
 }
 
+// Tells the browser to start downloading the catalog while it is still fetching
+// and parsing the app bundle, instead of waiting for React to mount and ask for
+// it. `as="fetch"` with `crossorigin` is what lets the app's own `fetch()` reuse
+// this download rather than issue a second one.
+const preloadCatalog = (url) => ({
+  name: 'fabtrades-preload-catalog',
+  transformIndexHtml: () =>
+    url
+      ? [{
+          tag: 'link',
+          attrs: { rel: 'preload', href: url, as: 'fetch', type: 'application/json', crossorigin: 'anonymous' },
+          injectTo: 'head',
+        }]
+      : [],
+})
+
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
   // Only bake the snapshot into `vite build`. `vite dev` must read Supabase
@@ -24,7 +40,7 @@ export default defineConfig(({ command }) => {
   if (url) console.log(`[vite] Catalog snapshot: ${url}`)
 
   return {
-    plugins: [react()],
+    plugins: [react(), preloadCatalog(url)],
     // Allow importing shared brand tokens from packages/contracts.
     server: {
       fs: {

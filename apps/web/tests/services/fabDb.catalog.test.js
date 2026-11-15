@@ -158,3 +158,112 @@ describe('fetchCatalog price freshness', () => {
         expect(global.fetch.mock.calls.some(([url]) => String(url).includes('fab_cards_with_prices'))).toBe(false);
     });
 });
+
+describe('fetchCatalog with onRefresh', () => {
+    beforeEach(() => {
+        global.fetch = jest.fn();
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    const snapshotBody = {
+        version: 1,
+        pricesUpdatedAt: '2026-10-05T06:00:00.000Z',
+        sets: [],
+        rows: [{ _uniqueId: '1-normal', marketPrice: 10, name: 'Command and Conquer' }],
+    };
+
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    /** A database whose freshness check only answers when the test says so. */
+    const databaseWith = (liveUpdatedAt) => {
+        let release;
+        const gate = new Promise((resolve) => { release = resolve; });
+        global.fetch.mockImplementation(async (url) => {
+            const href = String(url);
+            if (href === SNAPSHOT_URL) return jsonResponse(snapshotBody);
+            if (href.includes('fab_card_prices')) {
+                await gate;
+                return jsonResponse([{ updated_at: liveUpdatedAt }]);
+            }
+            if (href.includes('fab_cards_with_prices')) {
+                return jsonResponse([liveCard], { headers: { 'content-range': '0-0/1' } });
+            }
+            if (href.includes('fab_sets')) return jsonResponse([]);
+            throw new Error(`unexpected fetch ${href}`);
+        });
+        return release;
+    };
+
+    test('returns the snapshot without waiting for the freshness check', async () => {
+        const release = databaseWith('2026-10-06T06:00:00.000Z');
+        const onRefresh = jest.fn();
+
+        // The freshness check is still unanswered here, so this only resolves if
+        // the snapshot is no longer held back by it.
+        const catalog = await fetchCatalog({ snapshotUrl: SNAPSHOT_URL, onRefresh });
+
+        expect(catalog.rows[0].marketPrice).toBe(10);
+        expect(onRefresh).not.toHaveBeenCalled();
+        release();
+    });
+
+    test('hands over the live catalog once the pipeline turns out to be newer', async () => {
+        const release = databaseWith('2026-10-06T06:00:00.000Z');
+        const onRefresh = jest.fn();
+
+        await fetchCatalog({ snapshotUrl: SNAPSHOT_URL, onRefresh });
+        release();
+        await settle();
+
+        expect(onRefresh).toHaveBeenCalledTimes(1);
+        const fresh = onRefresh.mock.calls[0][0];
+        expect(fresh.pricesUpdatedAt).toBe('2026-10-06T06:00:00.000Z');
+        expect(fresh.rows[0].marketPrice).toBe(55);
+    });
+
+    test('stays quiet when the snapshot is current', async () => {
+        const release = databaseWith('2026-10-05T06:00:00.000Z');
+        const onRefresh = jest.fn();
+
+        await fetchCatalog({ snapshotUrl: SNAPSHOT_URL, onRefresh });
+        release();
+        await settle();
+
+        expect(onRefresh).not.toHaveBeenCalled();
+        expect(global.fetch.mock.calls.some(([url]) => String(url).includes('fab_cards_with_prices'))).toBe(false);
+    });
+
+    test('keeps the snapshot when the background database read fails', async () => {
+        const onRefresh = jest.fn();
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        global.fetch.mockImplementation(async (url) => {
+            const href = String(url);
+            if (href === SNAPSHOT_URL) return jsonResponse(snapshotBody);
+            if (href.includes('fab_card_prices')) {
+                return jsonResponse([{ updated_at: '2026-10-06T06:00:00.000Z' }]);
+            }
+            return jsonResponse({ message: 'nope' }, { ok: false, status: 500 });
+        });
+
+        const catalog = await fetchCatalog({ snapshotUrl: SNAPSHOT_URL, onRefresh });
+        await settle();
+
+        expect(catalog.rows[0].marketPrice).toBe(10);
+        expect(onRefresh).not.toHaveBeenCalled();
+    });
+
+    test('still reads the database directly when there is no snapshot', async () => {
+        const release = databaseWith('2026-10-06T06:00:00.000Z');
+        release();
+        const onRefresh = jest.fn();
+
+        const catalog = await fetchCatalog({ snapshotUrl: null, onRefresh });
+        await settle();
+
+        expect(catalog.rows[0].marketPrice).toBe(55);
+        expect(onRefresh).not.toHaveBeenCalled();
+    });
+});

@@ -35,7 +35,10 @@ jobs:
           NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
         run: |
           if [ -z "$NETLIFY_BUILD_HOOK" ]; then
-            echo "NETLIFY_BUILD_HOOK is not set; skipping the site rebuild."
+            # Loud on purpose: without the rebuild every visit downloads the
+            # catalog twice (the old snapshot, then the database) until the next
+            # code deploy. Forks have no hook either, so this stays a warning.
+            echo "::warning::NETLIFY_BUILD_HOOK is not set, so the site was not rebuilt with today's prices. Add the secret to keep the fast catalog snapshot current."
             exit 0
           fi
           curl --fail --silent --show-error -X POST -d '{}' "$NETLIFY_BUILD_HOOK"

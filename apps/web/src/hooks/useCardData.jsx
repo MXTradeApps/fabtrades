@@ -251,54 +251,73 @@ export const CardDataProvider = ({ children }) => {
     const [metadata, setMetadata] = useState(null); // Store metadata about the loaded data
 
     useEffect(() => {
+        // A catalog that arrives after the provider is gone must not set state.
+        let active = true;
+
+        const applyCatalog = ({ rows, sets: setGroups, pricesUpdatedAt }) => {
+            setSets(setGroups || []);
+            setDataSource('supabase');
+            setMetadata({
+                totalRecords: rows.length,
+                generatedAt: pricesUpdatedAt,
+                source: 'supabase'
+            });
+
+            const allCards = processJsonData(rows);
+            const enhancedCards = enhanceDisplayNames(allCards);
+            const linked = linkBasePrintings(enhancedCards);
+
+            // Create unique ID lookup map. A leftover blank-finish id
+            // points at the Normal printing so binders and links still open it.
+            const idLookup = {};
+            linked.cards.forEach(card => {
+                if (card._uniqueId) {
+                    idLookup[card._uniqueId] = card;
+                }
+            });
+            for (const [baseId, normalId] of linked.aliases) {
+                if (idLookup[normalId]) idLookup[baseId] = idLookup[normalId];
+            }
+
+            setCards(linked.cards);
+            setCardIdLookup(idLookup);
+        };
+
         const loadCardData = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
-                // Load the full catalog (cards, sets and prices) — from the
-                // build-time snapshot when there is one, otherwise straight from
-                // Supabase. Rows arrive pre-mapped to the legacy
-                // consolidated-data column names either way.
-                const { rows, sets: setGroups, pricesUpdatedAt } = await fetchCatalog();
-                setSets(setGroups || []);
-                setDataSource('supabase');
-                setMetadata({
-                    totalRecords: rows.length,
-                    generatedAt: pricesUpdatedAt,
-                    source: 'supabase'
-                });
-
-                const allCards = processJsonData(rows);
-                const enhancedCards = enhanceDisplayNames(allCards);
-                const linked = linkBasePrintings(enhancedCards);
-
-                // Create unique ID lookup map. A leftover blank-finish id
-                // points at the Normal printing so binders and links still open it.
-                const idLookup = {};
-                linked.cards.forEach(card => {
-                    if (card._uniqueId) {
-                        idLookup[card._uniqueId] = card;
+                // Load the full catalog (cards, sets and prices). The build-time
+                // snapshot is shown the moment it downloads so search is usable
+                // straight away; if the price pipeline has run since that build,
+                // the live catalog replaces it in the background via onRefresh.
+                // Rows arrive pre-mapped to the legacy consolidated-data column
+                // names either way.
+                const catalog = await fetchCatalog({
+                    onRefresh: (fresh) => {
+                        if (active) applyCatalog(fresh);
                     }
                 });
-                for (const [baseId, normalId] of linked.aliases) {
-                    if (idLookup[normalId]) idLookup[baseId] = idLookup[normalId];
-                }
-
-                setCards(linked.cards);
-                setCardIdLookup(idLookup);
+                if (!active) return;
+                applyCatalog(catalog);
 
             } catch (err) {
                 console.error('Error loading card data:', err);
-                setError(err.message);
+                if (active) setError(err.message);
             } finally {
-                setLoading(false);
-                setDataReady(true); // Mark data as ready when loading completes
+                if (active) {
+                    setLoading(false);
+                    setDataReady(true); // Mark data as ready when loading completes
+                }
             }
         };
 
         // Start loading immediately in the background
         loadCardData();
+        return () => {
+            active = false;
+        };
     }, []);
 
     const cardGroups = useMemo(() => {
