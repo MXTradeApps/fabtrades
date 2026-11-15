@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CollectionStats from '../../src/pages/CollectionStats.jsx';
@@ -7,7 +7,7 @@ import { ThemeModeProvider } from '../../src/contexts/ThemeContext.jsx';
 import { PriceProvider } from '../../src/contexts/PriceContext.jsx';
 import { pricedPrinting, unpricedPrinting, otherCard } from '../fixtures/printings.js';
 import { setOpenBinderId } from '../../src/utils/openBinder.js';
-import { trendingMovers } from '../../src/services/fabDb.js';
+import { trendingMovers, collectionValueHistory } from '../../src/services/fabDb.js';
 
 const mockGetBinderEntries = jest.fn();
 const mockGetBinders = jest.fn();
@@ -84,6 +84,7 @@ jest.mock('../../src/services/binder.js', () => ({
 
 jest.mock('../../src/services/fabDb.js', () => ({
     trendingMovers: jest.fn(),
+    collectionValueHistory: jest.fn(),
 }));
 
 jest.mock('../../src/components/elements/Header.jsx', () => () => (
@@ -144,6 +145,17 @@ const catalogGainer = {
     set_name: 'Welcome to Rathe',
 };
 
+/** [count] daily rows ending 2026-11-15, starting at [start] and rising [step] a day. */
+const valueRows = (count, start, step) => Array.from({ length: count }, (_, i) => {
+    const day = new Date(Date.UTC(2026, 10, 15) - (count - 1 - i) * 86400000);
+    return {
+        captured_on: day.toISOString().slice(0, 10),
+        total_value: start + i * step,
+        priced_copies: 1,
+        unpriced_copies: 0,
+    };
+});
+
 const wrap = (ui, route = '/binder') => render(
     <ThemeProvider theme={createTheme()}>
         <ThemeModeProvider>
@@ -170,6 +182,8 @@ describe('Collection Stats entry and page', () => {
         mockOpenDetail.mockClear();
         trendingMovers.mockReset();
         trendingMovers.mockResolvedValue([gainer]);
+        collectionValueHistory.mockReset();
+        collectionValueHistory.mockResolvedValue(valueRows(40, 100, 1));
         setOpenBinderId(null);
         mockGetBinders.mockResolvedValue(defaultBinders);
         mockGetBinderEntries.mockResolvedValue({
@@ -369,7 +383,7 @@ describe('Collection Stats entry and page', () => {
         expect(screen.getByTestId('movers-list-loser')).toHaveTextContent('Falling Card');
         expect(screen.getByTestId('movers-list-loser')).toHaveTextContent('6 copies');
 
-        fireEvent.click(screen.getByRole('button', { name: '30 days' }));
+        fireEvent.click(within(screen.getByTestId('collection-stats-controls')).getByRole('button', { name: '30 days' }));
         await waitFor(() => expect(trendingMovers).toHaveBeenLastCalledWith('tcgplayer', expect.objectContaining({
             days: 30,
             limit: null,
@@ -408,6 +422,58 @@ describe('Collection Stats entry and page', () => {
         expect(screen.getAllByTestId('trend-row')).toHaveLength(10);
         fireEvent.click(screen.getByRole('button', { name: 'Show all 12' }));
         expect(screen.getAllByTestId('trend-row')).toHaveLength(12);
+    });
+
+    test('value over time charts this Binder at the copies held, 30 days first', async () => {
+        mockGetBinderEntries.mockResolvedValue({
+            data: {
+                binder: [
+                    { cardId: pricedPrinting._uniqueId, quantity: 2, isWanted: false, binderId: 'system:trade', card: pricedPrinting },
+                    { cardId: otherCard._uniqueId, quantity: 5, isWanted: false, binderId: 'system:collection', card: otherCard },
+                ],
+                wants: [],
+            },
+            error: null,
+        });
+        // 91 daily rows: $100 rising $1 a day to $190.
+        collectionValueHistory.mockResolvedValue(valueRows(91, 100, 1));
+        setOpenBinderId('system:trade');
+        wrap(routes, '/binder/stats');
+        const change = await screen.findByTestId('value-over-time-change');
+        // Last 30 days: $160 to $190.
+        expect(change).toHaveTextContent('+$30.00 (+19%) over 30 days · was $160.00 → $190.00');
+        expect(screen.getByTestId('value-history-chart')).toBeInTheDocument();
+        expect(collectionValueHistory).toHaveBeenCalledWith(
+            'tcgplayer',
+            { [pricedPrinting._uniqueId]: 2 },
+            { days: 90 },
+        );
+
+        const calls = collectionValueHistory.mock.calls.length;
+        fireEvent.click(within(screen.getByTestId('value-over-time')).getByRole('button', { name: '90 days' }));
+        expect(screen.getByTestId('value-over-time-change'))
+            .toHaveTextContent('+$90.00 (+90%) over 90 days · was $100.00 → $190.00');
+        expect(collectionValueHistory.mock.calls.length).toBe(calls);
+    });
+
+    test('value over time shows a falling Binder in red wording and stays honest when empty or failing', async () => {
+        collectionValueHistory.mockResolvedValue(valueRows(10, 50, -2));
+        setOpenBinderId('system:trade');
+        const first = wrap(routes, '/binder/stats');
+        expect(await screen.findByTestId('value-over-time-change'))
+            .toHaveTextContent('−$18.00 (−36%) over 9 days · was $50.00 → $32.00');
+        first.unmount();
+
+        collectionValueHistory.mockResolvedValue([]);
+        const second = wrap(routes, '/binder/stats');
+        expect(await screen.findByText(/Not enough TCGplayer price history/)).toBeInTheDocument();
+        expect(screen.queryByTestId('value-history-chart')).not.toBeInTheDocument();
+        second.unmount();
+
+        collectionValueHistory.mockRejectedValue(new Error('offline'));
+        wrap(routes, '/binder/stats');
+        expect(await screen.findByText(/Couldn’t load the value history/)).toBeInTheDocument();
+        expect(screen.getByTestId('collection-stats-headline')).toBeInTheDocument();
     });
 
     test('RPC empty with ids is honest empty; headline stays', async () => {
