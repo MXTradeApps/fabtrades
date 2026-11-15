@@ -15,6 +15,9 @@ export type Week = {
   // Opening card that doubles as the thumbnail: your words in big type over a card's art.
   // `card` is which card's art to use (0 = first), `highlight` which line gets the accent colour (default: last).
   thumbnail?: {lines: string[]; highlight?: number; card?: number};
+  // Optional second opening screen, shown from `at` seconds until the first card: big title
+  // lines, a smaller line under them, and every card's art in a row.
+  intro?: {at: number; lines: string[]; sub?: string};
   fabLogo?: string | null; // Flesh and Blood logo under public/, set by render.mjs when the file exists
   cta?: {question: string; url: string; foot: string};
   cards: Mover[];

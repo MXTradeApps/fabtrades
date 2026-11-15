@@ -249,5 +249,14 @@
     ],
     "end": 76.43,
     "total": 88.1
+  },
+  "intro": {
+    "at": 5.3,
+    "lines": [
+      "Biggest",
+      "Gainers",
+      "& Losers"
+    ],
+    "sub": "Week of November 15"
   }
 }
