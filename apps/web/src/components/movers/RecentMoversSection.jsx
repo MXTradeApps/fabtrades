@@ -17,6 +17,8 @@ import { getBinderEntries } from '../../services/binder.js';
 import { copiesByPrintingId, ownedPrintingIds, splitMoversByDirection } from '../../utils/recentMovers.js';
 import { formatMoverAmount } from '../../utils/moverFormat.js';
 import TrendRow from './TrendRow.jsx';
+import DirectionList from './DirectionList.jsx';
+import { artForRow, buyForRow, segmentSx, windowLabel } from './trendListUtils.js';
 
 const DAY_OPTIONS = [7, 30];
 const SORT_OPTIONS = [
@@ -28,40 +30,14 @@ const FLOOR_OPTIONS = [0, 2, 10, 50];
 const sourceLabel = (priceSource) =>
     priceSource === 'cardmarket' ? 'CardMarket' : 'TCGplayer';
 
-/** Which price each list ranks by: Low for rising, Market (CM: Trend) for falling. */
-const measureLabel = (kind, priceSource) => {
-    if (kind === 'gainer') return 'by Low';
-    return priceSource === 'cardmarket' ? 'by Trend' : 'by Market';
-};
-
 const pickNumber = (raw, allowed, fallback) => {
     const n = Number(raw);
     return allowed.includes(n) ? n : fallback;
 };
 
-const windowLabel = (days) => (days === 7 ? 'this week' : `in the last ${days} days`);
-
 const floorLabel = (floor, priceSource) => {
     if (!floor) return 'Any price';
     return priceSource === 'cardmarket' ? `${floor} €+` : `$${floor}+`;
-};
-
-const artForRow = (row, cardIdLookup) => {
-    const printing = cardIdLookup?.[row.card_id];
-    return {
-        imageUrl: printing?.imageUrl || row.image_url || '',
-        fallbackUrl: printing?.imageUrlFallback || row.image_url || '',
-    };
-};
-
-/** TCGplayer product + finish for the affiliate buy link (catalog first, then the row). */
-const buyForRow = (row, cardIdLookup) => {
-    const printing = cardIdLookup?.[row.card_id];
-    const fromId = /^(\d+)-/.exec(String(row.card_id || ''))?.[1];
-    return {
-        productId: printing?.productId || fromId || null,
-        subTypeName: printing?.subTypeName || row.finish || null,
-    };
 };
 
 /** Trending filters live in the URL so a filtered view can be shared. */
@@ -86,16 +62,6 @@ const useTrendFilters = () => {
         setSort: (v) => update('sort', v, 'percent'),
         setFloor: (v) => update('min', v, 0),
     };
-};
-
-const segmentSx = {
-    '& .MuiToggleButton-root': {
-        px: 1.5,
-        py: 0.5,
-        textTransform: 'none',
-        fontWeight: 600,
-        fontSize: '0.84rem',
-    },
 };
 
 /**
@@ -280,82 +246,6 @@ const RecentMoversSection = () => {
         </Box>
     );
 };
-
-const DirectionList = ({
-    kind,
-    title,
-    rows,
-    total,
-    hiddenOnPhone,
-    emptyCopy,
-    priceSource,
-    cardIdLookup,
-    onSelect,
-}) => (
-    <Box
-        data-testid={`movers-list-${kind}`}
-        sx={{ display: { xs: hiddenOnPhone ? 'none' : 'block', md: 'block' }, minWidth: 0 }}
-    >
-        <Typography
-            variant="caption"
-            sx={{ display: { xs: 'block', md: 'none' }, color: 'text.secondary', mb: 1, fontVariantNumeric: 'tabular-nums' }}
-        >
-            {total === 1 ? '1 card' : `${total} cards`} · {measureLabel(kind, priceSource)}
-        </Typography>
-        <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'baseline', gap: 1, mb: 1 }}>
-            <Typography
-                variant="h4"
-                component="h2"
-                sx={{ color: kind === 'gainer' ? 'success.main' : 'error.main' }}
-            >
-                {title}
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
-                {total === 1 ? '1 card' : `${total} cards`} · {measureLabel(kind, priceSource)}
-            </Typography>
-        </Box>
-        {rows.length === 0 ? (
-            <Typography variant="body2" sx={{ color: 'text.secondary', py: 1 }}>
-                {emptyCopy}
-            </Typography>
-        ) : (
-            <Box
-                sx={{
-                    border: 1,
-                    borderColor: 'divider',
-                    borderRadius: '12px',
-                    bgcolor: 'background.paper',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}
-            >
-                {rows.map((row) => {
-                    const { imageUrl, fallbackUrl } = artForRow(row, cardIdLookup);
-                    return (
-                        <TrendRow
-                            key={`${row.direction}-${row.card_id}`}
-                            rank={row.rank}
-                            name={row.name}
-                            setName={row.set_name}
-                            finish={row.finish}
-                            imageUrl={imageUrl}
-                            fallbackUrl={fallbackUrl}
-                            startLow={Number(row.start_price)}
-                            latestLow={Number(row.latest_price)}
-                            percentChange={Number(row.percent_change)}
-                            amountChange={Number(row.amount_change)}
-                            history={row.history}
-                            {...buyForRow(row, cardIdLookup)}
-                            priceSource={priceSource}
-                            onSelect={() => onSelect(row)}
-                        />
-                    );
-                })}
-            </Box>
-        )}
-    </Box>
-);
 
 /**
  * Signed-in strip: how many of the user's cards (any Binder, not Want List)
