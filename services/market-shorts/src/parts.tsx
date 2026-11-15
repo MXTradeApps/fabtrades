@@ -1,6 +1,7 @@
 import React from 'react';
 import {Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig, Easing} from 'remotion';
 import {C, FONT, Mover} from './types';
+import {niceTicks, tickLabels} from '../ticks.mjs';
 
 const src = (img: string) => (/^https?:/.test(img) ? img : staticFile(img));
 
@@ -42,29 +43,42 @@ export const usePop = (delay: number, damping = 12) => {
   return spring({frame: frame - delay, fps, config: {damping, mass: 0.6}});
 };
 
-/** 30 day price line that draws itself, with this week shaded and a live price dot. */
+/**
+ * 30 day price line that draws itself, with a price scale on the left, this week shaded
+ * and a live price dot.
+ */
 export const Chart: React.FC<{series: number[]; color: string; delay: number; w?: number; h?: number}> = ({series, color, delay, w = 940, h = 360}) => {
   const frame = useCurrentFrame();
+  const G = 118; // gutter for the price labels
   const s = series.filter((v) => Number.isFinite(v));
   const lo = Math.min(...s), hi = Math.max(...s), pad = (hi - lo) * 0.14 || 1;
-  const x = (i: number) => (i / (s.length - 1)) * w;
+  const x = (i: number) => G + (i / (s.length - 1)) * (w - G);
   const y = (v: number) => h - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * h;
+  const ticks = niceTicks(lo - pad, hi + pad).filter((v) => y(v) > 14 && y(v) < h - 14);
+  const labels = tickLabels(ticks);
   const t = interpolate(frame - delay, [0, 50], [0, s.length - 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.inOut(Easing.cubic)});
   const i0 = Math.floor(t), f = t - i0;
   const head = {x: x(t), y: y(s[i0] + ((s[Math.min(i0 + 1, s.length - 1)] - s[i0]) * f))};
   const pts = [...s.slice(0, i0 + 1).map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`), `${head.x.toFixed(1)},${head.y.toFixed(1)}`].join(' ');
   const wk = Math.max(0, s.length - 8);
   const shade = interpolate(frame - delay, [30, 50], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const scale = interpolate(frame - delay, [-8, 8], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pulse = 1 + 0.25 * Math.sin(frame / 4);
   return (
     <svg width={w} height={h + 56} viewBox={`0 0 ${w} ${h + 56}`} style={{overflow: 'visible'}}>
+      {ticks.map((v, i) => (
+        <g key={v} opacity={scale}>
+          <line x1={G} y1={y(v)} x2={w} y2={y(v)} stroke={C.line} strokeWidth={2} strokeDasharray="6 10" />
+          <text x={G - 16} y={y(v) + 10} textAnchor="end" fill={C.dim} fontSize={28} fontWeight={600} fontFamily={FONT}>{labels[i]}</text>
+        </g>
+      ))}
       <rect x={x(wk)} y={0} width={w - x(wk)} height={h} fill={color} opacity={0.12 * shade} />
-      <polygon points={`0,${h} ${pts} ${head.x.toFixed(1)},${h}`} fill={color} opacity={0.16} />
+      <polygon points={`${G},${h} ${pts} ${head.x.toFixed(1)},${h}`} fill={color} opacity={0.16} />
       <polyline points={pts} fill="none" stroke={color} strokeWidth={8} strokeLinejoin="round" strokeLinecap="round" />
       <circle cx={head.x} cy={head.y} r={22 * pulse} fill={color} opacity={0.25} />
       <circle cx={head.x} cy={head.y} r={13} fill={color} />
-      <line x1={0} y1={h} x2={w} y2={h} stroke={C.line} strokeWidth={2} />
-      <text x={0} y={h + 44} fill={C.faint} fontSize={28} fontFamily={FONT}>30 days ago</text>
+      <line x1={G} y1={h} x2={w} y2={h} stroke={C.line} strokeWidth={2} />
+      <text x={G} y={h + 44} fill={C.faint} fontSize={28} fontFamily={FONT}>30 days ago</text>
       <text x={x(wk) + 10} y={h + 44} fill={C.dim} fontSize={28} fontFamily={FONT} opacity={shade}>this week</text>
     </svg>
   );
