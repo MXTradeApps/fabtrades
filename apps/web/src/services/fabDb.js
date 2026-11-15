@@ -299,37 +299,68 @@ export function catalogSnapshotIsStale(snapshotUpdatedAt, liveUpdatedAt) {
 }
 
 /**
+ * Resolves to the live catalog when the pipeline has published prices newer than
+ * [snapshot], or to null when the snapshot is current or that cannot be told.
+ * Never rejects: a failed check or read leaves the snapshot on screen.
+ */
+const fetchNewerCatalog = async (snapshot, liveUpdatedAtPromise) => {
+    try {
+        const liveUpdatedAt = await liveUpdatedAtPromise;
+        if (!catalogSnapshotIsStale(snapshot.pricesUpdatedAt, liveUpdatedAt)) return null;
+        console.info('[catalog] Pipeline prices are newer than this build; reading the database.');
+        return await fetchCatalogFromDatabase();
+    } catch (error) {
+        console.warn('[catalog] Could not refresh prices from the database.', error);
+        return null;
+    }
+};
+
+/**
  * The catalog, preferring the snapshot `scripts/generateCatalog.js` writes at
- * build time when it still matches the database.
+ * build time.
  *
- * Reading it live costs seventeen paginated requests against PostgREST. The
- * snapshot is one immutable, CDN-served file instead, and it is what most
- * visits use. It is only as fresh as the last deploy, though, and the price
- * pipeline can run without that deploy succeeding. Every load therefore checks
- * `fab_card_prices.updated_at`. A newer timestamp means the pipeline has run,
- * and the catalog is read from the database so the site shows those prices.
+ * Reading it live costs eighteen paginated requests against PostgREST. The
+ * snapshot is one immutable, CDN-served file instead. It is only as fresh as the
+ * last deploy, though, and the price pipeline can run without that deploy
+ * happening. Every load therefore checks `fab_card_prices.updated_at`, and a
+ * newer timestamp means the catalog is read from the database so the site shows
+ * those prices.
+ *
+ * How that read is delivered depends on [onRefresh]:
+ *
+ * - With it, the snapshot is returned as soon as it has downloaded, so search
+ *   works straight away with the prices of the last deploy. The freshness check
+ *   and any database read carry on in the background, and [onRefresh] receives
+ *   the live catalog once, if and when it turns out to be newer.
+ * - Without it, the call waits and resolves with whichever catalog is current.
  *
  * Falling back to the database also keeps `vite dev` working without a build
  * step, and covers a client whose cached bundle outlived the deploy its
  * snapshot shipped in.
  *
- * @param {{ snapshotUrl?: string|null }} [options] Tests pass a snapshot URL.
- *   Production omits it and uses the URL baked into the build.
+ * @param {{
+ *   snapshotUrl?: string|null,
+ *   onRefresh?: (catalog: object) => void
+ * }} [options] Tests pass a snapshot URL. Production omits it and uses the URL
+ *   baked into the build.
  */
-export const fetchCatalog = async ({ snapshotUrl: url = snapshotUrl() } = {}) => {
+export const fetchCatalog = async ({ snapshotUrl: url = snapshotUrl(), onRefresh } = {}) => {
     if (url) {
         try {
-            const [snapshot, liveUpdatedAt] = await Promise.all([
-                fetchCatalogSnapshot(url),
-                fetchPricesUpdatedAt().catch((error) => {
-                    console.warn('[catalog] Could not check price freshness.', error);
-                    return null;
-                })
-            ]);
-            if (!catalogSnapshotIsStale(snapshot.pricesUpdatedAt, liveUpdatedAt)) {
+            // Started alongside the snapshot so a stale one costs no extra wait.
+            const liveUpdatedAt = fetchPricesUpdatedAt().catch((error) => {
+                console.warn('[catalog] Could not check price freshness.', error);
+                return null;
+            });
+            const snapshot = await fetchCatalogSnapshot(url);
+            const newer = fetchNewerCatalog(snapshot, liveUpdatedAt);
+            if (onRefresh) {
+                newer.then((catalog) => {
+                    if (catalog) onRefresh(catalog);
+                });
                 return snapshot;
             }
-            console.info('[catalog] Pipeline prices are newer than this build; reading the database.');
+            return (await newer) || snapshot;
         } catch (error) {
             console.warn('[catalog] Falling back to a direct database read.', error);
         }
