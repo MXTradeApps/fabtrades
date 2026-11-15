@@ -11,6 +11,7 @@ import { ArrowBack as ArrowBackIcon, InsightsOutlined } from '@mui/icons-materia
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/elements/Header.jsx';
 import { Page, PageHeader, Panel, EmptyState } from '../components/layout/Page.jsx';
+import ValueOverTime from '../components/binder/ValueOverTime.jsx';
 import DirectionList from '../components/movers/DirectionList.jsx';
 import { segmentSx, windowLabel } from '../components/movers/trendListUtils.js';
 import { formatMoverAmount } from '../utils/moverFormat.js';
@@ -281,6 +282,8 @@ const CollectionStats = () => {
                         </Box>
                     </Box>
                 </Panel>
+
+                <ValueOverTime copies={copies} priceSource={priceSource} loading={loading} />
 
                 <Box component="section">
                     <Box

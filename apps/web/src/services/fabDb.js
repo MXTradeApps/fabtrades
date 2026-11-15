@@ -208,6 +208,28 @@ export const trendingMovers = async (source, {
 };
 
 /**
+ * Daily total value of the given holdings (`fab_collection_value_history`):
+ * today's copies valued at each past day's price (TCGplayer Market, else Low;
+ * CardMarket Trend, else Low). Rows are `{ captured_on, total_value,
+ * priced_copies, unpriced_copies }`, oldest first.
+ *
+ * @param {'tcgplayer'|'cardmarket'} source
+ * @param {Record<string, number>} copies printing id to copies held
+ * @param {{ days?: number }} [opts]
+ */
+export const collectionValueHistory = async (source, copies, { days = 90 } = {}) => {
+    const ids = Object.keys(copies || {}).filter((id) => Number(copies[id]) > 0);
+    const body = {
+        p_source: source,
+        p_card_ids: ids,
+        p_quantities: ids.map((id) => Math.round(Number(copies[id]))),
+        p_days: days,
+    };
+    const response = await restFetch('rpc/fab_collection_value_history', {}, { method: 'POST', body });
+    return response.json();
+};
+
+/**
  * Daily catalog snapshots for one Printing (`fab_price_history`). Empty list
  * is success (no snapshots yet), not an error. Window clipping is client-side.
  *
