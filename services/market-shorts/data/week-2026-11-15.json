@@ -1,0 +1,65 @@
+{
+  "week": "Nov 8 to Nov 15, 2026",
+  "source": "TCGplayer market price (actual sales), tracked daily by FAB Trades",
+  "cards": [
+    {
+      "tag": "BIGGEST RISER",
+      "name": "Perforate (Yellow)",
+      "printing": "The Hunted · Majestic · Rainbow Foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/612677_200w.jpg",
+      "old": 5.26,
+      "new": 10.04,
+      "series": [3.31, 3.37, 3.37, 3.37, 3.42, 3.42, 3.42, 3.42, 3.63, 3.63, 3.63, 3.63, 3.97, 3.97, 3.97, 3.97, 4.15, 4.15, 4.43, 4.43, 4.98, 5.26, 5.26, 5.26, 6.3, 7.03, 7.03, 9.06, 9.06, 9.6, 10.04],
+      "why": "The Fang deck that won Worlds ran three copies."
+    },
+    {
+      "tag": "RISER",
+      "name": "Orbitoclast",
+      "printing": "Outsiders · Majestic · Non-foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/488417_200w.jpg",
+      "old": 10.88,
+      "new": 15.13,
+      "series": [7.52, 7.52, 8.07, 8.07, 8.07, 9, 9, 9, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 9.6, 10.88, 10.88, 10.88, 11.66, 11.66, 11.66, 12.45, 14.05, 15.13],
+      "why": "Mastery Pack Assassin just dropped, and Arakni made top 8 at Calling Sydney."
+    },
+    {
+      "tag": "RISER",
+      "name": "Stonewall Gauntlet",
+      "printing": "Part the Mistveil · Legendary · Rainbow Foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/551718_200w.jpg",
+      "old": 29.41,
+      "new": 36.4,
+      "series": [17.48, 17.48, 17.48, 17.81, 18.07, 18.07, 18.28, 18.76, 18.76, 18.76, 19.77, 21.36, 22.95, 23.72, 25.71, 25.71, 25.71, 25.71, 27.2, 27.2, 27.2, 27.2, 27.95, 29.41, 29.91, 30.72, 32.46, 34.66, 34.66, 34.66, 36.4],
+      "why": "Also in the champion's Fang list."
+    },
+    {
+      "tag": "FALLER",
+      "name": "Blade Flurry (Red)",
+      "printing": "Heavy Hitters · Majestic · Non-foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/533512_200w.jpg",
+      "old": 18.05,
+      "new": 14.12,
+      "series": [21.5, 21.5, 21.5, 21.5, 21.5, 21.5, 21.5, 21.5, 20.86, 20.86, 20.86, 20.13, 20.13, 20.13, 20.13, 19.39, 19.39, 19.39, 18.64, 18.64, 18.64, 18.05, 18.05, 18.05, 16.07, 16.07, 15.43, 15.43, 14.12, 14.12, 14.12],
+      "why": "The champion played it, but the Mastery Pack reprint is $6."
+    },
+    {
+      "tag": "BIGGEST FALLER",
+      "name": "Reach of the Abyss",
+      "printing": "Usurp the Shadow Throne · Legendary · Rainbow Foil",
+      "img": "https://tcgplayer-cdn.tcgplayer.com/product/714931_200w.jpg",
+      "old": 22.12,
+      "new": 16.26,
+      "series": [38.36, 37.36, 37.36, 35.4, 33.51, 33.51, 31.61, 31.61, 31.61, 31.61, 31.61, 28.28, 27.06, 26.43, 26.43, 25.74, 25.09, 24.47, 24.47, 24.47, 23.76, 22.93, 22.12, 22.12, 20.52, 18.96, 17.61, 17.61, 17.61, 16.92, 16.26],
+      "why": "It was $38 a month ago and has slid all month."
+    }
+  ],
+  "thumbnail": {
+    "lines": ["Post-Worlds", "and Sydney Meta", "causing spikes!"],
+    "card": 0
+  },
+  "hook": {
+    "line": "This $5 card nearly doubled",
+    "sub": "the week Fang won Worlds",
+    "spoken": "This five dollar card nearly doubled the week Fang won Worlds. Here are your Flesh and Blood market movers."
+  }
+}
