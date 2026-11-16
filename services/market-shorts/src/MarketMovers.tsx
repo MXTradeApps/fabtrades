@@ -209,6 +209,27 @@ const End: React.FC<{w: Week}> = ({w}) => {
   );
 };
 
+/** A picture that slides up over the lower part of the slide, holds, and slides away. */
+const Shot: React.FC<{img: string; caption?: string; dur: number}> = ({img, caption, dur}) => {
+  const frame = useCurrentFrame();
+  const inn = usePop(0, 14);
+  const out = interpolate(frame, [dur - 8, dur], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return (
+    <AbsoluteFill style={{fontFamily: FONT, color: C.text, opacity: Math.min(1, inn * 2) * out}}>
+      <div style={{position: 'absolute', left: 30, right: 30, top: 1085, transform: `translateY(${(1 - inn) * 160 + (1 - out) * 60}px) rotate(${(1 - inn) * 2 - 1}deg)`}}>
+        <div style={{borderRadius: 28, overflow: 'hidden', border: `6px solid ${C.text}`, boxShadow: '0 30px 90px rgba(0,0,0,.85)', background: C.panel}}>
+          <Img src={staticFile(img)} style={{display: 'block', width: '100%'}} />
+        </div>
+        {caption ? (
+          <div style={{textAlign: 'center', marginTop: 22}}>
+            <span style={{display: 'inline-block', padding: '14px 30px', borderRadius: 22, background: C.panel, border: `2px solid ${C.line}`, fontSize: 40, fontWeight: 700}}>{caption}</span>
+          </div>
+        ) : null}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 /** Background glow, title bar, date and slide dots. These never fade between slides. */
 const Chrome: React.FC<{w: Week}> = ({w}) => {
   const frame = useCurrentFrame();
@@ -260,6 +281,10 @@ export const MarketMovers: React.FC<Week> = (w) => {
         <Sequence key={i} from={c.from} durationInFrames={c.dur}><CardScene w={w} i={i} dur={c.dur} /></Sequence>
       ))}
       <Sequence from={l.end.from} durationInFrames={l.end.dur}><End w={w} /></Sequence>
+      {(w.shots ?? []).map((sh, i) => {
+        const dur = Math.round((sh.dur ?? 4) * FPS);
+        return <Sequence key={`shot${i}`} from={Math.round(sh.at * FPS)} durationInFrames={dur}><Shot img={sh.img} caption={sh.caption} dur={dur} /></Sequence>;
+      })}
     </AbsoluteFill>
   );
 };

@@ -78,6 +78,22 @@ for (const [i, card] of week.cards.entries()) {
   card.img = saved;
 }
 
+// Emphasis pictures: copy each one into public/shots so the video can load it. A picture that
+// can't be found is left out with a warning instead of failing the render.
+const shots = [];
+for (const [i, shot] of (week.shots ?? []).entries()) {
+  const from = [shot.img, path.resolve(path.dirname(dataPath), shot.img)].find((f) => fs.existsSync(f) && fs.statSync(f).isFile());
+  if (!from) {
+    console.warn(`No picture at "${shot.img}"; leaving that shot out.`);
+    continue;
+  }
+  const file = `shots/${i}-${path.basename(from).replace(/[^\w.-]+/g, '_')}`;
+  fs.mkdirSync(path.join(here, 'public', 'shots'), {recursive: true});
+  fs.copyFileSync(from, path.join(here, 'public', file));
+  shots.push({...shot, img: file});
+}
+week.shots = shots;
+
 // Flesh and Blood logo for the opening card: public/fab-logo.png (or .svg / .webp).
 // Without it the card shows plain text instead.
 week.fabLogo = ['fab-logo.png', 'fab-logo.svg', 'fab-logo.webp'].find((f) => fs.existsSync(path.join(here, 'public', f))) ?? null;

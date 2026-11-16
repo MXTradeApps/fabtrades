@@ -23,6 +23,10 @@ export type Week = {
   // Optional second opening screen, shown from `at` seconds until the first card: big title
   // lines, a smaller line under them, and every card's art in a row.
   intro?: {at: number; lines: string[]; sub?: string};
+  // Pictures shown over the lower part of the video for emphasis (e.g. a stream screenshot).
+  // `at` is the second it appears, `dur` how long it stays (default 4), `img` a picture file:
+  // a path on your computer, or a file under public/ once render.mjs has copied it.
+  shots?: {at: number; dur?: number; img: string; caption?: string}[];
   fabLogo?: string | null; // Flesh and Blood logo under public/, set by render.mjs when the file exists
   cta?: {question: string; url: string; foot: string};
   cards: Mover[];
