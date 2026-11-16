@@ -120,22 +120,22 @@ PODS:
   - posthog_flutter (0.0.1):
     - Flutter
     - FlutterMacOS
-    - PostHog (< 4.0.0, >= 3.84.0)
+    - PostHog (< 4.0.0, >= 3.92.3)
   - PromisesObjC (2.4.1)
-  - purchases_flutter (10.18.1):
+  - purchases_flutter (11.0.2):
     - Flutter
-    - PurchasesHybridCommon (= 19.15.0)
-  - purchases_ui_flutter (10.18.1):
+    - PurchasesHybridCommon (= 20.9.0)
+  - purchases_ui_flutter (11.0.2):
     - Flutter
-    - PurchasesHybridCommonUI (= 19.15.0)
-  - PurchasesHybridCommon (19.15.0):
-    - RevenueCat (= 5.98.0)
-  - PurchasesHybridCommonUI (19.15.0):
-    - PurchasesHybridCommon (= 19.15.0)
-    - RevenueCatUI (= 5.98.0)
-  - RevenueCat (5.98.0)
-  - RevenueCatUI (5.98.0):
-    - RevenueCat (= 5.98.0)
+    - PurchasesHybridCommonUI (= 20.9.0)
+  - PurchasesHybridCommon (20.9.0):
+    - RevenueCat (= 5.103.0)
+  - PurchasesHybridCommonUI (20.9.0):
+    - PurchasesHybridCommon (= 20.9.0)
+    - RevenueCatUI (= 5.103.0)
+  - RevenueCat (5.103.0)
+  - RevenueCatUI (5.103.0):
+    - RevenueCat (= 5.103.0)
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -247,7 +247,7 @@ SPEC CHECKSUMS:
   FirebaseCoreInternal: 656b1c2fd5a1c5976183dc54b73deda78fb26ee3
   FirebaseInstallations: f70a49eed611f5602f373e40974b3b01556ac217
   FirebaseMessaging: c15f48126adbe8b4d3238a5e1fa24bab3ad3e472
-  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   google_mlkit_commons: b2c0a76e7ef4ff555e70e5d71f21d66ce3d08a97
   google_mlkit_text_recognition: 5a8cb8b73c765938fb7111de6f5f883b90f15d52
   GoogleDataTransport: a24e58982ab3ba2f64d79613e027fe7f57e88539
@@ -265,15 +265,15 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   PostHog: e23d1748dabcbd718125fc8d5c9b7b72beef35d2
-  posthog_flutter: c5462b0e35302b20ff880fc8036b842221408729
+  posthog_flutter: fa0828ac09cfe449a87e06ce846bc00f350ad456
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
-  purchases_flutter: bce632274172e59844aa3ba697b90a139fe81978
-  purchases_ui_flutter: f43993b7b2a7566a52f2ac6442c483eff9453d1a
-  PurchasesHybridCommon: 896c922f222ffde889a96568e02268b5ca9db85a
-  PurchasesHybridCommonUI: 843d45949325d6cf4c4abe285fa15876ca16f910
-  RevenueCat: d2d6a98d8e1d53cc1c6362cc1fdfb64ca99b8735
-  RevenueCatUI: 8f089ba531a2393465cb5062e2009eb3a6e42927
-  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  purchases_flutter: d7b0bd242bd2c98bff32f1cd06d091d693a44958
+  purchases_ui_flutter: 832a9dc125606f4647f65b543e895cbb8b804884
+  PurchasesHybridCommon: 6f43160f66c966baf5d4b5d3e5fb448d48904382
+  PurchasesHybridCommonUI: ccb7a520081b49ee863341536424dff930f055d2
+  RevenueCat: ceb7b3d27ecf3ac26674ef9a75b45cbd57c8f699
+  RevenueCatUI: 5191f13c2e8420b9398ecff5352ad671775dec66
+  shared_preferences_foundation: a7c3904f2dedb3701dd1903cb152ef5e7df92422
   sign_in_with_apple: 5e34677a4e74c5f42760f41b3bbe05343e84d171
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
