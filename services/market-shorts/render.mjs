@@ -28,7 +28,15 @@ const week = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 // Voiceover: copy it next to the template and read scene start times from its pauses.
 const audioPath = args.find((a) => /\.(m4a|mp3|wav|aac|mp4|mov)$/i.test(a));
 if (audioPath) {
-  const remotion = (...a) => spawnSync('npx', ['remotion', ...a], {cwd: here, encoding: 'utf8'});
+  // Run the Remotion CLI through node itself: `npx` is a .cmd file on Windows and can't be spawned directly.
+  const cliDir = path.join(here, 'node_modules', '@remotion', 'cli');
+  const bin = JSON.parse(fs.readFileSync(path.join(cliDir, 'package.json'), 'utf8')).bin;
+  const cli = path.join(cliDir, typeof bin === 'string' ? bin : bin.remotion);
+  const remotion = (...a) => {
+    const r = spawnSync(process.execPath, [cli, ...a], {cwd: here, encoding: 'utf8'});
+    if (r.error) throw r.error;
+    return r;
+  };
   const file = `audio/voice${path.extname(audioPath).toLowerCase()}`;
   fs.mkdirSync(path.join(here, 'public', 'audio'), {recursive: true});
   fs.copyFileSync(audioPath, path.join(here, 'public', file));

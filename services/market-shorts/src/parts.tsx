@@ -44,7 +44,7 @@ export const usePop = (delay: number, damping = 12) => {
 };
 
 /**
- * 30 day price line that draws itself, with a price scale on the left, this week shaded
+ * Price line (30 days when the history goes back that far) that draws itself, with a price scale on the left, this week shaded
  * and a live price dot.
  */
 export const Chart: React.FC<{series: number[]; color: string; delay: number; w?: number; h?: number}> = ({series, color, delay, w = 940, h = 360}) => {
@@ -61,6 +61,9 @@ export const Chart: React.FC<{series: number[]; color: string; delay: number; w?
   const head = {x: x(t), y: y(s[i0] + ((s[Math.min(i0 + 1, s.length - 1)] - s[i0]) * f))};
   const pts = [...s.slice(0, i0 + 1).map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`), `${head.x.toFixed(1)},${head.y.toFixed(1)}`].join(' ');
   const wk = Math.max(0, s.length - 8);
+  // Shade and label "this week" only when it starts clear of the left label. A card with a
+  // short price history (about a week) would otherwise print both labels on top of each other.
+  const split = x(wk) - G > 220;
   const shade = interpolate(frame - delay, [30, 50], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const scale = interpolate(frame - delay, [-8, 8], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pulse = 1 + 0.25 * Math.sin(frame / 4);
@@ -72,14 +75,14 @@ export const Chart: React.FC<{series: number[]; color: string; delay: number; w?
           <text x={G - 16} y={y(v) + 10} textAnchor="end" fill={C.dim} fontSize={28} fontWeight={600} fontFamily={FONT}>{labels[i]}</text>
         </g>
       ))}
-      <rect x={x(wk)} y={0} width={w - x(wk)} height={h} fill={color} opacity={0.12 * shade} />
+      {split ? <rect x={x(wk)} y={0} width={w - x(wk)} height={h} fill={color} opacity={0.12 * shade} /> : null}
       <polygon points={`${G},${h} ${pts} ${head.x.toFixed(1)},${h}`} fill={color} opacity={0.16} />
       <polyline points={pts} fill="none" stroke={color} strokeWidth={8} strokeLinejoin="round" strokeLinecap="round" />
       <circle cx={head.x} cy={head.y} r={22 * pulse} fill={color} opacity={0.25} />
       <circle cx={head.x} cy={head.y} r={13} fill={color} />
       <line x1={G} y1={h} x2={w} y2={h} stroke={C.line} strokeWidth={2} />
-      <text x={G} y={h + 44} fill={C.faint} fontSize={28} fontFamily={FONT}>30 days ago</text>
-      <text x={x(wk) + 10} y={h + 44} fill={C.dim} fontSize={28} fontFamily={FONT} opacity={shade}>this week</text>
+      <text x={G} y={h + 44} fill={C.faint} fontSize={28} fontFamily={FONT}>{s.length - 1} days ago</text>
+      {split ? <text x={x(wk) + 10} y={h + 44} fill={C.dim} fontSize={28} fontFamily={FONT} opacity={shade}>this week</text> : null}
     </svg>
   );
 };

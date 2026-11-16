@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Audio, Img, Sequence, interpolate, interpolateColors, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Backdrop, CardArt, Chart, Header, useCount, usePop} from './parts';
-import {C, FONT, Mover, Week, layout, pct, round$, usd} from './types';
+import {C, FONT, FPS, Mover, Week, layout, pct, round$, usd} from './types';
 
 const color = (m: Mover) => (m.new >= m.old ? C.up : C.down);
 const signed = (n: number) => (n > 0 ? '+' : '') + Math.round(n) + '%';
@@ -61,6 +61,41 @@ const Thumbnail: React.FC<{w: Week; dur: number}> = ({w, dur}) => {
             );
           })}
         </div>
+      </div>
+    </Scene>
+  );
+};
+
+/** Second opening screen: what the video is about, with every card's art in a row. */
+const Intro: React.FC<{w: Week; dur: number}> = ({w, dur}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const t = w.intro!;
+  const subIn = usePop(6 + t.lines.length * 5);
+  const n = w.cards.length;
+  const gap = 16;
+  const artW = Math.min(200, Math.floor((940 - gap * (n - 1)) / n));
+  return (
+    <Scene dur={dur}>
+      <div style={{position: 'absolute', top: 330, left: 60, right: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
+        {t.lines.map((line, i) => {
+          const pop = spring({frame: frame - 2 - i * 5, fps, config: {damping: 11, mass: 0.6}});
+          const size = Math.min(210, 940 / (0.66 * Math.max(line.length, 4)));
+          const col = /gain|ris|winner/i.test(line) ? C.up : /los|fall|drop/i.test(line) ? C.down : C.text;
+          return (
+            <div key={i} style={{fontSize: size, fontWeight: 900, lineHeight: 1.04, letterSpacing: -3, textTransform: 'uppercase', whiteSpace: 'nowrap', color: col, textShadow: '0 12px 50px rgba(0,0,0,.8)', opacity: Math.min(1, pop * 3), transform: `scale(${interpolate(pop, [0, 1], [1.8, 1])})`}}>{line}</div>
+          );
+        })}
+      </div>
+      {t.sub ? (
+        <div style={{position: 'absolute', top: 1010, left: 60, right: 60, textAlign: 'center', opacity: subIn, transform: `translateY(${(1 - subIn) * 40}px)`}}>
+          <span style={{display: 'inline-block', padding: '22px 42px', borderRadius: 28, background: C.panel, border: `2px solid ${C.line}`, fontSize: 54, fontWeight: 800}}>{t.sub}</span>
+        </div>
+      ) : null}
+      <div style={{position: 'absolute', top: 1230, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap}}>
+        {w.cards.map((m, i) => (
+          <div key={i} style={{borderBottom: `8px solid ${color(m)}`, paddingBottom: 14}}><CardArt m={m} width={artW} delay={14 + i * 4} from={1.4} /></div>
+        ))}
       </div>
     </Scene>
   );
@@ -185,13 +220,20 @@ const Chrome: React.FC<{w: Week}> = ({w}) => {
 
 export const MarketMovers: React.FC<Week> = (w) => {
   const l = layout(w);
+  // The optional intro screen takes over the end of the opening, if it fits inside it.
+  const at = w.intro?.lines?.length ? Math.round(w.intro.at * FPS) : 0;
+  const introAt = at > 15 && at < l.hook.dur - 15 ? at : null;
+  const hookDur = introAt ?? l.hook.dur;
   return (
     <AbsoluteFill style={{background: C.bg}}>
       {w.audio ? <Audio src={staticFile(w.audio)} /> : null}
       <Chrome w={w} />
-      <Sequence durationInFrames={l.hook.dur}>
-        {w.thumbnail?.lines?.length ? <Thumbnail w={w} dur={l.hook.dur} /> : <Hook w={w} dur={l.hook.dur} />}
+      <Sequence durationInFrames={hookDur}>
+        {w.thumbnail?.lines?.length ? <Thumbnail w={w} dur={hookDur} /> : <Hook w={w} dur={hookDur} />}
       </Sequence>
+      {introAt !== null ? (
+        <Sequence from={introAt} durationInFrames={l.hook.dur - introAt}><Intro w={w} dur={l.hook.dur - introAt} /></Sequence>
+      ) : null}
       {l.cards.map((c, i) => (
         <Sequence key={i} from={c.from} durationInFrames={c.dur}><CardScene w={w} i={i} dur={c.dur} /></Sequence>
       ))}

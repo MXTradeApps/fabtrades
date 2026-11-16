@@ -60,6 +60,14 @@ The Flesh and Blood logo on the card is `public/fab-logo.png`. Replace that file
 
 Without a `thumbnail` block the video opens on the percent hook instead.
 
+An optional second opening screen can follow it, timed to your intro line:
+
+```json
+"intro": { "at": 5.3, "lines": ["Biggest", "Gainers", "& Losers"], "sub": "Week of November 15" }
+```
+
+`at` is the second it appears; it stays until the first card. It shows the lines in big type, the smaller line under them, and every card's art in a row.
+
 ## Card art
 
 Art comes from the same place as fabtrades.net: the `image_url` on each card (TCGplayer's product image). The site shows the 200px version, so `render.mjs` asks for the 1000px version of the same image first, falls back to the 200px one, and saves it into `public/cards/` before rendering. If an image can't be downloaded, that card renders with an empty art slot and the render still finishes.
