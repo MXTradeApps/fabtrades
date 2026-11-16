@@ -47,11 +47,13 @@ export const usePop = (delay: number, damping = 12) => {
  * Price line (30 days when the history goes back that far) that draws itself, with a price scale on the left, this week shaded
  * and a live price dot.
  */
-export const Chart: React.FC<{series: number[]; color: string; delay: number; w?: number; h?: number}> = ({series, color, delay, w = 940, h = 360}) => {
+export const Chart: React.FC<{series: number[]; color: string; delay: number; w?: number; h?: number; days?: number; recent?: string; series2?: number[]; legend?: [string, string]}> = ({series, color, delay, w = 940, h = 360, days = 7, recent = 'this week', series2, legend}) => {
   const frame = useCurrentFrame();
   const G = 118; // gutter for the price labels
   const s = series.filter((v) => Number.isFinite(v));
-  const lo = Math.min(...s), hi = Math.max(...s), pad = (hi - lo) * 0.14 || 1;
+  // A second printing shares the scale; it is right-aligned so both lines end on today.
+  const s2 = (series2 ?? []).filter((v) => Number.isFinite(v)).slice(-s.length);
+  const lo = Math.min(...s, ...s2), hi = Math.max(...s, ...s2), pad = (hi - lo) * 0.14 || 1;
   const x = (i: number) => G + (i / (s.length - 1)) * (w - G);
   const y = (v: number) => h - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * h;
   const ticks = niceTicks(lo - pad, hi + pad).filter((v) => y(v) > 14 && y(v) < h - 14);
@@ -60,10 +62,14 @@ export const Chart: React.FC<{series: number[]; color: string; delay: number; w?
   const i0 = Math.floor(t), f = t - i0;
   const head = {x: x(t), y: y(s[i0] + ((s[Math.min(i0 + 1, s.length - 1)] - s[i0]) * f))};
   const pts = [...s.slice(0, i0 + 1).map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`), `${head.x.toFixed(1)},${head.y.toFixed(1)}`].join(' ');
-  const wk = Math.max(0, s.length - 8);
+  const wk = Math.max(0, s.length - 1 - days);
+  const off = s.length - s2.length;
+  const pts2 = s2.map((v, i) => [off + i, v] as const).filter(([i]) => i <= t)
+    .map(([i, v]) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
   // Shade and label "this week" only when it starts clear of the left label. A card with a
   // short price history (about a week) would otherwise print both labels on top of each other.
-  const split = x(wk) - G > 220;
+  const split = x(wk) - G > 220 && wk > 0;
+  const narrow = w - x(wk) < 190; // the shaded strip is too thin to hold its label
   const shade = interpolate(frame - delay, [30, 50], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const scale = interpolate(frame - delay, [-8, 8], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const pulse = 1 + 0.25 * Math.sin(frame / 4);
@@ -77,12 +83,21 @@ export const Chart: React.FC<{series: number[]; color: string; delay: number; w?
       ))}
       {split ? <rect x={x(wk)} y={0} width={w - x(wk)} height={h} fill={color} opacity={0.12 * shade} /> : null}
       <polygon points={`${G},${h} ${pts} ${head.x.toFixed(1)},${h}`} fill={color} opacity={0.16} />
+      {s2.length > 1 && pts2 ? <polyline points={pts2} fill="none" stroke={C.text} strokeOpacity={0.75} strokeWidth={6} strokeDasharray="4 12" strokeLinejoin="round" strokeLinecap="round" /> : null}
       <polyline points={pts} fill="none" stroke={color} strokeWidth={8} strokeLinejoin="round" strokeLinecap="round" />
       <circle cx={head.x} cy={head.y} r={22 * pulse} fill={color} opacity={0.25} />
       <circle cx={head.x} cy={head.y} r={13} fill={color} />
       <line x1={G} y1={h} x2={w} y2={h} stroke={C.line} strokeWidth={2} />
       <text x={G} y={h + 44} fill={C.faint} fontSize={28} fontFamily={FONT}>{s.length - 1} days ago</text>
-      {split ? <text x={x(wk) + 10} y={h + 44} fill={C.dim} fontSize={28} fontFamily={FONT} opacity={shade}>this week</text> : null}
+      {split ? <text x={narrow ? w : x(wk) + 10} y={h + 44} textAnchor={narrow ? 'end' : 'start'} fill={C.dim} fontSize={28} fontFamily={FONT} opacity={shade}>{recent}</text> : null}
+      {legend && s2.length > 1 ? (
+        <g opacity={scale} fontFamily={FONT} fontSize={28} fontWeight={600}>
+          <line x1={G + 16} y1={-26} x2={G + 66} y2={-26} stroke={color} strokeWidth={8} strokeLinecap="round" />
+          <text x={G + 80} y={-16} fill={C.dim}>{legend[0]}</text>
+          <line x1={G + 330} y1={-26} x2={G + 380} y2={-26} stroke={C.text} strokeOpacity={0.75} strokeWidth={6} strokeDasharray="4 12" strokeLinecap="round" />
+          <text x={G + 394} y={-16} fill={C.dim}>{legend[1]}</text>
+        </g>
+      ) : null}
     </svg>
   );
 };

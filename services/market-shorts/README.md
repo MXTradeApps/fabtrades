@@ -4,6 +4,8 @@ Animated 1080x1920 "FAB Market Movers" Shorts, built with [Remotion](https://www
 
 ## Weekly flow
 
+Weekly data files and scripts are not committed: `data/*.json` is ignored except `data/sample-week.json`. Keep them on the machine you render on.
+
 ```bash
 cd services/market-shorts
 npm install                                   # first time only
@@ -43,6 +45,24 @@ If it can't find enough clear pauses it stops with a message instead of renderin
 `pick-movers.mjs` takes the biggest weekly moves in TCGplayer market price (real sales, not listings) and keeps only real ones: $5 or more a week ago, and at least three separate price changes inside the week. A single sale on a thinly traded promo moves the price once and is dropped. Sealed product (boxes, packs, decks) and art cards are left out, so every pick is a single card. Default is 3 risers and 2 fallers.
 
 Edit the data file freely before rendering: reorder or swap cards, or change the opening with `"hook": {"line": "This $6 card just jumped", "sub": "and one staple lost a quarter of its value"}`. An optional `"why"` on a card shows as a one-line caption under the chart.
+
+## Other time spans and two printings
+
+The default is a weekly video. For a shorter span, set the prices yourself (`old` is the price at the start of the span) and add:
+
+```json
+"period": { "days": 2, "ago": "2 days ago", "recent": "last 2 days" }
+```
+
+The slide then says "was $28.00 2 days ago" and the chart shades the last 2 days.
+
+A card can say which price it shows with `"priceLabel": "lowest listing price"`, and can show a second printing on the same slide:
+
+```json
+"also": { "printing": "Dynasty · Majestic · Rainbow Foil", "old": 59, "new": 71.39, "series": [ ... ] }
+```
+
+Both printings get their own percent and price, and the second one is drawn as a dotted line on the same chart.
 
 ## Opening card and thumbnail
 
