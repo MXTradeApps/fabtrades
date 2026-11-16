@@ -6,3 +6,4 @@ public/audio/
 # Weekly data files stay on the machine that renders them; only the sample is tracked.
 data/*.json
 !data/sample-week.json
+public/shots/

@@ -64,6 +64,16 @@ A card can say which price it shows with `"priceLabel": "lowest listing price"`,
 
 Both printings get their own percent and price, and the second one is drawn as a dotted line on the same chart.
 
+## Emphasis pictures
+
+To show a picture over the lower part of the video for a few seconds (a stream screenshot, a stats graphic):
+
+```json
+"shots": [ { "at": 21.5, "dur": 4, "img": "C:/path/to/screenshot.png", "caption": "Top 8 at Calling Sydney" } ]
+```
+
+`at` is the second it appears, `dur` how long it stays (4 seconds if left out). `img` is a file on your computer; a path relative to the data file works too. `caption` is optional.
+
 ## Opening card and thumbnail
 
 Add your own words for the opening card to the data file:
