@@ -66,3 +66,11 @@ export const FONT = "'Inter Shorts', Inter, -apple-system, 'SF Pro Display', 'He
 export const pct = (m: Mover) => Math.round(((m.new - m.old) / m.old) * 100);
 export const usd = (n: number) => '$' + (n >= 100 ? Math.round(n).toLocaleString('en-US') : n.toFixed(2));
 export const round$ = (n: number) => '$' + Math.round(n);
+
+/**
+ * The part of the 1080x1920 frame that YouTube Shorts leaves uncovered. The app draws its
+ * own bar over the top, the title, channel and caption over the bottom, and a column of
+ * buttons down the right of the lower half. Everything that matters stays above `bottom`,
+ * below `top`, and (in the lower half) left of `rail`.
+ */
+export const SAFE = {top: 190, bottom: 1470, rail: 920};

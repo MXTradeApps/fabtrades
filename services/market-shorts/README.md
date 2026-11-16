@@ -66,13 +66,17 @@ Both printings get their own percent and price, and the second one is drawn as a
 
 ## Emphasis pictures
 
-To show a picture over the lower part of the video for a few seconds (a stream screenshot, a stats graphic):
+To show a picture over the middle of the video for a few seconds (a stream screenshot, a stats graphic):
 
 ```json
 "shots": [ { "at": 21.5, "dur": 4, "img": "C:/path/to/screenshot.png", "caption": "Top 8 at Calling Sydney" } ]
 ```
 
-`at` is the second it appears, `dur` how long it stays (4 seconds if left out). `img` is a file on your computer; a path relative to the data file works too. `caption` is optional.
+`at` is the second it appears, `dur` how long it stays (4 seconds if left out). `img` is a file on your computer; a path relative to the data file works too. `caption` is optional. The picture is sized to fill the middle of the frame, so crop it to what matters first.
+
+## YouTube Shorts safe zone
+
+Shorts covers the top of the video with its own bar, the bottom with the title, channel and caption, and the lower right with its buttons. Every screen keeps its content inside the area that stays visible (`SAFE` in `src/types.ts`): nothing important above 190px, below 1470px, or right of 920px in the lower half.
 
 ## Opening card and thumbnail
 
