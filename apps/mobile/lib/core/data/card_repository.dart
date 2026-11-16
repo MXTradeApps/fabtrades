@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../logic/recent_movers.dart';
+import '../logic/trending_movers.dart';
 import '../logic/set_sort.dart';
 import '../models/card_model.dart';
 import 'set_published_on.dart';
@@ -1189,6 +1190,30 @@ class CardRepository {
     final rows = await _client.rpc('fab_recent_movers', params: params);
     return (rows as List)
         .map((r) => RecentMoverRow.fromMap(Map<String, dynamic>.from(r as Map)))
+        .toList();
+  }
+
+  /// Trending movers (`fab_trending_movers`) for [source] over the window in
+  /// [options]: risers by catalog Low, fallers by Market (CardMarket: Trend),
+  /// top [limit] each way. Does not default a bad source.
+  Future<List<TrendingMoverRow>> trendingMovers(
+    String source, {
+    TrendingOptions options = const TrendingOptions(),
+    int limit = 10,
+  }) async {
+    final rows = await _client.rpc(
+      'fab_trending_movers',
+      params: {
+        'p_source': source,
+        'p_days': options.days,
+        'p_sort': options.sort.param,
+        'p_min_price': options.minPrice,
+        'p_limit': limit,
+      },
+    );
+    return (rows as List)
+        .map((r) =>
+            TrendingMoverRow.fromMap(Map<String, dynamic>.from(r as Map)))
         .toList();
   }
 

@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:fabtrades/core/data/card_repository.dart';
 import 'package:fabtrades/core/data/set_published_on.dart';
 import 'package:fabtrades/core/logic/recent_movers.dart';
+import 'package:fabtrades/core/logic/trending_movers.dart';
 import 'package:fabtrades/core/models/account.dart';
 import 'package:fabtrades/core/models/card_model.dart';
 import 'package:fabtrades/core/models/subscription_status.dart';
@@ -52,6 +53,10 @@ Future<ProviderContainer> pumpApp(
   Map<String, List<RecentMoverRow>> recentMoversByOwnedKey = const {},
   Object? recentMoversError,
   Object? recentMoversOwnedError,
+  List<TrendingMoverRow> trendingMovers = const [],
+  Future<List<TrendingMoverRow>> Function(String source, TrendingOptions options)?
+      onTrendingMovers,
+  Object? trendingMoversError,
   List<RecentLowChange> printingRecentChanges = const [],
   Map<String, List<RecentLowChange>> printingRecentChangesByKey = const {},
   Object? printingRecentChangesError,
@@ -87,6 +92,19 @@ Future<ProviderContainer> pumpApp(
   when(() => mockRepo.recentMovers(any())).thenAnswer(answerRecentMovers);
   when(() => mockRepo.recentMovers(any(), cardIds: any(named: 'cardIds')))
       .thenAnswer(answerRecentMovers);
+
+  registerFallbackValue(const TrendingOptions());
+  when(() => mockRepo.trendingMovers(any(), options: any(named: 'options')))
+      .thenAnswer((inv) async {
+    if (trendingMoversError != null) throw trendingMoversError;
+    if (onTrendingMovers != null) {
+      return onTrendingMovers(
+        inv.positionalArguments[0] as String,
+        inv.namedArguments[#options] as TrendingOptions,
+      );
+    }
+    return trendingMovers;
+  });
 
   Future<List<RecentLowChange>> answerPrintingRecentChanges(
     Invocation inv,

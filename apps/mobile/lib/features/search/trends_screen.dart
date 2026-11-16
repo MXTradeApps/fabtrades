@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../app/ui.dart';
 import '../../core/analytics/analytics.dart';
+import '../../core/logic/trending_movers.dart';
 import '../../core/providers.dart';
-import 'recent_movers_section.dart';
+import 'trending_section.dart';
 
 /// Compact Home row that opens catalog-wide gainers and losers.
 class SeeTrendingTile extends ConsumerWidget {
@@ -59,7 +60,8 @@ class SeeTrendingTile extends ConsumerWidget {
   }
 }
 
-/// Dedicated list of top catalog-wide gainers and losers.
+/// Catalog-wide rising and falling cards, with the web Trending page's
+/// window, rank-by and price-floor options.
 class TrendsScreen extends ConsumerStatefulWidget {
   const TrendsScreen({super.key});
 
@@ -69,6 +71,7 @@ class TrendsScreen extends ConsumerStatefulWidget {
 
 class _TrendsScreenState extends ConsumerState<TrendsScreen> {
   var _refreshGen = 0;
+  var _options = const TrendingOptions();
 
   Future<void> _refresh() async {
     try {
@@ -98,8 +101,11 @@ class _TrendsScreenState extends ConsumerState<TrendsScreen> {
         child: ListView(
           key: ValueKey<int>(_refreshGen),
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
-            RecentMoversSection(),
+          children: [
+            TrendingSection(
+              options: _options,
+              onOptionsChanged: (next) => setState(() => _options = next),
+            ),
           ],
         ),
       ),

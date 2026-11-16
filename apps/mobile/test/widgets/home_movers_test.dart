@@ -4,6 +4,7 @@ import 'package:fabtrades/app/app.dart';
 import 'package:fabtrades/app/widgets.dart';
 import 'package:fabtrades/core/data/set_published_on.dart';
 import 'package:fabtrades/core/logic/recent_movers.dart';
+import 'package:fabtrades/core/logic/trending_movers.dart';
 import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/features/card_detail/card_detail_screen.dart';
@@ -46,6 +47,35 @@ RecentMoverRow mover({
       amountChange: amountChange,
     );
 
+TrendingMoverRow trend({
+  required String direction,
+  int rank = 1,
+  int? directionTotal,
+  String cardId = 'aaa-normal',
+  String name = 'Awakening',
+  String setName = 'The Hunted',
+  String finish = 'Rainbow Foil',
+  double startPrice = 4,
+  double latestPrice = 6,
+  double percentChange = 0.5,
+  double amountChange = 2,
+}) =>
+    TrendingMoverRow(
+      direction: direction,
+      rank: rank,
+      directionTotal: directionTotal ?? rank,
+      priceKind: direction == 'gainer' ? 'low' : 'market',
+      cardId: cardId,
+      name: name,
+      setName: setName,
+      finish: finish,
+      startPrice: startPrice,
+      startOn: '2026-08-22',
+      latestPrice: latestPrice,
+      percentChange: percentChange,
+      amountChange: amountChange,
+    );
+
 void main() {
   final awakening = buildCard(
     id: 'aaa-normal',
@@ -63,14 +93,15 @@ void main() {
   final catalog = [awakening, unowned];
 
   final gainer = mover(direction: 'gainer');
-  final loser = mover(
+
+  final trendGainer = trend(direction: 'gainer');
+  final trendLoser = trend(
     direction: 'loser',
-    rank: 1,
     cardId: 'hot-unowned',
     name: 'Hot Catalog Card',
     finish: 'Normal',
-    startLow: 8,
-    latestLow: 4,
+    startPrice: 8,
+    latestPrice: 4,
     percentChange: -0.5,
     amountChange: -4,
   );
@@ -135,16 +166,16 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer, loser],
+      trendingMovers: [trendGainer, trendLoser],
     );
     await settle(tester);
 
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('See Trending'), findsOneWidget);
-    expect(find.text('Catalog-wide recent movers'), findsNothing);
+    expect(find.byKey(const Key('trendControls')), findsNothing);
     expect(find.text('Your recent movers'), findsNothing);
-    expect(find.text('Gainers'), findsNothing);
-    expect(find.text('Losers'), findsNothing);
+    expect(find.text('Rising'), findsNothing);
+    expect(find.text('Falling'), findsNothing);
     expect(find.text('Hot Catalog Card'), findsNothing);
     expect(find.text('Welcome to Rathe'), findsNothing);
     expect(find.text('The Hunted'), findsWidgets);
@@ -155,25 +186,28 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer, loser],
+      trendingMovers: [trendGainer, trendLoser],
     );
     await settle(tester);
     await openTrending(tester);
 
     expect(find.text('Trending'), findsOneWidget);
-    expect(find.text('Catalog-wide recent movers'), findsOneWidget);
+    expect(find.byKey(const Key('trendControls')), findsOneWidget);
     expect(find.text('Your recent movers'), findsNothing);
-    expect(find.text('Gainers'), findsOneWidget);
-    expect(find.text('Losers'), findsOneWidget);
+    expect(find.text('Rising'), findsOneWidget);
+    expect(find.text('Falling'), findsOneWidget);
     expect(find.text('Awakening'), findsWidgets);
     expect(find.textContaining('Rainbow Foil'), findsWidgets);
     expect(find.textContaining('+50'), findsWidgets);
-    expect(find.text('Hot Catalog Card'), findsWidgets);
+    expect(find.textContaining('was \$4.00'), findsOneWidget);
+    expect(find.text('Hot Catalog Card'), findsNothing);
+    await tester.tap(find.text('Falling'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hot Catalog Card'), findsOneWidget);
+    expect(find.text('Awakening'), findsNothing);
+    expect(find.text('−50%'), findsOneWidget);
     expect(find.textContaining('\$0.00'), findsNothing);
-    expect(
-      find.textContaining('Observed catalog Lows'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Rising uses the'), findsOneWidget);
   });
 
   testWidgets('signed-out still shows catalog-wide movers with no sign-in wall',
@@ -182,14 +216,14 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
     );
     await settle(tester);
     expect(find.text('See Trending'), findsOneWidget);
     expect(find.text('Sign in'), findsNothing);
 
     await openTrending(tester);
-    expect(find.text('Catalog-wide recent movers'), findsOneWidget);
+    expect(find.byKey(const Key('trendControls')), findsOneWidget);
     expect(find.text('Sign in'), findsNothing);
   });
 
@@ -199,7 +233,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
     );
     await settle(tester);
 
@@ -208,19 +242,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('See Trending'), findsNothing);
-    expect(find.text('Catalog-wide recent movers'), findsNothing);
+    expect(find.byKey(const Key('trendControls')), findsNothing);
     expect(find.text('Awakening'), findsWidgets);
 
     await tester.tap(find.byTooltip('Clear search'));
     await tester.pumpAndSettle();
     expect(find.text('See Trending'), findsOneWidget);
-    expect(find.text('Catalog-wide recent movers'), findsNothing);
+    expect(find.byKey(const Key('trendControls')), findsNothing);
   });
 
   testWidgets('Binder cards still show catalog-wide movers only',
       (tester) async {
     final ownedRow = mover(direction: 'gainer', name: 'Awakening');
-    final catalogRow = mover(
+    final catalogRow = trend(
       direction: 'gainer',
       cardId: 'hot-unowned',
       name: 'Hot Catalog Card',
@@ -230,7 +264,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [catalogRow],
+      trendingMovers: [catalogRow],
       recentMoversByOwnedKey: {
         'aaa-normal': [ownedRow],
       },
@@ -240,12 +274,12 @@ void main() {
 
     expect(find.text('Your recent movers'), findsNothing);
     expect(find.text('See Trending'), findsOneWidget);
-    expect(find.text('Catalog-wide recent movers'), findsNothing);
+    expect(find.byKey(const Key('trendControls')), findsNothing);
     expect(find.text('Hot Catalog Card'), findsNothing);
 
     await openTrending(tester);
     expect(find.text('Your recent movers'), findsNothing);
-    expect(find.text('Catalog-wide recent movers'), findsOneWidget);
+    expect(find.byKey(const Key('trendControls')), findsOneWidget);
     expect(find.text('Hot Catalog Card'), findsOneWidget);
   });
 
@@ -254,7 +288,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
     );
     container.read(binderProvider.notifier).add(awakening, isWanted: true);
     await settle(tester);
@@ -267,7 +301,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
       recentMoversByOwnedKey: {'aaa-normal': const []},
     );
     await settle(tester);
@@ -285,7 +319,7 @@ void main() {
 
     await openTrending(tester);
     expect(find.text('Your recent movers'), findsNothing);
-    expect(find.text('Catalog-wide recent movers'), findsOneWidget);
+    expect(find.byKey(const Key('trendControls')), findsOneWidget);
   });
 
   testWidgets('same Printing in two Binders is fetched once', (tester) async {
@@ -293,7 +327,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
       recentMoversByOwnedKey: {
         'aaa-normal': [gainer],
       },
@@ -310,7 +344,7 @@ void main() {
     await openTrending(tester);
     expect(find.text('Awakening'), findsWidgets);
     expect(find.text('Your recent movers'), findsNothing);
-    expect(find.text('Catalog-wide recent movers'), findsOneWidget);
+    expect(find.byKey(const Key('trendControls')), findsOneWidget);
   });
 
   testWidgets('row opens CardDetailScreen for that Printing id',
@@ -319,7 +353,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
     );
     await settle(tester);
     await openTrending(tester);
@@ -338,10 +372,10 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [
-        mover(direction: 'gainer', rank: 1, name: 'One'),
-        mover(direction: 'gainer', rank: 2, cardId: 'b', name: 'Two'),
-        mover(direction: 'gainer', rank: 3, cardId: 'c', name: 'Three'),
+      trendingMovers: [
+        trend(direction: 'gainer', rank: 1, directionTotal: 3, name: 'One'),
+        trend(direction: 'gainer', rank: 2, cardId: 'b', name: 'Two'),
+        trend(direction: 'gainer', rank: 3, cardId: 'c', name: 'Three'),
       ],
     );
     await settle(tester);
@@ -349,8 +383,11 @@ void main() {
     expect(find.text('One'), findsOneWidget);
     expect(find.text('Two'), findsOneWidget);
     expect(find.text('Three'), findsOneWidget);
-    expect(find.text('Gainers'), findsOneWidget);
-    expect(find.textContaining('No recent losers'), findsOneWidget);
+    expect(find.text('Rising'), findsOneWidget);
+    expect(find.textContaining('Top 3 of 3 rising'), findsOneWidget);
+    await tester.tap(find.text('Falling'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No cards fell this week'), findsOneWidget);
     expect(find.textContaining('\$0.00'), findsNothing);
   });
 
@@ -360,7 +397,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMoversError: Exception('offline'),
+      trendingMoversError: Exception('offline'),
     );
     await settle(tester);
 
@@ -405,7 +442,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: [...catalog, cheap, pricey],
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
       printingRecentChanges: [
         RecentLowChange(
           cardId: 'cheap-bolt',
@@ -424,7 +461,7 @@ void main() {
     expect(find.byType(MoverBox), findsWidgets);
     expect(find.byType(CardRow), findsNothing);
     expect(find.text('See Trending'), findsNothing);
-    expect(find.text('Catalog-wide recent movers'), findsNothing);
+    expect(find.byKey(const Key('trendControls')), findsNothing);
     expect(find.text('Alpha Bolt'), findsOneWidget);
     expect(find.text('Zulu Bolt'), findsOneWidget);
 
@@ -451,7 +488,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
     );
     await settle(tester);
 
@@ -472,7 +509,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
     );
     await settle(tester);
 
@@ -489,7 +526,7 @@ void main() {
     expect(find.byKey(const Key('search-trend-boxes')), findsOneWidget);
     expect(find.text('Awakening'), findsWidgets);
     expect(find.text('See Trending'), findsNothing);
-    expect(find.text('Catalog-wide recent movers'), findsNothing);
+    expect(find.byKey(const Key('trendControls')), findsNothing);
   });
 
   testWidgets('no match, omit-change, overlay error, and unpriced stay honest',
@@ -503,7 +540,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: [...catalog, unpriced],
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
     );
     await settle(tester);
 
@@ -531,7 +568,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: catalog,
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
       printingRecentChangesError: Exception('offline'),
     );
     await settle(tester);
@@ -555,7 +592,7 @@ void main() {
       tester,
       const BrowseScreen(),
       catalog: [...catalog, unpriced],
-      recentMovers: [gainer],
+      trendingMovers: [trendGainer],
     );
     await settle(tester);
     await typeQuery(tester, 'Promo');
