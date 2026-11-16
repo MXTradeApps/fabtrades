@@ -13,7 +13,7 @@ import Header from '../components/elements/Header.jsx';
 import { Page, PageHeader, Panel, EmptyState } from '../components/layout/Page.jsx';
 import ValueOverTime from '../components/binder/ValueOverTime.jsx';
 import DirectionList from '../components/movers/DirectionList.jsx';
-import { segmentSx, windowLabel } from '../components/movers/trendListUtils.js';
+import { DAY_OPTIONS, segmentSx, windowLabel } from '../components/movers/trendListUtils.js';
 import { formatMoverAmount } from '../utils/moverFormat.js';
 import SignInDialog from '../components/auth/SignInDialog.jsx';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,7 +31,6 @@ import { formatCatalogPrice } from '../components/cardDetail/CardDetailPrices.js
 import { getBinderEntries, getBinders, TRADE_BINDER_ID } from '../services/binder.js';
 import { trendingMovers } from '../services/fabDb.js';
 
-const DAY_OPTIONS = [7, 30];
 /** Rows shown per list before "Show all". */
 const LIST_PREVIEW = 10;
 

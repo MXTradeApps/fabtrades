@@ -263,6 +263,26 @@ describe('Trends', () => {
         }));
     });
 
+    test('2 days is offered for overnight spikes, from the button or the URL', async () => {
+        wrap(
+            <Routes>
+                <Route path="/trends" element={<Trends />} />
+            </Routes>,
+            '/trends?days=2',
+        );
+        await screen.findByTestId('movers-list-gainer');
+        expect(trendingMovers).toHaveBeenLastCalledWith('tcgplayer', {
+            days: 2, sort: 'percent', minPrice: 0, limit: 10,
+        });
+        expect(screen.getByRole('button', { name: '2 days' })).toHaveAttribute('aria-pressed', 'true');
+        fireEvent.click(screen.getByRole('button', { name: '7 days' }));
+        await waitFor(() => expect(trendingMovers).toHaveBeenLastCalledWith('tcgplayer', {
+            days: 7, sort: 'percent', minPrice: 0, limit: 10,
+        }));
+        fireEvent.click(screen.getByRole('button', { name: '2 days' }));
+        await waitFor(() => expect(screen.getByRole('button', { name: '2 days' })).toHaveAttribute('aria-pressed', 'true'));
+    });
+
     test('filters come from the URL', async () => {
         wrap(
             <Routes>
