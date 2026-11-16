@@ -7,6 +7,9 @@ export type Mover = {
   new: number; // price now
   series: number[]; // daily prices, oldest first (about 30 days)
   why?: string; // optional one-line reason shown on screen
+  priceLabel?: string; // which price this is, shown under it, e.g. "lowest listing"
+  // A second printing of the same card on the same slide (e.g. the foil next to the non-foil).
+  also?: {printing: string; old: number; new: number; series?: number[]};
 };
 
 export type Week = {
@@ -15,6 +18,8 @@ export type Week = {
   // Opening card that doubles as the thumbnail: your words in big type over a card's art.
   // `card` is which card's art to use (0 = first), `highlight` which line gets the accent colour (default: last).
   thumbnail?: {lines: string[]; highlight?: number; card?: number};
+  // How far back "old" is. Default is a week. For a 2-day video: {"days": 2, "ago": "2 days ago", "recent": "last 2 days"}.
+  period?: {days: number; ago: string; recent: string};
   // Optional second opening screen, shown from `at` seconds until the first card: big title
   // lines, a smaller line under them, and every card's art in a row.
   intro?: {at: number; lines: string[]; sub?: string};

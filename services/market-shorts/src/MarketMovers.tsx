@@ -5,6 +5,8 @@ import {C, FONT, FPS, Mover, Week, layout, pct, round$, usd} from './types';
 
 const color = (m: Mover) => (m.new >= m.old ? C.up : C.down);
 const signed = (n: number) => (n > 0 ? '+' : '') + Math.round(n) + '%';
+/** Last part of "Set · Rarity · Finish". */
+const finish = (printing: string) => printing.split(' · ').pop() ?? printing;
 
 /**
  * One slide's content. Only this fades and slides between slides; the title bar, date,
@@ -147,22 +149,42 @@ const CardScene: React.FC<{w: Week; i: number; dur: number}> = ({w, i, dur}) => 
   const pctIn = usePop(8, 9);
   const nameIn = usePop(14);
   const whyIn = usePop(70);
+  const ago = w.period?.ago ?? 'a week ago';
+  const also = m.also ?? {printing: '', old: 1, new: 1};
+  const n2 = useCount(0, Math.round(((also.new - also.old) / also.old) * 100), 22, 26);
+  const price2 = useCount(also.old, also.new, 26, 34);
+  const alsoIn = usePop(18);
   return (
     <Scene dur={dur}>
       <div style={{position: 'absolute', top: 190, left: 70, fontSize: 42, fontWeight: 800, letterSpacing: 3, color: col, opacity: tagIn, transform: `translateX(${(1 - tagIn) * -80}px)`}}>
         {p >= 0 ? '▲' : '▼'} {m.tag}
       </div>
       <div style={{position: 'absolute', top: 275, left: 70}}><CardArt m={m} width={440} delay={2} from={1.5} /></div>
-      <div style={{position: 'absolute', top: 285, left: 550, right: 40}}>
-        <div style={{fontSize: 158, fontWeight: 900, lineHeight: 1, letterSpacing: -6, color: col, transformOrigin: 'left center', transform: `scale(${interpolate(pctIn, [0, 1], [1.7, 1])})`, opacity: Math.min(1, pctIn * 3)}}>{signed(n)}</div>
-        <div style={{fontSize: 96, fontWeight: 800, marginTop: 34, fontVariantNumeric: 'tabular-nums'}}>{usd(price)}</div>
-        <div style={{fontSize: 42, color: C.dim, marginTop: 8}}>was {usd(m.old)}<br />a week ago</div>
-      </div>
+      {m.also ? (
+        // Two printings of the same card, stacked: finish, percent, price now and before.
+        <div style={{position: 'absolute', top: 268, left: 550, right: 30}}>
+          {[{label: finish(m.printing), old: m.old, pc: n, now: price, c: col}, {label: finish(m.also.printing), old: m.also.old, pc: n2, now: price2, c: m.also.new >= m.also.old ? C.up : C.down}].map((r, k) => (
+            <div key={k} style={{marginTop: k ? 30 : 0, paddingTop: k ? 26 : 0, borderTop: k ? `2px solid ${C.line}` : 'none', opacity: k ? alsoIn : 1, transform: `translateY(${k ? (1 - alsoIn) * 30 : 0}px)`}}>
+              <div style={{fontSize: 34, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: C.dim}}>{r.label}</div>
+              <div style={{fontSize: 124, fontWeight: 900, lineHeight: 1.02, letterSpacing: -5, color: r.c}}>{signed(r.pc)}</div>
+              <div style={{fontSize: 70, fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.1}}>{usd(r.now)}</div>
+              <div style={{fontSize: 32, color: C.dim, marginTop: 2}}>was {usd(r.old)} {ago}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{position: 'absolute', top: 285, left: 550, right: 40}}>
+          <div style={{fontSize: 158, fontWeight: 900, lineHeight: 1, letterSpacing: -6, color: col, transformOrigin: 'left center', transform: `scale(${interpolate(pctIn, [0, 1], [1.7, 1])})`, opacity: Math.min(1, pctIn * 3)}}>{signed(n)}</div>
+          <div style={{fontSize: 96, fontWeight: 800, marginTop: 34, fontVariantNumeric: 'tabular-nums'}}>{usd(price)}</div>
+          <div style={{fontSize: 42, color: C.dim, marginTop: 8}}>was {usd(m.old)}<br />{ago}</div>
+          {m.priceLabel ? <div style={{fontSize: 30, color: C.faint, marginTop: 12}}>{m.priceLabel}</div> : null}
+        </div>
+      )}
       <div style={{position: 'absolute', top: 925, left: 70, right: 70, opacity: nameIn, transform: `translateY(${(1 - nameIn) * 40}px)`}}>
         <div style={{fontSize: m.name.length > 26 ? 52 : 64, fontWeight: 800, lineHeight: 1.08}}>{m.name}</div>
-        <div style={{fontSize: 32, fontWeight: 500, color: C.dim, marginTop: 12}}>{m.printing}</div>
+        <div style={{fontSize: 32, fontWeight: 500, color: C.dim, marginTop: 12}}>{m.also ? [...m.printing.split(' · ').slice(0, -1), m.priceLabel].filter(Boolean).join(' · ') : m.printing}</div>
       </div>
-      <div style={{position: 'absolute', top: 1130, left: 70}}><Chart series={m.series} color={col} delay={24} h={m.why ? 290 : 360} /></div>
+      <div style={{position: 'absolute', top: m.also?.series ? 1170 : 1130, left: 70}}><Chart series={m.series} color={col} delay={24} h={m.why ? 290 : m.also?.series ? 330 : 360} days={w.period?.days} recent={w.period?.recent} series2={m.also?.series} legend={m.also ? [finish(m.printing), finish(m.also.printing)] : undefined} /></div>
       {m.why ? (
         <div style={{position: 'absolute', top: 1490, left: 70, right: 150, fontSize: 40, fontWeight: 700, padding: '18px 26px', borderRadius: 20, background: C.panel, borderLeft: `8px solid ${col}`, opacity: whyIn, transform: `translateY(${(1 - whyIn) * 30}px)`}}>{m.why}</div>
       ) : null}

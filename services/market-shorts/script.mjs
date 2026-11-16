@@ -16,6 +16,7 @@ export function buildScript(week) {
   const first = week.cards[0];
   const month = (c) => (c.new - c.series[0]) / c.series[0];
   const lines = [];
+  const span = week.period ? `in ${week.period.days} days` : 'this week';
   lines.push(`# Voiceover script: ${week.week}`, '');
   lines.push('Read one paragraph per scene and take a clear breath (about half a second) between paragraphs.');
   lines.push('Replace each [why] with one short sentence. Aim for about 30 to 40 seconds in total.', '');
@@ -27,7 +28,8 @@ export function buildScript(week) {
     const extra = Math.abs(m) >= 0.9 && Math.sign(m) === Math.sign(p) ? ` It was ${say(c.series[0])} a month ago.` : '';
     const lead = p < 0 && pct(week.cards[i - 1] ?? c) >= 0 && i > 0 ? 'Going down: ' : '';
     lines.push(`**${i + 1}. ${c.name}**`, '');
-    lines.push(`${lead}${short(c.name)}, ${p >= 0 ? 'up' : lead ? 'off' : 'down'} ${Math.abs(p)} percent this week to ${say(c.new)}.${extra} ${c.why ?? '[why]'}`, '');
+    const also = c.also ? ` The ${c.also.printing.split(' · ').pop().toLowerCase()} is ${c.also.new >= c.also.old ? 'up' : 'down'} ${Math.abs(pct(c.also))} percent to ${say(c.also.new)}.` : '';
+    lines.push(`${lead}${short(c.name)}, ${p >= 0 ? 'up' : lead ? 'off' : 'down'} ${Math.abs(p)} percent ${span} to ${say(c.new)}.${week.period ? '' : extra}${also} ${c.why ?? '[why]'}`, '');
   });
   lines.push('**Sign-off**', '');
   lines.push(`${week.cta?.spoken ?? "Want to know what your binder is worth today? It's free at fabtrades dot net."}`, '');
