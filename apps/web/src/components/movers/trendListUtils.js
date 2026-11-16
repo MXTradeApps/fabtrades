@@ -6,6 +6,9 @@ export const measureLabel = (kind, priceSource) => {
     return priceSource === 'cardmarket' ? 'by Trend' : 'by Market';
 };
 
+/** Time windows offered on the ranked lists, in days. 2 is for spotting overnight spikes. */
+export const DAY_OPTIONS = [2, 7, 30];
+
 export const windowLabel = (days) => (days === 7 ? 'this week' : `in the last ${days} days`);
 
 

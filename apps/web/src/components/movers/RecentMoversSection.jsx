@@ -18,9 +18,8 @@ import { copiesByPrintingId, ownedPrintingIds, splitMoversByDirection } from '..
 import { formatMoverAmount } from '../../utils/moverFormat.js';
 import TrendRow from './TrendRow.jsx';
 import DirectionList from './DirectionList.jsx';
-import { artForRow, buyForRow, segmentSx, windowLabel } from './trendListUtils.js';
+import { DAY_OPTIONS, artForRow, buyForRow, segmentSx, windowLabel } from './trendListUtils.js';
 
-const DAY_OPTIONS = [7, 30];
 const SORT_OPTIONS = [
     { value: 'percent', label: 'By %' },
     { value: 'amount', label: 'By $' },

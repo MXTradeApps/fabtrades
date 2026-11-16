@@ -390,6 +390,13 @@ describe('Collection Stats entry and page', () => {
         })));
         expect(await screen.findByTestId('collection-stats-net')).toHaveTextContent('in the last 30 days');
 
+        fireEvent.click(within(screen.getByTestId('collection-stats-controls')).getByRole('button', { name: '2 days' }));
+        await waitFor(() => expect(trendingMovers).toHaveBeenLastCalledWith('tcgplayer', expect.objectContaining({
+            days: 2,
+            limit: null,
+        })));
+        expect(await screen.findByTestId('collection-stats-net')).toHaveTextContent('in the last 2 days');
+
         const calls = trendingMovers.mock.calls.length;
         fireEvent.click(screen.getByRole('button', { name: 'By $' }));
         expect(trendingMovers.mock.calls.length).toBe(calls);
