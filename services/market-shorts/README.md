@@ -4,6 +4,8 @@ Animated 1080x1920 "FAB Market Movers" Shorts, built with [Remotion](https://www
 
 ## Weekly flow
 
+Weekly data files and scripts are not committed: `data/*.json` is ignored except `data/sample-week.json`. Keep them on the machine you render on.
+
 ```bash
 cd services/market-shorts
 npm install                                   # first time only
