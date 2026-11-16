@@ -34,7 +34,7 @@ const Thumbnail: React.FC<{w: Week; dur: number}> = ({w, dur}) => {
   return (
     <Scene dur={dur} fadeIn={false}>
       <div style={{position: 'absolute', inset: 0, transform: `translate(${shake}px, ${shake * 0.6}px)`}}>
-        <div style={{position: 'absolute', top: SAFE.top - 10, left: 250, width: 580, height: 230, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: logoIn, transform: `translateY(${(1 - logoIn) * -40}px)`}}>
+        <div style={{position: 'absolute', top: SAFE.top + 10, left: 260, width: 560, height: 215, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: logoIn, transform: `translateY(${(1 - logoIn) * -40}px)`}}>
           {w.fabLogo ? (
             <Img src={staticFile(w.fabLogo)} style={{width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 14px 30px rgba(0,0,0,.6))'}} />
           ) : (
@@ -51,7 +51,7 @@ const Thumbnail: React.FC<{w: Week; dur: number}> = ({w, dur}) => {
         <div style={{position: 'absolute', top: 430, left: 30, right: 30, height: 1005, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6}}>
           {t.lines.map((line, i) => {
             const pop = spring({frame: frame - 5 - i * 5, fps, config: {damping: 10, mass: 0.6}});
-            const size = Math.min(175, 800 / (0.7 * Math.max(line.length, 4))); // keeps the widest line inside the frame
+            const size = Math.min(170, 730 / (0.7 * Math.max(line.length, 4))); // keeps the widest line inside the frame
             return (
               <div key={i} style={{
                 fontSize: size, fontWeight: 900, fontStyle: 'italic', lineHeight: 1.02, letterSpacing: -2, textTransform: 'uppercase', whiteSpace: 'nowrap',
@@ -76,7 +76,7 @@ const Intro: React.FC<{w: Week; dur: number}> = ({w, dur}) => {
   const subIn = usePop(6 + t.lines.length * 5);
   const n = w.cards.length;
   const gap = 16;
-  const artW = Math.min(185, Math.floor((840 - gap * (n - 1)) / n));
+  const artW = Math.min(180, Math.floor((756 - gap * (n - 1)) / n));
   return (
     <Scene dur={dur}>
       <div style={{position: 'absolute', top: 300, left: 60, right: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4}}>
