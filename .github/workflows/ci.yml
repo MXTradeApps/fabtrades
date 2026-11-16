@@ -22,6 +22,7 @@ jobs:
     outputs:
       web: ${{ steps.filter.outputs.web }}
       mobile: ${{ steps.filter.outputs.mobile }}
+      android: ${{ steps.filter.outputs.android }}
       supabase: ${{ steps.filter.outputs.supabase }}
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +45,13 @@ jobs:
               # The release tag check reads apps/mobile/pubspec.yaml, so it belongs
               # to this job rather than a separate one.
               - 'scripts/**'
+            # Only what can break the native Android build: the Gradle files and
+            # the packages that bring native code with them.
+            android:
+              - 'apps/mobile/android/**'
+              - 'apps/mobile/pubspec.yaml'
+              - 'apps/mobile/pubspec.lock'
+              - '.github/workflows/ci.yml'
             supabase:
               - 'supabase/**'
               - '.github/workflows/ci.yml'
@@ -109,6 +117,42 @@ jobs:
       - name: Check the release tag guard
         working-directory: ${{ github.workspace }}
         run: bash scripts/check-release-tag.test.sh
+
+  # `flutter analyze` and `flutter test` never run Gradle, so a Gradle, Android
+  # Gradle Plugin or Kotlin version that Flutter no longer accepts would first show
+  # up in the release workflow, mid-release. This builds the same release bundle
+  # (R8 included) without signing secrets or an upload; with no key.properties the
+  # build falls back to debug signing.
+  android:
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # GitHub-hosted runners have ~7GB RAM; the repo gradle.properties requests 8G.
+      - name: Cap Gradle memory for CI
+        run: |
+          sed -i 's/org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -XX:+HeapDumpOnOutOfMemoryError/' \
+            android/gradle.properties
+
+      - name: Build release app bundle
+        run: flutter build appbundle --release --dart-define-from-file=env/production.json
 
   supabase:
     needs: changes
