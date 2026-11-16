@@ -217,8 +217,11 @@ const Shot: React.FC<{img: string; caption?: string; dur: number}> = ({img, capt
   return (
     <AbsoluteFill style={{fontFamily: FONT, color: C.text, opacity: Math.min(1, inn * 2) * out}}>
       <div style={{position: 'absolute', left: 30, right: 30, top: 1085, transform: `translateY(${(1 - inn) * 160 + (1 - out) * 60}px) rotate(${(1 - inn) * 2 - 1}deg)`}}>
-        <div style={{borderRadius: 28, overflow: 'hidden', border: `6px solid ${C.text}`, boxShadow: '0 30px 90px rgba(0,0,0,.85)', background: C.panel}}>
-          <Img src={staticFile(img)} style={{display: 'block', width: '100%'}} />
+        {/* Sized by whichever runs out first, width or height, so a tall picture stays inside the frame. */}
+        <div style={{display: 'flex', justifyContent: 'center'}}>
+          <div style={{borderRadius: 28, overflow: 'hidden', border: `6px solid ${C.text}`, boxShadow: '0 30px 90px rgba(0,0,0,.85)', background: C.panel}}>
+            <Img src={staticFile(img)} style={{display: 'block', width: 'auto', height: 'auto', maxWidth: 1008, maxHeight: caption ? 680 : 780}} />
+          </div>
         </div>
         {caption ? (
           <div style={{textAlign: 'center', marginTop: 22}}>
