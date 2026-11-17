@@ -1,6 +1,6 @@
 import React from 'react';
 import {Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig, Easing} from 'remotion';
-import {C, FONT, Mover} from './types';
+import {C, FONT, Mover, SAFE} from './types';
 import {niceTicks, tickLabels} from '../ticks.mjs';
 
 const src = (img: string) => (/^https?:/.test(img) ? img : staticFile(img));
@@ -111,7 +111,7 @@ export const Header: React.FC<{week: string; count?: number; pos?: number; dots?
   const frac = pos - Math.floor(pos);
   const stretch = Math.sin(Math.PI * frac); // 0 at rest, 1 mid-move
   return (
-    <div style={{position: 'absolute', top: 70, left: 70, right: 70, display: 'flex', alignItems: 'center', gap: 22, fontSize: 30, fontWeight: 600, color: C.dim, fontFamily: FONT}}>
+    <div style={{position: 'absolute', top: SAFE.top, left: 70, right: 70, display: 'flex', alignItems: 'center', gap: 22, fontSize: 30, fontWeight: 600, color: C.dim, fontFamily: FONT}}>
       <Img src={staticFile('icon.png')} style={{width: 64, height: 64, borderRadius: 14}} />
       <div style={{flex: 1, whiteSpace: 'nowrap'}}><b style={{color: C.text}}>FAB Market Movers</b> · {week}</div>
       {count ? (
