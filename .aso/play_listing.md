@@ -1,4 +1,7 @@
-# Google Play listing (paste into Play Console)
+# Google Play listing
+
+The text below lives in `.aso/play_listing.json`. To push it, run **Actions → Update Play listing
+text** (leave "apply" off to see what would change first), or paste it by hand:
 
 Play Console → Grow users → Store presence → Main store listing. Add each language under
 "Manage translations → Add your own translations". Play allows "free" in the short description;

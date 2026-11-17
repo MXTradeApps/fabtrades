@@ -1,0 +1,37 @@
+name: Update Play listing text
+
+# Compares .aso/play_listing.json with the live Google Play listing, and with
+# "apply" ticked writes the app name and descriptions for each language in it.
+# Screenshots, category and data safety are not touched.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Write the changes to Google Play (leave off to only compare)
+        type: boolean
+        default: false
+
+concurrency:
+  group: update-play-listing
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  listing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare or apply
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          MODE: ${{ inputs.apply && 'apply' || '' }}
+        run: |
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "Missing secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
+            exit 1
+          fi
+          python3 -m pip install --quiet google-api-python-client google-auth
+          python3 .aso/play_listing.py $MODE
