@@ -133,10 +133,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Java 21, not 17: the lint that Android Gradle Plugin 9.3 runs during a release
+      # build calls Java 21 APIs and crashes on 17 (NoSuchMethodError: List.removeLast).
+      # The app itself is still compiled for Java 17 (see android/app/build.gradle.kts).
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - uses: subosito/flutter-action@v2
         with:
