@@ -7,10 +7,15 @@ import App from './App.jsx'
 import { CardDataProvider } from "./hooks/useCardData.jsx";
 import { PriceProvider } from "./contexts/PriceContext.jsx";
 import { ThemeModeProvider, useThemeMode } from "./contexts/ThemeContext.jsx";
-import { landingPath } from "./utils/analytics.js";
+import { initPostHog, landingPath } from "./utils/analytics.js";
+import { appEnv, posthogConfig } from "./config/env.js";
 
 // Remember the page this visit started on before any navigation happens.
 landingPath();
+
+// Start analytics before rendering, so the first page view is recorded with the
+// campaign tags (utm_source, ...) still in the address bar.
+initPostHog({ ...posthogConfig(), appEnv: appEnv() });
 
 // Wrapper component that applies the dynamic theme
 const ThemedApp = () => {

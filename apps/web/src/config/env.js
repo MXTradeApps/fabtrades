@@ -37,6 +37,16 @@ export const supabaseCredentials = () => {
 /** `production` or `staging`. Names the environment; the URL decides where data goes. */
 export const appEnv = () => read('VITE_APP_ENV') ?? 'production';
 
+/**
+ * The PostHog project key and host, or null when analytics is not configured
+ * (local dev by default). The key is a public, write-only project token — the
+ * same one the mobile app ships with.
+ */
+export const posthogConfig = () => {
+    const key = read('VITE_POSTHOG_KEY');
+    return key ? { key, host: read('VITE_POSTHOG_HOST') ?? 'https://us.i.posthog.com' } : null;
+};
+
 export const isProduction = () => appEnv() === 'production';
 
 /**

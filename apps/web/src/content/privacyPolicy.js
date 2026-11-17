@@ -10,7 +10,7 @@
  * { type: 'ul', items: [...] } for a bulleted list.
  */
 
-export const PRIVACY_EFFECTIVE_DATE = 'August 28, 2026';
+export const PRIVACY_EFFECTIVE_DATE = 'November 17, 2026';
 
 export const PRIVACY_CONTACT_EMAIL = 'mxbloombusiness@gmail.com';
 
@@ -45,7 +45,7 @@ export const privacySections = [
             {
                 type: 'ul',
                 items: [
-                    'Usage and analytics data. We use Google Analytics to understand how the Website is used. Google Analytics collects information such as the pages you visit, time spent on the site, approximate location (city/country level, derived from your IP address), browser and device type, and sets cookies to distinguish visitors. This data is aggregated and does not directly identify you.',
+                    'Usage and analytics data. We use Google Analytics to understand how the Website is used. Google Analytics collects information such as the pages you visit, time spent on the site, approximate location (city/country level, derived from your IP address), browser and device type, and sets cookies to distinguish visitors. This data is aggregated and does not directly identify you. We also use PostHog, a product analytics service, to record page views on the Website and a small number of actions (such as adding a card to a trade or tapping a link to the App), together with the referring site and any campaign tags on the link you arrived from (for example, a link in a video description). We do not use this data for advertising.',
                     'Account information (optional). If you choose to sign in with Discord, Google, Apple, or email, we receive your user ID, username or display name, email address, and avatar (when provided) from the identity provider through our authentication provider, Supabase. Signing in is entirely optional — all core features work without an account.',
                     'Saved trade data (optional). If you are signed in and save a trade, the trade contents (card names, quantities, prices, and totals) are stored in our database, linked to your account, so you can view them later in your trade history.',
                     'Local preferences. Settings such as light/dark theme and your current (unsaved) trade lists are stored locally in your browser (localStorage) and are not transmitted to us.'
@@ -79,7 +79,7 @@ export const privacySections = [
                 type: 'ul',
                 items: [
                     'To provide the Services: fetching card prices, balancing trades, identifying scanned cards, syncing your lists when signed in, and granting FABTrades Pro access after a purchase.',
-                    'To understand aggregate usage of the Website (via Google Analytics) and of the App (via PostHog) so we can improve features and performance.',
+                    'To understand aggregate usage of the Website (via Google Analytics and PostHog) and of the App (via PostHog) so we can improve features and performance.',
                     'To maintain the security and integrity of the Services.'
                 ]
             },
@@ -104,7 +104,7 @@ export const privacySections = [
                 type: 'ul',
                 items: [
                     'Google Analytics (Website only) — usage analytics. See Google\u2019s Privacy Policy at https://policies.google.com/privacy. You can opt out of Google Analytics with the browser add-on at https://tools.google.com/dlpage/gaoptout.',
-                    'PostHog (App only) — first-party product usage analytics (screens, feature interactions, and subscription funnel events). See https://posthog.com/privacy.',
+                    'PostHog (Website and App) — product usage analytics (page views and a few actions on the Website; screens, feature interactions, and subscription funnel events in the App). See https://posthog.com/privacy.',
                     'Supabase — database and authentication hosting (card catalog, prices, accounts, synced lists, and saved trades). See https://supabase.com/privacy.',
                     'Apple — Sign in with Apple and App Store billing for FABTrades Pro on iOS. See https://www.apple.com/legal/privacy/.',
                     'Google — Sign in with Google and Google Play billing for FABTrades Pro on Android. See https://policies.google.com/privacy.',
@@ -122,7 +122,8 @@ export const privacySections = [
             {
                 type: 'p',
                 text:
-                    'The Website uses cookies set by Google Analytics (such as _ga) to ' +
+                    'The Website uses cookies set by Google Analytics (such as _ga) and ' +
+                    'by PostHog (a cookie whose name starts with ph_) to ' +
                     'distinguish visitors, and localStorage to remember your preferences ' +
                     'and sign-in session. You can block or delete cookies in your browser ' +
                     'settings; the Website remains fully functional without them. The App ' +
