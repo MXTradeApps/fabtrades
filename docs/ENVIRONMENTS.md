@@ -114,10 +114,12 @@ mapping is reviewable:
 | `VITE_SUPABASE_URL` | Project REST endpoint |
 | `VITE_SUPABASE_ANON_KEY` | Publishable key |
 | `VITE_APP_ENV` | `production` or `staging`; naming only |
+| `VITE_POSTHOG_KEY` | PostHog project token (public). Unset means no web analytics, which is the local default |
+| `VITE_POSTHOG_HOST` | PostHog ingestion host |
 
 Locally, copy `apps/web/.env.example` to `apps/web/.env`.
 
-All three are read through [`src/config/env.js`](../apps/web/src/config/env.js),
+All of them are read through [`src/config/env.js`](../apps/web/src/config/env.js),
 which consults Vite's `import.meta.env` in the browser and `process.env` under
 Node, because `scripts/generateSeoPages.js` prerenders pages with the same Supabase
 queries at build time.
