@@ -17,8 +17,10 @@ async function loadSources() {
 async function downloadLogo(url) {
   const res = await fetch(url, { headers: { ...HTTP_HEADERS, Accept: 'image/*' } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  // The CDN labels some PNGs application/octet-stream, so the header only rules
+  // out pages and error documents; sharp rejects anything that is not an image.
   const type = res.headers.get('content-type') || '';
-  if (!type.startsWith('image/')) throw new Error(`not an image (${type || 'no content-type'})`);
+  if (/^(text|application\/(json|xml|xhtml))/i.test(type)) throw new Error(`not an image (${type})`);
   const source = Buffer.from(await res.arrayBuffer());
   if (source.length > MAX_SOURCE_BYTES) throw new Error(`too large (${source.length} bytes)`);
   return sharp(source)

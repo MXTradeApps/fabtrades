@@ -13,6 +13,14 @@
       "name": "Welcome to Rathe",
       "url": "https://cdn.fabtcg.com/uploads/2025/11/wtr_logo-1.png"
     },
+    "2727": {
+      "name": "Welcome Deck: Ira",
+      "url": "https://cdn.fabtcg.com/uploads/2025/10/fab_logo_hires.png"
+    },
+    "2732": {
+      "name": "Flesh and Blood: Promo Cards",
+      "url": "https://cdn.fabtcg.com/uploads/2025/10/fab_logo_hires.png"
+    },
     "2775": {
       "name": "Monarch",
       "url": "https://cdn.fabtcg.com/uploads/2025/11/0zIUv0bFVWaD-1.png"
@@ -123,15 +131,27 @@
     },
     "24371": {
       "name": "Super Slam",
-      "url": "https://cdn.fabtcg.com/uploads/2025/07/super_slam_logo.png"
+      "url": "https://cdn.fabtcg.com/uploads/2025/07/super_slam_logo-scaled.png"
     },
     "24375": {
       "name": "Armory Deck: Pleiades",
       "url": "https://cdn.fabtcg.com/uploads/2025/12/armory_deck.original.png"
     },
+    "24391": {
+      "name": "Welcome Deck Bravo",
+      "url": "https://cdn.fabtcg.com/uploads/2025/10/fab_logo_hires.png"
+    },
     "24415": {
       "name": "Smash Palace",
       "url": "https://cdn.fabtcg.com/uploads/2025/12/Smash_Palace_Logo_Vector_Final_Grey.png"
+    },
+    "24416": {
+      "name": "Armory Deck: Legends Viserai",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/armory_deck.original.png"
+    },
+    "24417": {
+      "name": "Armory Deck: Legends Prism",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/armory_deck.original.png"
     },
     "24474": {
       "name": "Armory Deck: Rhinar",
@@ -188,6 +208,34 @@
     "24764": {
       "name": "Silver Age: Usurp the Shadow Throne",
       "url": "https://cdn.fabtcg.com/uploads/2025/12/silver_age_logo.png"
+    },
+    "24773": {
+      "name": "Smash Palace: Chorus of Steel",
+      "url": "https://cdn.fabtcg.com/uploads/2026/07/spw_logo.png"
+    },
+    "24814": {
+      "name": "Armory Deck: Dr. Mortimer",
+      "url": "https://cdn.fabtcg.com/uploads/2026/08/armory_deck_mortimer.png"
+    },
+    "24818": {
+      "name": "Mastery Pack Assassin",
+      "url": "https://cdn.fabtcg.com/uploads/2026/07/mastery_pack_assassin_logo.png"
+    },
+    "24913": {
+      "name": "Armory Deck: Min",
+      "url": "https://cdn.fabtcg.com/uploads/2026/10/armory_deck_min.png"
+    },
+    "24914": {
+      "name": "Outbreak",
+      "url": "https://cdn.fabtcg.com/uploads/2026/10/outbreak-scaled.png"
+    },
+    "24936": {
+      "name": "Demo Deck: Dorinthea",
+      "url": "https://cdn.fabtcg.com/uploads/2025/10/fab_logo_hires.png"
+    },
+    "24940": {
+      "name": "Mastery Pack Brute",
+      "url": "https://cdn.fabtcg.com/uploads/2026/11/mastery_pack_brute-scaled.png"
     }
   }
 }

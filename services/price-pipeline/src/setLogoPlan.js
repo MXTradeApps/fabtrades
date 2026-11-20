@@ -8,6 +8,8 @@ export const LOGO_BUCKET = 'set-logos';
 const PARENT_RULES = [
   [/^Historic Pack 1 Blitz Deck:/i, () => 'History Pack Vol.1'],
   [/^Blitz Deck: (.+) - .+$/i, (m) => m[1]],
+  // The 2019 Hero Decks shipped alongside the first set and have no mark of their own.
+  [/^Hero Deck: .+$/i, () => 'Welcome to Rathe'],
   [/^(.+) Pre-?release (?:Cards|Kit)$/i, (m) => m[1]],
   [/^(.+) - Antiquity Pack$/i, (m) => m[1]],
   [/^Silver Age: .+$/i, () => 'Silver Age Chapter 1'],
