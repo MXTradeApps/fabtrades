@@ -1,0 +1,193 @@
+{
+  "_comment": "Where each set's own logo is copied from, keyed by TCGplayer group id. The price pipeline downloads a source once, stores a resized copy in the set-logos bucket and writes its URL to fab_sets.logo_url. Sets without an entry inherit a parent set's logo when src/setLogoPlan.js has a rule for their name; otherwise they stay without one.",
+  "sources": {
+    "2724": {
+      "name": "Crucible of War",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/cru_logo_stacked.png"
+    },
+    "2725": {
+      "name": "Arcane Rising",
+      "url": "https://cdn.fabtcg.com/uploads/2025/11/ARC-1.png"
+    },
+    "2726": {
+      "name": "Welcome to Rathe",
+      "url": "https://cdn.fabtcg.com/uploads/2025/11/wtr_logo-1.png"
+    },
+    "2775": {
+      "name": "Monarch",
+      "url": "https://cdn.fabtcg.com/uploads/2025/11/0zIUv0bFVWaD-1.png"
+    },
+    "2885": {
+      "name": "Tales of Aria",
+      "url": "https://cdn.fabtcg.com/uploads/2025/11/toa_logo-1.png"
+    },
+    "2947": {
+      "name": "Everfest",
+      "url": "https://cdn.fabtcg.com/uploads/2025/11/1ubILjMFFi7Junh-1.png"
+    },
+    "3053": {
+      "name": "History Pack Vol.1",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/1hp_blitz_logo.png"
+    },
+    "3056": {
+      "name": "Uprising",
+      "url": "https://cdn.fabtcg.com/uploads/2025/11/KS40Q76S1e5DuPQ-1.png"
+    },
+    "3057": {
+      "name": "Classic Battles: Rhinar vs Dorinthea",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/cb_logo_2.png"
+    },
+    "17678": {
+      "name": "Dynasty",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/dynasty_logo_re.png"
+    },
+    "22893": {
+      "name": "Outsiders",
+      "url": "https://cdn.fabtcg.com/uploads/2025/11/outsiders23012-1.png"
+    },
+    "23173": {
+      "name": "Dusk till Dawn",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/dusk_till_dawn_logo.png"
+    },
+    "23277": {
+      "name": "Bright Lights",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/bright_lights_logo_3TRCirLnKQgbe.png"
+    },
+    "23295": {
+      "name": "Round the Table: TCCxLSS",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/round_the_table.png"
+    },
+    "23354": {
+      "name": "Heavy Hitters",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/heavy_hitters_logo.png"
+    },
+    "23476": {
+      "name": "Part the Mistveil",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/logo_mst.png"
+    },
+    "23506": {
+      "name": "Armory Deck: Kayo",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/armory_deck_kayo_logo.png"
+    },
+    "23534": {
+      "name": "Armory Deck: Boltyn",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/ad_boltyn_logo.png"
+    },
+    "23540": {
+      "name": "Rosetta",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/logo_rosetta_full.png"
+    },
+    "23548": {
+      "name": "1st Strike",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/1st_strike_logo.png"
+    },
+    "23558": {
+      "name": "Armory Deck: Azalea",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/en_ad_azalea_logo.png"
+    },
+    "23738": {
+      "name": "Armory Deck: Dash",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/armory_deck_dash_logo-720x501.png"
+    },
+    "23771": {
+      "name": "Armory Deck: Jarl Vetreidi",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/jarl_logo.png"
+    },
+    "23815": {
+      "name": "The Hunted",
+      "url": "https://cdn.fabtcg.com/uploads/2025/06/the_hunted_logo-scaled.png"
+    },
+    "24162": {
+      "name": "Armory Deck: Aurora",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/1stk_aurora_logo.png"
+    },
+    "24253": {
+      "name": "Armory Deck: Maxx Nitro",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/ad_maxx_logo.png"
+    },
+    "24266": {
+      "name": "High Seas",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/high_seas_logo_noglow.png"
+    },
+    "24268": {
+      "name": "Armory Deck: Gravy Bones",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/gravybones_logo-720x450.png"
+    },
+    "24315": {
+      "name": "Armory Deck: Ira",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/AD_Ira_Logo_Glow.png"
+    },
+    "24330": {
+      "name": "Mastery Pack Guardian",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/mastery_pack_guardian_logo_1.png"
+    },
+    "24371": {
+      "name": "Super Slam",
+      "url": "https://cdn.fabtcg.com/uploads/2025/07/super_slam_logo.png"
+    },
+    "24375": {
+      "name": "Armory Deck: Pleiades",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/armory_deck.original.png"
+    },
+    "24415": {
+      "name": "Smash Palace",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/Smash_Palace_Logo_Vector_Final_Grey.png"
+    },
+    "24474": {
+      "name": "Armory Deck: Rhinar",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/rhinar_name.png"
+    },
+    "24524": {
+      "name": "Silver Age Chapter 1",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/silver_age_logo.png"
+    },
+    "24525": {
+      "name": "Silver Age Chapter 2",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/silver_age_logo.png"
+    },
+    "24526": {
+      "name": "Armory Deck: Arakni",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/arakni_name.png"
+    },
+    "24532": {
+      "name": "Compendium of Rathe",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/compendium_of_rathe.png"
+    },
+    "24610": {
+      "name": "Armory Deck Origins: Hala",
+      "url": "https://cdn.fabtcg.com/uploads/2026/03/hala_name-scaled.png"
+    },
+    "24639": {
+      "name": "Armory Deck: Zyggy",
+      "url": "https://cdn.fabtcg.com/uploads/2026/03/zyggy_name.png"
+    },
+    "24640": {
+      "name": "Omens of the Third Age",
+      "url": "https://cdn.fabtcg.com/uploads/2026/03/omens_of_the_third_age_logo.png"
+    },
+    "24671": {
+      "name": "Mastery Pack Warrior",
+      "url": "https://cdn.fabtcg.com/uploads/2026/04/mastery_pack_warrior.png"
+    },
+    "24672": {
+      "name": "Armory Deck: Olympia",
+      "url": "https://cdn.fabtcg.com/uploads/2026/04/armory_deck_olympia.png"
+    },
+    "24706": {
+      "name": "Silver Age Chapter 3",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/silver_age_logo.png"
+    },
+    "24762": {
+      "name": "Usurp the Shadow Throne",
+      "url": "https://cdn.fabtcg.com/uploads/2026/07/usurp_the_shadow_throne_logo.png"
+    },
+    "24763": {
+      "name": "Armory Deck: Malice",
+      "url": "https://cdn.fabtcg.com/uploads/2026/07/armory_deck_malice.png"
+    },
+    "24764": {
+      "name": "Silver Age: Usurp the Shadow Throne",
+      "url": "https://cdn.fabtcg.com/uploads/2025/12/silver_age_logo.png"
+    }
+  }
+}

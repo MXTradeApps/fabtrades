@@ -42,7 +42,7 @@ Name: **FAB Trades**, domain fabtrades.net. Mark: `public/image.svg`. Contact: m
 ## Evidence on Hand
 
 - Real catalog and price data in Supabase, plus legacy CSVs in `public/price-guide/` and `productgroups.json`.
-- Set logos via `public/setLogos.json` (cdn.fabtcg.com); card images from official FAB CDN.
+- Set logos via `fab_sets.logo_url` (our copies in the `set-logos` Storage bucket, filled by the price pipeline from `services/price-pipeline/set-logos.json`), falling back to the bundled `setLogos.json` (cdn.fabtcg.com), then the set name; card images from official FAB CDN.
 - Privacy policy at `src/content/privacyPolicy.js` (effective July 15, 2026) with GDPR/CCPA and children's-privacy language.
 - No testimonials, case studies, or press exist — future work must not fabricate any.
 - Stale docs: root `README.md` (CSV-era) and `mobile/README.md` ("Flutter not started") lag the implementation; prefer `CONTEXT.md` and `mobile/context.md`.

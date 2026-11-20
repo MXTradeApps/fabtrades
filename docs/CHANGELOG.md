@@ -9,6 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Set logos live in the database.** `fab_sets.logo_url` points at our own
+  copy of each logo in the `set-logos` Storage bucket. The daily price
+  pipeline copies the sources listed in `services/price-pipeline/set-logos.json`
+  and lets Blitz Decks, pre-release kits and similar products borrow their
+  parent set's logo. Web and mobile read the column first and fall back to the
+  bundled `setLogos.json`, so older app versions are unaffected and a new logo
+  no longer needs a release.
 - **Find Trade Filler** is free on mobile. The Pro lock, badge, and paywall
   gate are gone; anyone can open the sheet from an unbalanced trade.
 - Free plan **loaned-card cap** is 10 (was 1). Pro remains unlimited.

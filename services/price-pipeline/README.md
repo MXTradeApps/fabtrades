@@ -61,3 +61,20 @@ See [`../../.github/workflows/update-prices.yml`](../../.github/workflows/update
 (must live at the **repo root** `.github/workflows/` — GitHub ignores nested workflow folders).
 Repo secrets required: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 (Settings → Secrets and variables → Actions).
+
+## Set logos
+
+After the sets are upserted, the run fills `fab_sets.logo_url`:
+
+- Each entry in `set-logos.json` (TCGplayer group id → source image URL) is
+  downloaded once, resized to at most 640px, and stored in the public
+  `set-logos` bucket as `<groupId>-<hash>.png`.
+- A set with no entry borrows its parent set's logo when `src/setLogoPlan.js`
+  has a rule for its name (Blitz Decks, pre-release cards and kits, Antiquity
+  Pack, Silver Age and Smash Palace releases).
+- A logo that is already the set's own copy, or a URL set by hand, is left
+  alone. To replace a logo, change its source and set `logo_url` to null.
+
+To add a logo, add its group id and source URL to `set-logos.json`; the next
+run picks it up. The step is optional: a failure is logged and never fails the
+price ingest.
