@@ -13,6 +13,7 @@ describe('parentSetName', () => {
     ['Blitz Deck: The Hunted - Arakni, Web of Deceit', 'The Hunted'],
     ['Blitz Deck: Part the Mistveil - Zen', 'Part the Mistveil'],
     ['Historic Pack 1 Blitz Deck: Kano', 'History Pack Vol.1'],
+    ['Hero Deck: Bravo', 'Welcome to Rathe'],
     ['Usurp the Shadow Throne Pre-release Cards', 'Usurp the Shadow Throne'],
     ['Outbreak Pre-Release Kit', 'Outbreak'],
     ['Compendium of Rathe - Antiquity Pack', 'Compendium of Rathe'],
