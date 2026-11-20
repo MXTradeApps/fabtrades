@@ -154,11 +154,44 @@ final cardHashIndexProvider = FutureProvider<CardHashIndex>((ref) async {
   return CardHashIndex.fromJson(jsonText);
 });
 
-/// Official FAB set logos (TCGplayer group id → CDN URL), bundled as an asset.
-/// After load, logos are downloaded into the on-device [SetLogoCache] so the
-/// browse list can scroll without re-fetching from the CDN.
+/// How long a first launch waits for database logos before showing the
+/// bundled ones.
+const _storedSetLogosTimeout = Duration(seconds: 4);
+
+/// Database logos for [setLogoMapProvider]. Serves the local copy at once and
+/// refreshes it for the next launch; only a first launch waits on the network.
+/// Any failure (offline, a database without the column, tests without a
+/// repository) yields what is cached, or nothing — never an error.
+Future<Map<String, String>> _loadStoredSetLogos(Ref ref) async {
+  try {
+    final store = StoredSetLogosRepository(ref.read(sharedPreferencesProvider));
+    final repository = ref.read(cardRepositoryProvider);
+    Future<Map<String, String>> refresh() async {
+      final urls =
+          await repository.fetchSetLogoUrls().timeout(_storedSetLogosTimeout);
+      await store.save(urls);
+      return urls;
+    }
+
+    final cached = store.load();
+    if (cached != null) {
+      unawaited(refresh().then<void>((_) {}, onError: (Object _) {}));
+      return cached;
+    }
+    return await refresh();
+  } catch (e) {
+    debugPrint('stored set logos unavailable: $e');
+    return const {};
+  }
+}
+
+/// Set logos (TCGplayer group id → URL): the bundled list with the database's
+/// logos laid over it, so the app looks the same as before whenever the
+/// database has nothing to add. After load, logos are downloaded into the
+/// on-device [SetLogoCache] so the browse list can scroll without re-fetching.
 final setLogoMapProvider = FutureProvider<SetLogoMap>((ref) async {
-  final map = await loadSetLogoMap();
+  final bundled = await loadSetLogoMap();
+  final map = bundled.withStored(await _loadStoredSetLogos(ref));
   unawaited(SetLogoCache.warm(map.urls));
   return map;
 });

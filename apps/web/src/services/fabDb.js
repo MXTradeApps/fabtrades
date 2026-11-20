@@ -155,6 +155,21 @@ export const fetchSetGroups = async () => {
     }));
 };
 
+/**
+ * Sets that have a logo stored in the database. Kept apart from `fetchSetGroups`
+ * on purpose: that query feeds the catalog snapshot and must keep working against
+ * a database that predates the `logo_url` column, while callers of this one treat
+ * a failure as "no stored logos".
+ */
+export const fetchSetLogos = async (options = {}) => {
+    const rows = await restGet('fab_sets?select=group_id,name,logo_url&logo_url=not.is.null', options);
+    return rows.map((row) => ({
+        groupId: row.group_id,
+        name: row.name || '',
+        logoUrl: row.logo_url
+    }));
+};
+
 /** ISO timestamp of the most recent price ingest, or null when unavailable. */
 export const fetchPricesUpdatedAt = async () => {
     const rows = await restGet(

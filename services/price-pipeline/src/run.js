@@ -4,6 +4,7 @@ import { fetchCardMarketByName } from './cardmarket.js';
 import { buildRows } from './transform.js';
 import { applyOfficialCards, buildUnmatchedOfficialCards, fetchOfficialPrintings } from './official.js';
 import { retireBaseDuplicates, retireStaleTwins, upsertInChunks } from './supabase.js';
+import { syncSetLogos } from './setLogos.js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 
@@ -123,6 +124,15 @@ async function main() {
     // Order matters: sets -> cards (FK to sets) -> prices/history (FK to cards).
     console.log('⬆️  Upserting sets...');
     await upsertInChunks(supabase, 'fab_sets', setRows, 'group_id');
+    // Decoration only: a logo that cannot be fetched must not fail the ingest.
+    try {
+      const logos = await syncSetLogos(supabase);
+      console.log(
+        `🖼️  Set logos: ${logos.copied} copied, ${logos.inherited} inherited, ${logos.failed} failed`
+      );
+    } catch (err) {
+      console.warn(`   ⚠ Set logo sync skipped: ${err.message}`);
+    }
     console.log('⬆️  Upserting cards...');
     await upsertInChunks(supabase, 'fab_cards', allCards, 'id');
     console.log('⬆️  Upserting card_prices...');

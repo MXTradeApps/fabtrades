@@ -4,6 +4,7 @@ import '../logic/recent_movers.dart';
 import '../logic/trending_movers.dart';
 import '../logic/set_sort.dart';
 import '../models/card_model.dart';
+import 'set_logos.dart';
 import 'set_published_on.dart';
 
 enum CardSort {
@@ -1255,6 +1256,20 @@ class CardRepository {
         .select('group_id, published_on')
         .not('published_on', 'is', null);
     return SetPublishedOnMap.fromRows(
+      (rows as List).map((r) => Map<String, dynamic>.from(r as Map)),
+    );
+  }
+
+  /// Set logos stored in the database (group id → URL), from
+  /// `fab_sets.logo_url`. Callers treat a failure as "no stored logos" and
+  /// keep the bundled list, so this must stay a separate query from the ones
+  /// the catalog depends on.
+  Future<Map<String, String>> fetchSetLogoUrls() async {
+    final rows = await _client
+        .from('fab_sets')
+        .select('group_id, logo_url')
+        .not('logo_url', 'is', null);
+    return SetLogoMap.storedFromRows(
       (rows as List).map((r) => Map<String, dynamic>.from(r as Map)),
     );
   }
