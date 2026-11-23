@@ -533,7 +533,7 @@ class _PhotoPostScreenState extends ConsumerState<PhotoPostScreen> {
           ],
           AddListRow(
             key: const Key('photoAddCard'),
-            label: 'Add a card the photo missed',
+            label: 'Add a missed card',
             onTap: _add,
           ),
         ],

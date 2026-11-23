@@ -15,7 +15,6 @@ import 'package:fabtrades/core/scan/photo_text_reader.dart';
 import 'package:fabtrades/features/binder/binder_screen.dart';
 import 'package:fabtrades/features/binder/photo_post_screen.dart';
 import 'package:fabtrades/features/onboarding/onboarding_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 

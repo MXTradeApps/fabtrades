@@ -238,7 +238,9 @@ class _CandidateReviewState extends State<CandidateReview> {
               label: const Text('None of these'),
             ),
           ),
-        Row(
+        // Wraps on a narrow phone or with large text instead of overflowing.
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
           children: [
             TextButton(
               key: const Key('candidateReviewPrev'),
@@ -251,7 +253,6 @@ class _CandidateReviewState extends State<CandidateReview> {
               onPressed: () => widget.onSkip(current),
               child: Text(skipped ? 'Skipped' : 'Skip this card'),
             ),
-            const Spacer(),
             TextButton(
               key: const Key('candidateReviewNext'),
               onPressed: index >= items.length - 1
