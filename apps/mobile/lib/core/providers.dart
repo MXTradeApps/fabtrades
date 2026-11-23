@@ -45,6 +45,8 @@ import 'models/purchase_outcome.dart';
 import 'models/subscription_status.dart';
 import 'models/trade.dart';
 import 'scan/card_hash_index.dart';
+import 'scan/photo_cards.dart';
+import 'scan/photo_text_reader.dart';
 import 'sync/sync_journal.dart';
 import 'sync/sync_rate_limiter.dart';
 import 'sync/sync_service.dart';
@@ -252,6 +254,21 @@ final setCodeIndexProvider = Provider<SetCodeIndex>((ref) {
   final cards = ref.watch(catalogProvider).asData?.value ?? const <CardModel>[];
   return buildSetCodeIndex(cards);
 });
+
+/// Catalog lookups for "Post from photo" ([recognizePhotoCards]). Memoized
+/// like [setCodeIndexProvider]: building it walks the whole catalog.
+final photoCatalogIndexProvider = Provider<PhotoCatalogIndex>((ref) {
+  final cards = ref.watch(catalogProvider).asData?.value ?? const <CardModel>[];
+  return PhotoCatalogIndex.build(cards);
+});
+
+/// Reads the text in a still photo. Tests override it with canned lines.
+final photoTextReaderProvider =
+    Provider<PhotoTextReader>((ref) => const MlKitPhotoTextReader());
+
+/// Takes or chooses the photo for "Post from photo".
+final photoPickerProvider =
+    Provider<PhotoPicker>((ref) => pickPhotoWithImagePicker);
 
 // ---------------------------------------------------------------------------
 // Settings

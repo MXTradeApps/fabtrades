@@ -9,6 +9,8 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>FAB Trades uses the camera to scan trading cards and identify them by name and collector number.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FAB Trades reads the card names in a photo you choose so it can build a sale post from it.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
