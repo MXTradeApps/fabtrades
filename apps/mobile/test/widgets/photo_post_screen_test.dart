@@ -8,13 +8,12 @@
 import 'dart:convert';
 
 import 'package:fabtrades/core/analytics/analytics.dart';
-import 'package:fabtrades/core/models/binder.dart';
 import 'package:fabtrades/core/providers.dart';
 import 'package:fabtrades/core/scan/ocr_guide_filter.dart';
 import 'package:fabtrades/core/scan/photo_text_reader.dart';
-import 'package:fabtrades/features/binder/binder_screen.dart';
 import 'package:fabtrades/features/binder/photo_post_screen.dart';
 import 'package:fabtrades/features/onboarding/onboarding_repository.dart';
+import 'package:fabtrades/features/trade/trade_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -385,14 +384,14 @@ void main() {
     expect(find.text('Try again'), findsOneWidget);
   });
 
-  testWidgets('Binder menu: Post from photo asks for a photo and opens the '
+  testWidgets('Trade menu: Post from photo asks for a photo and opens the '
       'review', (tester) async {
     tallPhone(tester);
     analytics = RecordingAnalytics();
     final asked = <PhotoSource>[];
-    final container = await pumpApp(
+    await pumpApp(
       tester,
-      const BinderScreen(),
+      const TradeScreen(),
       catalog: catalog,
       seed: {
         OnboardingRepository.storageKey:
@@ -408,12 +407,10 @@ void main() {
         }),
       ],
     );
-    await tester.pump();
-    container.read(openBinderIdProvider.notifier).open(BinderIds.trade);
     await tester.pumpAndSettle();
 
-    // Offered even in an empty Binder: the cards come from the photo.
-    await tapKey(tester, 'binderOverflow');
+    // Offered even on an empty trade: the cards come from the photo.
+    await tapKey(tester, 'tradeOverflow');
     await tapKey(tester, 'sellFromPhoto');
     await tapKey(tester, 'photoPostGallery');
 
