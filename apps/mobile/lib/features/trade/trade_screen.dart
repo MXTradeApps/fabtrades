@@ -16,6 +16,7 @@ import '../../core/logic/trade_offer.dart';
 import '../../core/models/card_model.dart';
 import '../../core/models/trade.dart';
 import '../../core/providers.dart';
+import '../binder/photo_post_screen.dart';
 import '../onboarding/onboarding_keys.dart';
 import '../onboarding/showcase_theme.dart';
 import '../onboarding/tour_copy.dart';
@@ -76,6 +77,31 @@ class _TradeScreenState extends ConsumerState<TradeScreen> {
               tooltip: 'Clear trade',
               onPressed: () => _confirmClear(context, notifier),
             ),
+          // Always offered, even on an empty trade: the cards come from the
+          // photo, not from this trade or a Binder.
+          PopupMenuButton<String>(
+            key: const Key('tradeOverflow'),
+            tooltip: 'More',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (action) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                if (action == 'sell_photo') startPhotoPost(context, ref);
+              });
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                key: Key('sellFromPhoto'),
+                value: 'sell_photo',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.add_a_photo_outlined),
+                  title: Text('Post from photo'),
+                  subtitle: Text('Sale post from a picture of your cards'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       // Confirm Trade lives in a Column (not Scaffold.bottomNavigationBar) so

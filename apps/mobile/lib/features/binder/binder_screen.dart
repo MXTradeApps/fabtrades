@@ -28,7 +28,6 @@ import '../want_list/want_list_screen.dart';
 import 'binder_grid.dart';
 import 'binder_list.dart';
 import 'collection_stats_screen.dart';
-import 'photo_post_screen.dart';
 import 'sale_post_sheet.dart';
 
 class BinderScreen extends ConsumerStatefulWidget {
@@ -160,9 +159,6 @@ class _BinderScreenState extends ConsumerState<BinderScreen> {
                           if (action == 'clear') _clearBinder(context);
                           if (action == 'share') _shareBinder(context);
                           if (action == 'sell') _sellBinder(context);
-                          if (action == 'sell_photo') {
-                            startPhotoPost(context, ref);
-                          }
                         });
                       },
                       itemBuilder: (_) => [
@@ -172,11 +168,6 @@ class _BinderScreenState extends ConsumerState<BinderScreen> {
                             value: 'sell',
                             child: Text('Post for sale'),
                           ),
-                        const PopupMenuItem(
-                          key: Key('sellFromPhoto'),
-                          value: 'sell_photo',
-                          child: Text('Post from photo'),
-                        ),
                         if (openRows.isNotEmpty)
                           const PopupMenuItem(
                             key: Key('clearBinder'),
