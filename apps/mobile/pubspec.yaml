@@ -67,6 +67,9 @@ dependencies:
   stop_watch_timer: ^3.2.2
   # Local Fabrary collection export picker (Binder settings import).
   file_picker: ^13.2.0
+  # Take or choose the photo for "Post from photo" (Binder). file_picker
+  # above cannot open the camera.
+  image_picker: ^1.1.2
   # System rating sheet (SKStoreReviewController / Play In-App Review), asked
   # only after positive moments — see lib/core/logic/review_prompt.dart.
   in_app_review: ^2.0.12

@@ -1,0 +1,22 @@
+{
+  "note": "Made up for the test, not a real photo.",
+  "catalog": [
+    {"id": "es", "name": "Enlightened Strike", "collectorNumber": "WTR159"},
+    {"id": "sn", "name": "Snatch", "collectorNumber": "WTR167"},
+    {"id": "sb-r", "name": "Sink Below (Red)", "collectorNumber": "WTR215", "pitch": "1"},
+    {"id": "sb-y", "name": "Sink Below (Yellow)", "collectorNumber": "WTR216", "pitch": "2"}
+  ],
+  "expected": ["Enlightened Strike", "Snatch", "Sink Below (Yellow)"],
+  "minHits": 3,
+  "lines": [
+    {"left": 115, "top": 57, "right": 265, "bottom": 75, "text": "Enlightened Strike"},
+    {"left": 70, "top": 300, "right": 310, "bottom": 311, "text": "Choose 1; Draw a card."},
+    {"left": 64, "top": 434, "right": 130, "bottom": 441, "text": "WTR159"},
+    {"left": 435, "top": 57, "right": 585, "bottom": 75, "text": "Snatch"},
+    {"left": 390, "top": 300, "right": 630, "bottom": 311, "text": "If this hits, draw a card."},
+    {"left": 384, "top": 434, "right": 450, "bottom": 441, "text": "WTR167"},
+    {"left": 755, "top": 57, "right": 905, "bottom": 75, "text": "Sink Below"},
+    {"left": 710, "top": 300, "right": 950, "bottom": 311, "text": "You may put a card from your hand"},
+    {"left": 704, "top": 434, "right": 770, "bottom": 441, "text": "WTR216"}
+  ]
+}
