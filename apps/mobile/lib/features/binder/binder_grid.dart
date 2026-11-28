@@ -79,7 +79,7 @@ class BinderGrid extends ConsumerWidget {
       scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
           sliver: SliverGrid(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,

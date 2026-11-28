@@ -167,13 +167,13 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard> {
             key: Key('homeOwnedMoversTitle'),
             padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              key: const Key('homeOwnedMovers'),
-              children: [
-                for (final m in movers)
-                  MoverBox(
+          Column(
+            key: const Key('homeOwnedMovers'),
+            children: [
+              for (final m in movers) ...[
+                if (m != movers.first)
+                  const Divider(height: 1, indent: AppSpacing.gutter),
+                MoverBox(
                     key: Key('homeOwnedMover-${m.cardId}'),
                     name: cardsById[m.cardId]?.name ?? m.cardId,
                     setName: cardsById[m.cardId]?.setName ?? '',
@@ -192,7 +192,7 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard> {
                     },
                   ),
               ],
-            ),
+            ],
           ),
         ],
         const SizedBox(height: 8),

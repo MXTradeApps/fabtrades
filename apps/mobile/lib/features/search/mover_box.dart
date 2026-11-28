@@ -18,6 +18,7 @@ class MoverBox extends StatelessWidget {
     this.copies,
     required this.pricing,
     required this.onSelect,
+    this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
   });
 
   final String name;
@@ -29,6 +30,10 @@ class MoverBox extends StatelessWidget {
   final int? copies;
   final Pricing pricing;
   final VoidCallback onSelect;
+
+  /// Row inset. Defaults to the page gutter for full-width lists; pass zero
+  /// when the row already sits inside a padded card.
+  final EdgeInsetsGeometry padding;
 
   bool get _showChange =>
       percentChange != null && amountChange != null && percentChange != 0;
@@ -51,7 +56,7 @@ class MoverBox extends StatelessWidget {
     ].join(' · ');
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      contentPadding: padding,
       title: Text(name),
       subtitle: Text(subtitle),
       trailing: Column(

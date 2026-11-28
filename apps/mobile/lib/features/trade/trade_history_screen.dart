@@ -33,7 +33,7 @@ class _TradeHistoryScreenState extends ConsumerState<TradeHistoryScreen> {
       body: trades.isEmpty
           ? const Center(child: Text('No saved trades yet.'))
           : ListView.separated(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               itemCount: trades.length,
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, i) => _TradeCard(trade: trades[i]),

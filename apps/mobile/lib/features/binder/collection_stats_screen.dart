@@ -77,7 +77,7 @@ class _CollectionStatsScreenState extends ConsumerState<CollectionStatsScreen> {
         title: const Text('Collection Stats'),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
           Text(
             binderName,
@@ -375,8 +375,10 @@ class _DirectionList extends StatelessWidget {
             ),
           )
         else
-          for (final row in rows)
+          for (final row in rows) ...[
+            if (row != rows.first) const Divider(height: 1),
             MoverBox(
+              padding: EdgeInsets.zero,
               name: row.name,
               setName: row.setName,
               finish: row.finish,
@@ -387,6 +389,7 @@ class _DirectionList extends StatelessWidget {
               pricing: pricing,
               onSelect: () => onSelect(row.cardId),
             ),
+          ],
       ],
     );
   }

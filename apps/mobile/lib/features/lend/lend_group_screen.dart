@@ -127,7 +127,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      margin: const EdgeInsets.all(12),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
@@ -189,7 +189,7 @@ class _ItemRow extends ConsumerWidget {
             settings: const RouteSettings(name: 'Card Detail'),
             builder: (_) => CardDetailScreen(card: card, source: 'lend'))),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
               CardThumbnail(url: card.imageUrl, foil: card.isFoil),

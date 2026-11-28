@@ -138,7 +138,7 @@ class _CardPickerScreenState extends ConsumerState<CardPickerScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: CardSearchBar(
               controller: _controller,
               hintText: 'Search cards…',

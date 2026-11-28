@@ -141,7 +141,7 @@ class _TrendingSectionState extends ConsumerState<TrendingSection> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -230,7 +230,7 @@ class _TrendingSectionState extends ConsumerState<TrendingSection> {
               )
             else ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+                padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   'Top ${rows.length} of $total '
                   '${_showRising ? 'rising' : 'falling'} $when, by '
@@ -240,13 +240,15 @@ class _TrendingSectionState extends ConsumerState<TrendingSection> {
                   ),
                 ),
               ),
-              for (final row in rows)
+              for (final row in rows) ...[
+                if (row != rows.first) const Divider(height: 1),
                 _TrendRow(
                   key: Key('trendRow-${row.direction}-${row.cardId}'),
                   row: row,
                   pricing: pricing,
                   onSelect: () => _openRow(row),
                 ),
+              ],
             ],
           ],
           Padding(
@@ -337,7 +339,7 @@ class _TrendRow extends StatelessWidget {
     return InkWell(
       onTap: onSelect,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
             SizedBox(

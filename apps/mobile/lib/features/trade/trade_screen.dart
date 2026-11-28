@@ -506,7 +506,8 @@ class _TradeSideList extends ConsumerWidget {
               ],
             ),
           ),
-          for (final item in items)
+          for (final item in items) ...[
+            if (item != items.first) const Divider(height: 1, indent: 13),
             _TradeItemRow(
               item: item,
               symbol: symbol,
@@ -519,6 +520,8 @@ class _TradeSideList extends ConsumerWidget {
               onTap: () => _editVersion(
                   context, ref, side, item, printingsForCard(catalog, item.card)),
             ),
+          ],
+          if (items.isNotEmpty) const Divider(height: 1, indent: 13),
           AddListRow(
             label: addLabel,
             onTap: () => _pick(context, ref, side),
