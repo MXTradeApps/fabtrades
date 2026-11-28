@@ -99,7 +99,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: CardSearchBar(
               controller: _controller,
               hintText: 'Search all cards…',
@@ -504,12 +504,15 @@ class _GlobalSearchResultsState extends ConsumerState<_GlobalSearchResults> {
         final overlayById = {
           for (final row in _overlays) row.cardId: row,
         };
-        return ListView.builder(
+        return ListView.separated(
           key: const Key('search-trend-boxes'),
           physics: const AlwaysScrollableScrollPhysics(),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.only(bottom: 16),
           itemCount: filtered.length + (_overlayError != null ? 1 : 0),
+          separatorBuilder: (_, i) => _overlayError != null && i == 0
+              ? const SizedBox.shrink()
+              : const Divider(height: 1, indent: AppSpacing.gutter),
           itemBuilder: (context, i) {
             if (_overlayError != null && i == 0) {
               return Column(
@@ -622,7 +625,7 @@ class _SetCardsScreenState extends ConsumerState<SetCardsScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: CardSearchBar(
               controller: _controller,
               hintText: 'Search in ${widget.setName}…',

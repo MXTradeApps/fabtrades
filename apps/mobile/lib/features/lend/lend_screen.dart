@@ -127,7 +127,7 @@ class _GroupList extends ConsumerWidget {
       onTap: onAdd,
     );
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         if (groups.isEmpty)
           Padding(

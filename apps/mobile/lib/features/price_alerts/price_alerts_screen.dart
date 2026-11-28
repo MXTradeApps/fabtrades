@@ -109,13 +109,13 @@ class _AlertList extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () => ref.read(priceAlertsProvider.notifier).refresh(),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         children: [
           if (hit.isNotEmpty) ...[
             SectionTitle(
               'Hit',
               count: hit.length,
-              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
             ),
             for (final a in hit) _AlertTile(alert: a),
           ],
@@ -123,7 +123,7 @@ class _AlertList extends ConsumerWidget {
             SectionTitle(
               'Watching',
               count: watching.length,
-              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
             ),
             for (final a in watching) _AlertTile(alert: a),
           ],

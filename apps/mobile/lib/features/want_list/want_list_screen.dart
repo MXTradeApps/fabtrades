@@ -132,7 +132,7 @@ class _WantGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return GridView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 100),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,

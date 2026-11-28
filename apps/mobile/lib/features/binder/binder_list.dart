@@ -119,7 +119,7 @@ class _BinderListState extends ConsumerState<BinderList> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: CardSearchBar(
             controller: _controller,
             hintText: 'Search Binder…',
@@ -157,7 +157,7 @@ class _BinderListState extends ConsumerState<BinderList> {
                     padding: const EdgeInsets.only(bottom: 96),
                     itemCount: pageRows.length,
                     separatorBuilder: (_, _) =>
-                        const Divider(height: 1, indent: 46),
+                        const Divider(height: 1, indent: 52),
                     itemBuilder: (context, i) => _EntryRow(
                       entry: pageRows[i],
                       pricing: pricing,
@@ -226,7 +226,7 @@ class _BinderPager extends StatelessWidget {
     final to = math.min((page + 1) * pageSize, total);
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+      padding: const EdgeInsets.fromLTRB(16, 0, 8, 4),
       child: Row(
         key: const Key('binderPager'),
         children: [
@@ -503,7 +503,7 @@ class _EntryRow extends ConsumerWidget {
           onTap: selecting ? () => _toggle(ref) : null,
           onLongPress: selecting ? null : () => _toggle(ref),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            padding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
             child: Row(
               children: [
                 if (selecting) ...[
